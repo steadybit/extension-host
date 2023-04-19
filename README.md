@@ -1,42 +1,43 @@
-# Steadybit Extension Scaffold
+# Steadybit extension-host
 
-This repository contains a scaffold with a sample implementation of a [Steadybit extension](https://docs.steadybit.com/integrate-with-steadybit/extensions). You may find this repository helpful…
+*Open Beta: This extension generally works, but you may discover some rough edges.*
 
- - [When you want to understand what Steadybit extensions are](#understanding-the-extension-mechanism).
- - [When you want to build a Steadybit extension](#for-extension-authors)
+TODO describe what your extension is doing here from a user perspective.
 
-Please follow one of the links above to move to the appropriate documentation sections.
+## Configuration
 
-## Understanding the Extension Mechanism
+| Environment Variable                  | Meaning                                                                                                                                                                | Default                 |
+|---------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------|
+| `STEADYBIT_EXTENSION_ROBOT_NAMES`     | Comma-separated list of discoverable robots                                                                                                                            | Bender,Terminator,R2-D2 |
+| `STEADYBIT_EXTENSION_PORT`            | Port number that the HTTP server should bind to.                                                                                                                       | 8080                    |
+| `STEADYBIT_EXTENSION_TLS_SERVER_CERT` | Optional absolute path to a TLS certificate that will be used to open an **HTTPS** server.                                                                             |                         |
+| `STEADYBIT_EXTENSION_TLS_SERVER_KEY`  | Optional absolute path to a file containing the key to the server certificate.                                                                                         |                         |
+| `STEADYBIT_EXTENSION_TLS_CLIENT_CAS`  | Optional comma-separated list of absolute paths to files containing TLS certificates. When specified, the server will expect clients to authenticate using mutual TLS. |                         |
+| `STEADYBIT_LOG_FORMAT`                | Defines the log format that the extension will use. Possible values are `text` and `json`.                                                                             | text                    |
+| `STEADYBIT_LOG_LEVEL`                 | Defines the active log level. Possible values are `debug`, `info`, `warn` and `error`.                                                                                 | info                    |
 
-One of the best ways to understand the extension mechanism is to run an extension and experiment with its APIs. We have prepared Gitpod and GitHub codespaces setups to make this as easy as possible for you.
+## Running the Extension
 
-When you click one of these buttons, you will be directed to an online editor with a locally running extension, and the file `README.http` will open. This file contains documentation and HTTP calls you can execute to learn about extensions and this specific sample implementation.
+### Using Docker
 
-[![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](http://gitpod.io/#https://github.com/steadybit/extension-scaffold/blob/main/README.http)
+```sh
+$ docker run \
+  --rm \
+  -p 8085 \
+  --name steadybit-extension-host \
+  ghcr.io/steadybit/extension-host:latest
+```
 
+### Using Helm in Kubernetes
 
-[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://github.com/codespaces/new?hide_repo_select=true&ref=main&repo=595972094)
-
-
-## For Extension Authors
-
-**Note:** We recommend that you [understand the extension mechanism](#understanding-the-extension-mechanism) before following these instructions.
-
-This repository ships with everything Steadybit extensions might need:
- - Basic usage of and initialization for ActionKit, DiscoveryKit, EventKit and ExtensionKit.
- - Extension configuration support.
- - Dockerfile and Helm chart.
- - GitHub actions for building, testing and publishing Docker images and Helm charts.
- - and more.
-
-To use this scaffold, you need to:
-
- 1. Get a copy of this scaffold. [Use GitHub's repository template feature](https://docs.github.com/en/repositories/creating-and-managing-repositories/creating-a-repository-from-a-template), [fork the repository](https://github.com/steadybit/extension-scaffold/fork) or [download it](https://github.com/steadybit/extension-scaffold/archive/refs/heads/main.zip).
- 2. Execute `make eject` within the copy to replace the readme, license etc. files with some more appropriate starting points.
- 3. Delete the `.github/workflows/cla.yml` workflow or allow access to the access for CLA verification.
- 4. Rename all occurrences of `extension-scaffold` to `extension-{{other name}}`
- 5. Verify that the Docker and Helm installation instructions are correct in the `README.md`
- 6. Create an empty branch named "gh-pages"
- 7. After the first build, ensure that you make the Docker image public through `packages -> {{your package name}} -> Package settings -> Change visibility`
-
+```sh
+$ helm repo add steadybit-extension-host https://steadybit.github.io/extension-host
+$ helm repo update
+$ helm upgrade steadybit-extension-host \
+    --install \
+    --wait \
+    --timeout 5m0s \
+    --create-namespace \
+    --namespace steadybit-extension \
+    steadybit-extension-host/steadybit-extension-host
+```

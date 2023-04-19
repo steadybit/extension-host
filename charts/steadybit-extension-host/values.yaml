@@ -3,9 +3,9 @@
 # Declare variables to be passed into your templates.
 image:
   # image.name -- The container image to use for the Steadybit scaffold extension.
-  name: ghcr.io/steadybit/extension-scaffold
-  # image.tag -- tag name of the extension-scaffold container image to use.
-  # See https://github.com/steadybit/extension-scaffold/pkgs/container/extension-scaffold/versions for all tags.
+  name: ghcr.io/steadybit/extension-host
+  # image.tag -- tag name of the extension-host container image to use.
+  # See https://github.com/steadybit/extension-host/pkgs/container/extension-host/versions for all tags.
   tag: latest
   # image.pullPolicy -- Specifies when to pull the image container.
   pullPolicy: Always
