@@ -4,17 +4,17 @@ manifest should match snapshot with TLS:
     kind: Service
     metadata:
       annotations:
-        steadybit.com/extension-auto-discovery: "{\n  \"extensions\": [\n    {\n      \"port\": 8080,\n      \"types\": [\"ACTION\",\"DISCOVERY\",\"EVENT\"],\n      \"tls\": {\n        \"server\": {\n          \"extraCertsFile\": \"/opt/steadybit/agent/etc/extension-mtls/server-cert/tls.crt\"\n        }\n        \n      }\n    }\n  ]\n}\n"
+        steadybit.com/extension-auto-discovery: "{\n  \"extensions\": [\n    {\n      \"port\": 8085,\n      \"types\": [\"ACTION\",\"DISCOVERY\"],\n      \"tls\": {\n        \"server\": {\n          \"extraCertsFile\": \"/opt/steadybit/agent/etc/extension-mtls/server-cert/tls.crt\"\n        }\n        \n      }\n    }\n  ]\n}\n"
       labels: null
-      name: RELEASE-NAME
+      name: RELEASE-NAME-steadybit-extension-host
       namespace: NAMESPACE
     spec:
       ports:
-        - port: 8080
+        - port: 8085
           protocol: TCP
-          targetPort: 8080
+          targetPort: 8085
       selector:
-        app.kubernetes.io/name: RELEASE-NAME
+        app.kubernetes.io/name: steadybit-extension-host
 manifest should match snapshot with mutual TLS:
   1: |
     apiVersion: v1
@@ -25,8 +25,8 @@ manifest should match snapshot with mutual TLS:
           {
             "extensions": [
               {
-                "port": 8080,
-                "types": ["ACTION","DISCOVERY","EVENT"],
+                "port": 8085,
+                "types": ["ACTION","DISCOVERY"],
                 "tls": {
                   "server": {
                     "extraCertsFile": "/opt/steadybit/agent/etc/extension-mtls/server-cert/tls.crt"
@@ -40,29 +40,29 @@ manifest should match snapshot with mutual TLS:
             ]
           }
       labels: null
-      name: RELEASE-NAME
+      name: RELEASE-NAME-steadybit-extension-host
       namespace: NAMESPACE
     spec:
       ports:
-        - port: 8080
+        - port: 8085
           protocol: TCP
-          targetPort: 8080
+          targetPort: 8085
       selector:
-        app.kubernetes.io/name: RELEASE-NAME
+        app.kubernetes.io/name: steadybit-extension-host
 manifest should match snapshot without TLS:
   1: |
     apiVersion: v1
     kind: Service
     metadata:
       annotations:
-        steadybit.com/extension-auto-discovery: "{\n  \"extensions\": [\n    {\n      \"port\": 8080,\n      \"types\": [\"ACTION\",\"DISCOVERY\",\"EVENT\"],\n      \"tls\": {\n        \n      }\n    }\n  ]\n}\n"
+        steadybit.com/extension-auto-discovery: "{\n  \"extensions\": [\n    {\n      \"port\": 8085,\n      \"types\": [\"ACTION\",\"DISCOVERY\"],\n      \"tls\": {\n        \n      }\n    }\n  ]\n}\n"
       labels: null
-      name: RELEASE-NAME
+      name: RELEASE-NAME-steadybit-extension-host
       namespace: NAMESPACE
     spec:
       ports:
-        - port: 8080
+        - port: 8085
           protocol: TCP
-          targetPort: 8080
+          targetPort: 8085
       selector:
-        app.kubernetes.io/name: RELEASE-NAME
+        app.kubernetes.io/name: steadybit-extension-host

@@ -3,7 +3,7 @@
 ##
 ## Build
 ##
-FROM golang:1.19-alpine AS build
+FROM golang:1.20-alpine AS build
 
 ARG NAME
 ARG VERSION
@@ -41,6 +41,6 @@ WORKDIR /
 
 COPY --from=build /app/extension /extension
 
-EXPOSE 8080
+EXPOSE 8085 8081
 
 ENTRYPOINT ["/extension"]

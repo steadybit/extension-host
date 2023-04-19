@@ -1,6 +1,6 @@
 dependencies:
 - name: extensionlib
   repository: https://steadybit.github.io/helm-charts
-  version: 1.0.0
-digest: sha256:45c735e61c01773f8b233397c0c8bd4496f1077c78425ec8370cccfcaada2634
-generated: "2023-02-01T14:14:30.559149+01:00"
+  version: 1.1.0
+digest: sha256:50f7816a312812729400e1ead5cfe1a89de8aabcc66ff2cc6eac262d0952912b
+generated: "2023-04-19T13:44:19.724885+02:00"

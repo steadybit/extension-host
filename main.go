@@ -5,8 +5,8 @@
 package main
 
 import (
-  "github.com/steadybit/action-kit/go/action_kit_api/v2"
-  "github.com/steadybit/action-kit/go/action_kit_sdk"
+	"github.com/steadybit/action-kit/go/action_kit_api/v2"
+	"github.com/steadybit/action-kit/go/action_kit_sdk"
 	"github.com/steadybit/discovery-kit/go/discovery_kit_api"
 	"github.com/steadybit/event-kit/go/event_kit_api"
 	"github.com/steadybit/extension-host/config"
@@ -15,7 +15,7 @@ import (
 	"github.com/steadybit/extension-kit/exthealth"
 	"github.com/steadybit/extension-kit/exthttp"
 	"github.com/steadybit/extension-kit/extlogging"
-  "github.com/steadybit/extension-scaffold/extevents"
+	"github.com/steadybit/extension-scaffold/extevents"
 )
 
 func main() {
@@ -50,7 +50,7 @@ func main() {
 	// for your extension. You might want to change these because the names do not fit, or because
 	// you do not have a need for all of them.
 	exthost.RegisterDiscoveryHandlers()
-	action_kit_sdk.RegisterAction(exthost.NewLogAction())
+	action_kit_sdk.RegisterAction(exthost.NewStressCPUAction())
 
 	//This will install a signal handlder, that will stop active actions when receiving a SIGURS1, SIGTERM or SIGINT
 	action_kit_sdk.InstallSignalHandler()
