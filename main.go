@@ -5,17 +5,17 @@
 package main
 
 import (
-	"github.com/steadybit/action-kit/go/action_kit_api/v2"
-	"github.com/steadybit/action-kit/go/action_kit_sdk"
-	"github.com/steadybit/discovery-kit/go/discovery_kit_api"
-	"github.com/steadybit/event-kit/go/event_kit_api"
-	"github.com/steadybit/extension-host/config"
-	"github.com/steadybit/extension-host/exthost"
-	"github.com/steadybit/extension-kit/extbuild"
-	"github.com/steadybit/extension-kit/exthealth"
-	"github.com/steadybit/extension-kit/exthttp"
-	"github.com/steadybit/extension-kit/extlogging"
-	"github.com/steadybit/extension-scaffold/extevents"
+  "github.com/steadybit/action-kit/go/action_kit_api/v2"
+  "github.com/steadybit/action-kit/go/action_kit_sdk"
+  "github.com/steadybit/discovery-kit/go/discovery_kit_api"
+  "github.com/steadybit/event-kit/go/event_kit_api"
+  "github.com/steadybit/extension-host/config"
+  "github.com/steadybit/extension-host/exthost"
+  "github.com/steadybit/extension-host/exthost/resources"
+  "github.com/steadybit/extension-kit/extbuild"
+  "github.com/steadybit/extension-kit/exthealth"
+  "github.com/steadybit/extension-kit/exthttp"
+  "github.com/steadybit/extension-kit/extlogging"
 )
 
 func main() {
@@ -50,7 +50,7 @@ func main() {
 	// for your extension. You might want to change these because the names do not fit, or because
 	// you do not have a need for all of them.
 	exthost.RegisterDiscoveryHandlers()
-	action_kit_sdk.RegisterAction(exthost.NewStressCPUAction())
+	action_kit_sdk.RegisterAction(resources.NewStressCPUAction())
 
 	//This will install a signal handlder, that will stop active actions when receiving a SIGURS1, SIGTERM or SIGINT
 	action_kit_sdk.InstallSignalHandler()
@@ -84,8 +84,5 @@ func getExtensionList() ExtensionListResponse {
 		// https://github.com/steadybit/discovery-kit/blob/main/docs/discovery-api.md#index-response
 		DiscoveryList: exthost.GetDiscoveryList(),
 
-		// See this document to learn more about the event listener list:
-		// https://github.com/steadybit/event-kit/blob/main/docs/event-api.md#event-listeners-list
-		EventListenerList: extevents.GetEventListenerList(),
 	}
 }

@@ -37,13 +37,13 @@ func GetDiscoveryList() discovery_kit_api.DiscoveryList {
 		TargetTypes: []discovery_kit_api.DescribingEndpointReference{
 			{
 				Method: "GET",
-				Path:   discoveryBasePath + "target-description",
+				Path:   discoveryBasePath + "/target-description",
 			},
 		},
 		TargetAttributes: []discovery_kit_api.DescribingEndpointReference{
 			{
 				Method: "GET",
-				Path:   discoveryBasePath + "attribute-descriptions",
+				Path:   discoveryBasePath + "/attribute-descriptions",
 			},
 		},
 	}
@@ -51,7 +51,7 @@ func GetDiscoveryList() discovery_kit_api.DiscoveryList {
 
 func getDiscoveryDescription() discovery_kit_api.DiscoveryDescription {
 	return discovery_kit_api.DiscoveryDescription{
-		Id:         targetID,
+		Id:         TargetID,
 		RestrictTo: extutil.Ptr(discovery_kit_api.LEADER),
 		Discover: discovery_kit_api.DescribingEndpointReferenceWithCallInterval{
 			Method:       "GET",
@@ -63,7 +63,7 @@ func getDiscoveryDescription() discovery_kit_api.DiscoveryDescription {
 
 func getTargetDescription() discovery_kit_api.TargetDescription {
 	return discovery_kit_api.TargetDescription{
-		Id:      targetID,
+		Id:      TargetID,
 		Version: extbuild.GetSemverVersionStringOrUnknown(),
 		Icon:    extutil.Ptr(targetIcon),
 
@@ -163,14 +163,14 @@ func getHostTarget() []discovery_kit_api.Target {
 	}
 	fqdn, err := host.FQDN()
 	if err != nil {
-		log.Warn().Err(err).Msg("Failed to get FQDN")
+		log.Trace().Err(err).Msg("Failed to get FQDN")
 		fqdn = host.Info().Hostname
 	}
 
 	// ip adress of the host
 	targets[0] = discovery_kit_api.Target{
 		Id:         hostname,
-		TargetType: targetID,
+		TargetType: TargetID,
 		Label:      hostname,
 		Attributes: map[string][]string{
 			"host.hostname":        {hostname},

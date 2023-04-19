@@ -11,7 +11,6 @@ require (
 	github.com/steadybit/discovery-kit/go/discovery_kit_api v1.3.0
 	github.com/steadybit/event-kit/go/event_kit_api v1.1.0
 	github.com/steadybit/extension-kit v1.7.10
-	github.com/steadybit/extension-scaffold v0.0.0-20230414133445-de0f50da69a9
 	github.com/stretchr/testify v1.8.0
 )
 

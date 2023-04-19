@@ -2,15 +2,16 @@
  * Copyright 2023 steadybit GmbH. All rights reserved.
  */
 
-package exthost
+package resources
 
 import (
 	"context"
 	"errors"
 	"fmt"
 	"github.com/rs/zerolog/log"
-	"github.com/steadybit/action-kit/go/action_kit_api/v2"
-	"github.com/steadybit/action-kit/go/action_kit_sdk"
+  "github.com/steadybit/action-kit/go/action_kit_api/v2"
+  "github.com/steadybit/action-kit/go/action_kit_sdk"
+	"github.com/steadybit/extension-host/exthost"
 	"github.com/steadybit/extension-kit/extbuild"
 	"github.com/steadybit/extension-kit/extutil"
 	"strconv"
@@ -26,7 +27,8 @@ var (
 )
 
 type StressCPUActionState struct {
-	stressNGArgs []string
+	StressNGArgs []string
+	Pid          int
 }
 
 func NewStressCPUAction() action_kit_sdk.Action[StressCPUActionState] {
@@ -40,20 +42,20 @@ func (l *stressCPUAction) NewEmptyState() StressCPUActionState {
 // Describe returns the action description for the platform with all required information.
 func (l *stressCPUAction) Describe() action_kit_api.ActionDescription {
 	return action_kit_api.ActionDescription{
-		Id:          fmt.Sprintf("%s.stressCPU", targetID),
+		Id:          fmt.Sprintf("%s.stress-cpu", actionId),
 		Label:       "Stress CPU",
 		Description: "Generates CPU load for one or more cores.",
 		Version:     extbuild.GetSemverVersionStringOrUnknown(),
 		Icon:        extutil.Ptr(stressCPUIcon),
 		TargetSelection: extutil.Ptr(action_kit_api.TargetSelection{
 			// The target type this action is for
-			TargetType: targetID,
+			TargetType: exthost.TargetID,
 			// You can provide a list of target templates to help the user select targets.
 			// A template can be used to pre-fill a selection
 			SelectionTemplates: extutil.Ptr([]action_kit_api.TargetSelectionTemplate{
 				{
 					Label: "by host name",
-					Query: "host.name=\"\"",
+					Query: "host.hostname=\"\"",
 				},
 			}),
 		}),
@@ -115,19 +117,29 @@ func (l *stressCPUAction) Describe() action_kit_api.ActionDescription {
 // The passed in state is included in the subsequent calls to start/status/stop.
 // So the state should contain all information needed to execute the action and even more important: to be able to stop it.
 func (l *stressCPUAction) Prepare(_ context.Context, state *StressCPUActionState, request action_kit_api.PrepareActionRequestBody) (*action_kit_api.PrepareResult, error) {
-	duration := toUInt64(request.Config["duration"])
-	cpuLoad := toUInt(request.Config["cpuLoad"])
-	workers := toUInt(request.Config["workers"])
+	duration := exthost.ToUInt64(request.Config["duration"]) / 1000
+	cpuLoad := exthost.ToUInt(request.Config["cpuLoad"])
+	workers := exthost.ToUInt(request.Config["workers"])
 	if duration == 0 {
 		return nil, errors.New("duration must be greater than 0")
 	}
 	if cpuLoad == 0 {
 		return nil, errors.New("cpuLoad must be greater than 0")
 	}
-	state.stressNGArgs = []string{
+	state.Pid = 5
+	state.StressNGArgs = []string{
 		"--cpu", strconv.Itoa(int(workers)),
 		"--cpu-load", strconv.Itoa(int(cpuLoad)),
 		"--timeout", strconv.Itoa(int(duration)),
+	}
+
+	if !exthost.IsStressNgInstalled() {
+		return &action_kit_api.PrepareResult{
+			Error: extutil.Ptr(action_kit_api.ActionKitError{
+				Title:  fmt.Sprintf("Stress-ng is not installed on %s", request.Target.Name),
+				Status: extutil.Ptr(action_kit_api.Errored),
+			}),
+		}, nil
 	}
 
 	return nil, nil
@@ -137,34 +149,19 @@ func (l *stressCPUAction) Prepare(_ context.Context, state *StressCPUActionState
 // You can mutate the state here.
 // You can use the result to return messages/errors/metrics or artifacts
 func (l *stressCPUAction) Start(_ context.Context, state *StressCPUActionState) (*action_kit_api.StartResult, error) {
-	log.Info().Str("message", state.FormattedMessage).Msg("Logging in log action **start**")
-
-	return &action_kit_api.StartResult{
-		//These messages will show up in agent log
-		Messages: extutil.Ptr([]action_kit_api.Message{
-			{
-				Level:   extutil.Ptr(action_kit_api.Info),
-				Message: fmt.Sprintf("Started logging '%s'", state.FormattedMessage),
-			},
-		})}, nil
+	pid, err := exthost.StartStressNG(state.StressNGArgs)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to start stress-ng")
+		return nil, err
+	}
+	log.Info().Int("Pid", pid).Msg("Started stress-ng")
+	state.Pid = pid
+	return nil, nil
 }
 
-// Status is optional.
-// If you implement that it will be called periodically to check the status of the action.
-// You can use the result to signal that the action is done and to return messages/errors/metrics or artifacts
-func (l *stressCPUAction) Status(_ context.Context, state *StressCPUActionState) (*action_kit_api.StatusResult, error) {
-	log.Info().Str("message", state.FormattedMessage).Msg("Logging in log action **status**")
-
-	return &action_kit_api.StatusResult{
-		//indicate that the action is still running
-		Completed: false,
-		//These messages will show up in agent log
-		Messages: extutil.Ptr([]action_kit_api.Message{
-			{
-				Level:   extutil.Ptr(action_kit_api.Info),
-				Message: fmt.Sprintf("Status for logging '%s'", state.FormattedMessage),
-			},
-		})}, nil
+func (l *stressCPUAction) Status(ctx context.Context, state *StressCPUActionState) (*action_kit_api.StatusResult, error) {
+	//TODO implement me
+	return nil, nil
 }
 
 // Stop is called to stop the action
@@ -172,14 +169,14 @@ func (l *stressCPUAction) Status(_ context.Context, state *StressCPUActionState)
 // It should be implemented in a immutable way, as the agent might to retries if the stop method timeouts.
 // You can use the result to return messages/errors/metrics or artifacts
 func (l *stressCPUAction) Stop(_ context.Context, state *StressCPUActionState) (*action_kit_api.StopResult, error) {
-	log.Info().Str("message", state.FormattedMessage).Msg("Logging in log action **status**")
-
-	return &action_kit_api.StopResult{
-		//These messages will show up in agent log
-		Messages: extutil.Ptr([]action_kit_api.Message{
-			{
-				Level:   extutil.Ptr(action_kit_api.Info),
-				Message: fmt.Sprintf("Stopped logging '%s'", state.FormattedMessage),
-			},
-		})}, nil
+	if state.Pid != 0 {
+		log.Info().Int("Pid", state.Pid).Msg("Stopping stress-ng")
+		err := exthost.StopStressNG(state.Pid)
+		if err != nil {
+			log.Error().Err(err).Int("Pid", state.Pid).Msg("Failed to stop stress-ng")
+			return nil, err
+		}
+		state.Pid = 0
+	}
+	return nil, nil
 }
