@@ -14,6 +14,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strings"
 )
 
 const discoveryBasePath = basePath + "/discovery"
@@ -181,7 +182,22 @@ func getHostTarget() []discovery_kit_api.Target {
 			"host.os.version":      {osVersion},
 		},
 	}
+	environmentVariables := getEnvironmentVariables()
+	for key, value := range environmentVariables {
+		targets[0].Attributes[key] = value
+	}
+
 	return targets
+}
+
+func getEnvironmentVariables() map[string][]string {
+	envVars := make(map[string][]string)
+	env := os.Environ()
+	for _, e := range env {
+		pair := strings.Split(e, "=")
+		envVars["host.env."+pair[0]] = []string{pair[1]}
+	}
+	return envVars
 }
 
 func getIP4sAndNICs() ([]string, []string) {
