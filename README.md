@@ -2,7 +2,12 @@
 
 *Open Beta: This extension generally works, but you may discover some rough edges.*
 
-TODO describe what your extension is doing here from a user perspective.
+This extension provides a Host discovery and the following attacks for host targets:
+
+ - stress CPU
+ - stress Memory
+ - stress Disk
+ -
 
 ## Configuration
 
