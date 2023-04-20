@@ -55,3 +55,5 @@ topologySpreadConstraints: []
 
 # affinity -- Affinities to influence pod assignment.
 affinity: {}
+
+types: ["ACTION", "DISCOVERY"]

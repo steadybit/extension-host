@@ -7,6 +7,33 @@ metadata:
     {{- range $key, $value := .Values.extraLabels }}
       {{ $key }}: {{ $value }}
     {{- end }}
+  annotations:
+    "steadybit.com/extension-auto-discovery": >
+      {
+        "extensions": [
+          {
+            "port": "8085",
+            "types": {{ toJson .Values.types }},
+            "tls": {
+                {{- if .Values.tls.server.certificate.fromSecret }}
+              "server": {
+                "extraCertsFile": "/opt/steadybit/agent/etc/extension-mtls/{{ .Values.tls.server.certificate.fromSecret }}/tls.crt"
+                {{ if .Values.tls.client.certificates.fromSecrets -}}
+              },
+                {{- else -}}
+              }
+                {{- end -}}
+                {{- end }}
+                {{ if .Values.tls.client.certificates.fromSecrets -}}
+              "client": {
+                "certChainFile": "/opt/steadybit/agent/etc/extension-mtls/{{ first .Values.tls.client.certificates.fromSecrets }}/tls.crt",
+                "certKeyFile": "/opt/steadybit/agent/etc/extension-mtls/{{ first .Values.tls.client.certificates.fromSecrets }}/tls.key"
+              }
+                {{- end }}
+            }
+          }
+        ]
+      }
 spec:
   selector:
     matchLabels:
@@ -16,7 +43,6 @@ spec:
       labels:
         app.kubernetes.io/name: {{ include "extensionlib.names.name" . }}
     spec:
-      serviceAccountName: {{ include "extensionlib.names.name" . }}
       hostNetwork: true
       hostPID: true
       dnsPolicy: ClusterFirstWithHostNet
