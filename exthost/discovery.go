@@ -5,8 +5,8 @@
 package exthost
 
 import (
-	"github.com/elastic/go-sysinfo"
-	"github.com/rs/zerolog/log"
+  "github.com/elastic/go-sysinfo"
+  "github.com/rs/zerolog/log"
 	"github.com/steadybit/discovery-kit/go/discovery_kit_api"
 	"github.com/steadybit/extension-kit/extbuild"
 	"github.com/steadybit/extension-kit/exthttp"
@@ -14,7 +14,6 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"strings"
 )
 
 const discoveryBasePath = basePath + "/discovery"
@@ -184,20 +183,14 @@ func getHostTarget() []discovery_kit_api.Target {
 	}
 	environmentVariables := getEnvironmentVariables()
 	for key, value := range environmentVariables {
-		targets[0].Attributes[key] = value
+		targets[0].Attributes["host.env."+key] = []string{value}
+	}
+	labels := getLabels()
+	for key, value := range labels {
+		targets[0].Attributes["label."+key] = []string{value}
 	}
 
 	return targets
-}
-
-func getEnvironmentVariables() map[string][]string {
-	envVars := make(map[string][]string)
-	env := os.Environ()
-	for _, e := range env {
-		pair := strings.Split(e, "=")
-		envVars["host.env."+pair[0]] = []string{pair[1]}
-	}
-	return envVars
 }
 
 func getIP4sAndNICs() ([]string, []string) {
