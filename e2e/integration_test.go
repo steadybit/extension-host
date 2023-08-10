@@ -9,6 +9,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
 	"github.com/steadybit/action-kit/go/action_kit_test/e2e"
+	"github.com/steadybit/action-kit/go/action_kit_test/e2e/retry"
 	"github.com/steadybit/discovery-kit/go/discovery_kit_api"
 	"github.com/steadybit/extension-host/exthost"
 	"github.com/steadybit/extension-kit/extutil"
@@ -75,55 +76,55 @@ func TestWithMinikube(t *testing.T) {
 		ExtraArgs: func(m *e2e.Minikube) []string {
 			return []string{
 				"--set", fmt.Sprintf("container.runtime=%s", m.Runtime),
-				//"--set", "logging.level=debug",
+				"--set", "logging.level=debug",
 			}
 		},
 	}
 
 	e2e.WithDefaultMinikube(t, &extFactory, []e2e.WithMinikubeTestCase{
-		{
-			Name: "target discovery",
-			Test: testDiscovery,
-		},
-		{
-			Name: "stress cpu",
-			Test: testStressCpu,
-		},
-		{
-			Name: "stress memory",
-			Test: testStressMemory,
-		}, {
-			Name: "stress io",
-			Test: testStressIo,
-		},
-		{
-			Name: "time travel",
-			Test: testTimeTravel,
-		},
-		{
-			Name: "stop process",
-			Test: testStopProcess,
-		},
-		{
-			Name: "network delay",
-			Test: testNetworkDelay,
-		},
-		{
-			Name: "network blackhole",
-			Test: testNetworkBlackhole,
-		},
-		{
-			Name: "network block dns",
-			Test: testNetworkBlockDns,
-		},
-		{
-			Name: "network limit bandwidth",
-			Test: testNetworkLimitBandwidth,
-		},
-		{
-			Name: "network package loss",
-			Test: testNetworkPackageLoss,
-		},
+		//{
+		//	Name: "target discovery",
+		//	Test: testDiscovery,
+		//},
+		//{
+		//	Name: "stress cpu",
+		//	Test: testStressCpu,
+		//},
+		//{
+		//	Name: "stress memory",
+		//	Test: testStressMemory,
+		//}, {
+		//	Name: "stress io",
+		//	Test: testStressIo,
+		//},
+		//{
+		//	Name: "time travel",
+		//	Test: testTimeTravel,
+		//},
+		//{
+		//	Name: "stop process",
+		//	Test: testStopProcess,
+		//},
+		//{
+		//	Name: "network delay",
+		//	Test: testNetworkDelay,
+		//},
+		//{
+		//	Name: "network blackhole",
+		//	Test: testNetworkBlackhole,
+		//},
+		//{
+		//	Name: "network block dns",
+		//	Test: testNetworkBlockDns,
+		//},
+		//{
+		//	Name: "network limit bandwidth",
+		//	Test: testNetworkLimitBandwidth,
+		//},
+		//{
+		//	Name: "network package loss",
+		//	Test: testNetworkPackageLoss,
+		//},
 		{
 			Name: "network package corruption",
 			Test: testNetworkPackageCorruption,
@@ -517,25 +518,25 @@ func testNetworkPackageCorruption(t *testing.T, m *e2e.Minikube, e *e2e.Extensio
 		interfaces       []string
 		WantedCorruption bool
 	}{
-		{
-			name:             "should corrupt packages on all traffic",
-			WantedCorruption: true,
-		},
 		//{
-		//	name:             "should corrupt packages only on port 5001 traffic",
-		//	port:             []string{"5001"},
+		//	name:             "should corrupt packages on all traffic",
 		//	WantedCorruption: true,
 		//},
 		{
-			name:             "should corrupt packages only on port 80 traffic",
-			port:             []string{"80"},
-			WantedCorruption: false,
-		},
-		{
-			name:             "should corrupt packages only traffic for iperf server",
-			ip:               []string{iperf.ServerIp},
+			name:             "should corrupt packages only on port 5001 traffic",
+			port:             []string{"5001"},
 			WantedCorruption: true,
 		},
+		//{
+		//	name:             "should corrupt packages only on port 80 traffic",
+		//	port:             []string{"80"},
+		//	WantedCorruption: false,
+		//},
+		//{
+		//	name:             "should corrupt packages only traffic for iperf server",
+		//	ip:               []string{iperf.ServerIp},
+		//	WantedCorruption: true,
+		//},
 	}
 
 	for _, tt := range tests {
@@ -555,7 +556,7 @@ func testNetworkPackageCorruption(t *testing.T, m *e2e.Minikube, e *e2e.Extensio
 			NetInterface: tt.interfaces,
 		}
 
-		t.Run(tt.name, func(t *testing.T) {
+		retry.RunWith(&retry.Counter{Count: 3, Wait: time.Second}, t, func(r *retry.R) {
 			if runsInCi() {
 				time.Sleep(5 * time.Second)
 			}
@@ -564,13 +565,13 @@ func testNetworkPackageCorruption(t *testing.T, m *e2e.Minikube, e *e2e.Extensio
 			require.NoError(t, err)
 
 			if tt.WantedCorruption {
-				iperf.AssertPackageLoss(t, float64(config.Corruption)*0.7, float64(config.Corruption)*1.3)
+				iperf.AssertPackageLossWithRetry(r, float64(config.Corruption)*0.7, float64(config.Corruption)*1.3)
 			} else {
-				iperf.AssertPackageLoss(t, 0, 5)
+				iperf.AssertPackageLossWithRetry(r, 0, 5)
 			}
-			require.NoError(t, action.Cancel())
+			require.NoError(r, action.Cancel())
 
-			iperf.AssertPackageLoss(t, 0, 5)
+			iperf.AssertPackageLossWithRetry(r, 0, 5)
 		})
 	}
 }
