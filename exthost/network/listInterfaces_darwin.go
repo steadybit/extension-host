@@ -4,17 +4,20 @@
 package network
 
 import (
+	"context"
 	"fmt"
 	"github.com/rs/zerolog/log"
 	"net"
 )
 
-func ListInterfaces(interfaces []Interface) ([]Interface, error) {
+func ListInterfaces(_ context.Context) ([]Interface, error) {
 	ifaces, err := net.Interfaces()
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to get interfaces")
 		return nil, fmt.Errorf("could not list interfaces: %w", err)
 	}
+
+	var interfaces []Interface
 	for _, iface := range ifaces {
 		var flags []string
 		if iface.Flags&net.FlagUp != 0 {
