@@ -5,17 +5,18 @@
 package main
 
 import (
+	"github.com/rs/zerolog"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
 	"github.com/steadybit/action-kit/go/action_kit_sdk"
 	"github.com/steadybit/discovery-kit/go/discovery_kit_api"
 	"github.com/steadybit/extension-host/config"
 	"github.com/steadybit/extension-host/exthost"
-	"github.com/steadybit/extension-host/exthost/common"
 	"github.com/steadybit/extension-host/exthost/resources"
 	"github.com/steadybit/extension-kit/extbuild"
 	"github.com/steadybit/extension-kit/exthealth"
 	"github.com/steadybit/extension-kit/exthttp"
 	"github.com/steadybit/extension-kit/extlogging"
+	"github.com/steadybit/extension-kit/extruntime"
 )
 
 func main() {
@@ -33,6 +34,7 @@ func main() {
 	// Build information is set at compile-time. This line writes the build information to the log.
 	// The information is mostly handy for debugging purposes.
 	extbuild.PrintBuildInformation()
+	extruntime.LogRuntimeInformation(zerolog.InfoLevel)
 
 	//This will start /health/liveness and /health/readiness endpoints on port 8081 for use with kubernetes
 	//The port can be configured using the STEADYBIT_EXTENSION_HEALTH_PORT environment variable
@@ -72,8 +74,6 @@ func main() {
 
 	//This will switch the readiness state of the application to true.
 	exthealth.SetReady(true)
-
-	common.PrintCaps()
 
 	exthttp.Listen(exthttp.ListenOpts{
 		// This is the default port under which your extension is accessible.
