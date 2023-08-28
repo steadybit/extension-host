@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	github.com/elastic/go-sysinfo v1.11.1
-	github.com/google/uuid v1.3.0
+	github.com/google/uuid v1.3.1
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/mitchellh/go-ps v1.0.0
 	github.com/rs/zerolog v1.30.0
