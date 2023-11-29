@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/elastic/go-sysinfo"
+	"github.com/rs/zerolog/log"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
 	"github.com/steadybit/action-kit/go/action_kit_sdk"
 	"github.com/steadybit/extension-host/exthost/resources"
@@ -16,6 +17,7 @@ import (
 	"github.com/steadybit/extension-kit/extutil"
 	"math"
 	"strconv"
+	"time"
 )
 
 type stressMemoryAction struct{}
@@ -30,12 +32,12 @@ func NewStressMemoryAction() action_kit_sdk.Action[resources.StressActionState] 
 	return &stressMemoryAction{}
 }
 
-func (l *stressMemoryAction) NewEmptyState() resources.StressActionState {
+func (a *stressMemoryAction) NewEmptyState() resources.StressActionState {
 	return resources.StressActionState{}
 }
 
 // Describe returns the action description for the platform with all required information.
-func (l *stressMemoryAction) Describe() action_kit_api.ActionDescription {
+func (a *stressMemoryAction) Describe() action_kit_api.ActionDescription {
 	return action_kit_api.ActionDescription{
 		Id:          fmt.Sprintf("%s.stress-mem", BaseActionID),
 		Label:       "Stress Memory",
@@ -75,7 +77,7 @@ func (l *stressMemoryAction) Describe() action_kit_api.ActionDescription {
 				DefaultValue: extutil.Ptr("100"),
 				Required:     extutil.Ptr(true),
 				Order:        extutil.Ptr(1),
-				MinValue:     extutil.Ptr(0),
+				MinValue:     extutil.Ptr(1),
 				MaxValue:     extutil.Ptr(100),
 			},
 			{
@@ -97,35 +99,15 @@ func (l *stressMemoryAction) Describe() action_kit_api.ActionDescription {
 // It must not cause any harmful effects.
 // The passed in state is included in the subsequent calls to start/status/stop.
 // So the state should contain all information needed to execute the action and even more important: to be able to stop it.
-func (l *stressMemoryAction) Prepare(_ context.Context, state *resources.StressActionState, request action_kit_api.PrepareActionRequestBody) (*action_kit_api.PrepareResult, error) {
+func (a *stressMemoryAction) Prepare(_ context.Context, state *resources.StressActionState, request action_kit_api.PrepareActionRequestBody) (*action_kit_api.PrepareResult, error) {
 	_, err := CheckTargetHostname(request.Target.Attributes)
 	if err != nil {
 		return nil, err
 	}
-	durationConfig := extutil.ToUInt64(request.Config["duration"])
-	if durationConfig < 1000 {
-		return &action_kit_api.PrepareResult{
-			Error: extutil.Ptr(action_kit_api.ActionKitError{
-				Title:  "Duration must be greater / equal than 1s",
-				Status: extutil.Ptr(action_kit_api.Errored),
-			}),
-		}, nil
-	}
-	duration := durationConfig / 1000
-	percentage := extutil.ToUInt(request.Config["percentage"])
 
-	if percentage == 0 {
-		return nil, errors.New("percentage must be greater than 0")
-	}
-	memory, err := getMemory(percentage)
+	state.StressNGArgs, err = a.toArgs(request.Config)
 	if err != nil {
 		return nil, err
-	}
-	state.StressNGArgs = []string{
-		"--vm", "1",
-		"--vm-hang", "0", //will allocate the memory and wait until termination (wastes less cpu than --vm-keep)
-		"--timeout", strconv.Itoa(int(duration)),
-		"--vm-bytes", memory,
 	}
 
 	if !resources.IsStressNgInstalled() {
@@ -138,6 +120,33 @@ func (l *stressMemoryAction) Prepare(_ context.Context, state *resources.StressA
 	}
 
 	return nil, nil
+}
+
+func (a *stressMemoryAction) toArgs(config map[string]interface{}) ([]string, error) {
+	timeout := time.Duration(extutil.ToInt64(config["duration"])) * time.Millisecond
+	if timeout < 1*time.Second {
+		return nil, errors.New("Duration must be greater / equal than 1s")
+	}
+
+	percentage := extutil.ToUInt(config["percentage"])
+
+	memory, err := getMemory(percentage)
+	if err != nil {
+		return nil, err
+	}
+
+	args := []string{
+		"--vm", "1",
+		"--vm-hang", "0", //will allocate the memory and wait until termination (wastes less cpu than --vm-keep)
+		"--timeout", strconv.Itoa(int(timeout.Seconds())),
+		"--vm-bytes", memory,
+	}
+
+	if log.Trace().Enabled() {
+		args = append(args, "-v")
+	}
+
+	return args, nil
 }
 
 func getMemory(percentage uint) (string, error) {
@@ -156,7 +165,7 @@ func getMemory(percentage uint) (string, error) {
 // Start is called to start the action
 // You can mutate the state here.
 // You can use the result to return messages/errors/metrics or artifacts
-func (l *stressIOAction) Start(_ context.Context, state *resources.StressActionState) (*action_kit_api.StartResult, error) {
+func (a *stressIOAction) Start(_ context.Context, state *resources.StressActionState) (*action_kit_api.StartResult, error) {
 	return resources.Start(state)
 }
 
@@ -164,6 +173,6 @@ func (l *stressIOAction) Start(_ context.Context, state *resources.StressActionS
 // It will be called even if the start method did not complete successfully.
 // It should be implemented in a immutable way, as the agent might to retries if the stop method timeouts.
 // You can use the result to return messages/errors/metrics or artifacts
-func (l *stressIOAction) Stop(_ context.Context, state *resources.StressActionState) (*action_kit_api.StopResult, error) {
+func (a *stressIOAction) Stop(_ context.Context, state *resources.StressActionState) (*action_kit_api.StopResult, error) {
 	return resources.Stop(state)
 }

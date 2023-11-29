@@ -1,6 +1,13 @@
 # Changelog
 
+## next
 
+- add flush, read_write, read_write_and_flush mode to stress io
+
+## v1.1.12
+
+- Added `pprof` endpoints for debugging purposes
+- Update dependencies
 ## v1.1.12
 
 - Added `pprof` endpoints for debugging purposes

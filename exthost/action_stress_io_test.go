@@ -25,9 +25,11 @@ func TestActionIO_Prepare(t *testing.T) {
 			name: "Should return config",
 			requestBody: action_kit_api.PrepareActionRequestBody{
 				Config: map[string]interface{}{
-					"action":   "prepare",
-					"duration": "1000",
-					"workers":  "1",
+					"action":            "prepare",
+					"duration":          "1000",
+					"workers":           "1",
+					"path":              "/tmp",
+					"mbytes_per_worker": "768",
 				},
 				ExecutionId: uuid.New(),
 				Target: extutil.Ptr(action_kit_api.Target{
@@ -38,10 +40,58 @@ func TestActionIO_Prepare(t *testing.T) {
 			},
 
 			wantedState: &resources.StressActionState{
-				StressNGArgs: []string{"--io", "1", "--timeout", "1", "--aggressive"},
+				StressNGArgs: []string{"--timeout", "1", "--temp-path", "/tmp", "--hdd", "1", "--hdd-bytes", "768m", "--io", "1", "-v"},
 				Pid:          0,
 			},
-		}, {
+		},
+		{
+			name: "Should return config (flush only)",
+			requestBody: action_kit_api.PrepareActionRequestBody{
+				Config: map[string]interface{}{
+					"action":   "prepare",
+					"duration": "1000",
+					"workers":  "1",
+					"path":     "/tmp",
+					"mode":     "flush",
+				},
+				ExecutionId: uuid.New(),
+				Target: extutil.Ptr(action_kit_api.Target{
+					Attributes: map[string][]string{
+						"host.hostname": {"myhostname"},
+					},
+				}),
+			},
+
+			wantedState: &resources.StressActionState{
+				StressNGArgs: []string{"--timeout", "1", "--temp-path", "/tmp", "--io", "1", "-v"},
+				Pid:          0,
+			},
+		},
+		{
+			name: "Should return config (read_write only)",
+			requestBody: action_kit_api.PrepareActionRequestBody{
+				Config: map[string]interface{}{
+					"action":            "prepare",
+					"duration":          "1000",
+					"workers":           "1",
+					"path":              "/tmp",
+					"mode":              "read_write",
+					"mbytes_per_worker": "1024",
+				},
+				ExecutionId: uuid.New(),
+				Target: extutil.Ptr(action_kit_api.Target{
+					Attributes: map[string][]string{
+						"host.hostname": {"myhostname"},
+					},
+				}),
+			},
+
+			wantedState: &resources.StressActionState{
+				StressNGArgs: []string{"--timeout", "1", "--temp-path", "/tmp", "--hdd", "1", "--hdd-bytes", "1024m", "-v"},
+				Pid:          0,
+			},
+		},
+		{
 			name: "Should return error too low duration",
 			requestBody: action_kit_api.PrepareActionRequestBody{
 				Config: map[string]interface{}{

@@ -40,7 +40,7 @@ func TestActionCPU_Prepare(t *testing.T) {
 			},
 
 			wantedState: &resources.StressActionState{
-				StressNGArgs: []string{"--cpu", "1", "--cpu-load", "50", "--timeout", "1"},
+				StressNGArgs: []string{"--cpu", "1", "--cpu-load", "50", "--timeout", "1", "-v"},
 				Pid:          0,
 			},
 		}, {
