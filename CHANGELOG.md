@@ -8,10 +8,6 @@
 
 - Added `pprof` endpoints for debugging purposes
 - Update dependencies
-## v1.1.12
-
-- Added `pprof` endpoints for debugging purposes
-- Update dependencies
 
 ## v1.1.11
 
