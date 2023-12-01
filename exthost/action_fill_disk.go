@@ -227,7 +227,7 @@ func (a *fillDiskAction) Start(ctx context.Context, state *FillDiskActionState) 
 			Messages: extutil.Ptr([]action_kit_api.Message{
 				{
 					Level:   extutil.Ptr(action_kit_api.Warn),
-					Message: fmt.Sprintf("Nothing to do for host fill disk"),
+					Message: "Nothing to do for host fill disk",
 				},
 			}),
 		}, nil

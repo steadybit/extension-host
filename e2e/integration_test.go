@@ -134,6 +134,14 @@ func TestWithMinikube(t *testing.T) {
 			Name: "network package corruption",
 			Test: testNetworkPackageCorruption,
 		},
+		{
+			Name: "network package corruption",
+			Test: testNetworkPackageCorruption,
+		},
+		{
+			Name: "fill disk",
+			Test: testFillDisk,
+		},
 		// deactivated cause otherwise the shutdown will prevent the coverage collection from the tests above
 		//{
 		// must be the last test, because it will shutdown the minikube host (minikube cannot be restarted)
@@ -743,6 +751,121 @@ func testNetworkBlockDns(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			require.NoError(t, action.Cancel())
 			nginx.AssertIsReachable(t, true)
 			nginx.AssertCanReach(t, "https://steadybit.com", true)
+		})
+	}
+}
+
+func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
+
+	err := m.SshExec("sudo", "mkdir", "-p", "/host-tmp/filldisk").Run()
+	require.NoError(t, err)
+
+	type testCase struct {
+		name            string
+		mode            string
+		size            int
+		checkFileSize   int
+		atLeastFileSize bool
+		blockSize       int
+		method          string
+	}
+	testCases := []testCase{
+		{
+			name:            "fill disk with percentage (fallocate)",
+			mode:            "PERCENTAGE",
+			size:            50,
+			checkFileSize:   3 * 1024,
+			atLeastFileSize: true,
+			blockSize:       0,
+			method:          "AT_ONCE",
+		},
+		{
+			name:            "fill disk with megabytes to fill (fallocate)",
+			mode:            "MB_TO_FILL",
+			size:            4 * 1024, // 4GB
+			checkFileSize:   4 * 1024,
+			atLeastFileSize: false,
+			blockSize:       0,
+			method:          "AT_ONCE",
+		},
+		{
+			name:            "fill disk with megabytes left (fallocate)",
+			mode:            "MB_LEFT",
+			size:            4 * 1024, // 4GB
+			checkFileSize:   3 * 1024,
+			atLeastFileSize: true,
+			blockSize:       0,
+			method:          "AT_ONCE",
+		},
+		{
+			name:            "fill disk with percentage (dd)",
+			mode:            "PERCENTAGE",
+			size:            50,
+			checkFileSize:   3 * 1024,
+			atLeastFileSize: true,
+			blockSize:       1024,
+			method:          "OVER_TIME",
+		},
+		{
+			name:            "fill disk with megabytes to fill (dd)",
+			mode:            "MB_TO_FILL",
+			size:            4 * 1024, // 4GB
+			checkFileSize:   4 * 1024,
+			atLeastFileSize: false,
+			blockSize:       1024,
+			method:          "OVER_TIME",
+		},
+		{
+			name:            "fill disk with megabytes left (dd)",
+			mode:            "MB_LEFT",
+			size:            4 * 1024, // 4GB
+			checkFileSize:   3 * 1024,
+			atLeastFileSize: true,
+			blockSize:       1024,
+			method:          "OVER_TIME",
+		},
+		{
+			name:            "fill disk with bigger blocksize (dd)",
+			mode:            "MB_TO_FILL",
+			size:            4 * 1024, // 4GB
+			checkFileSize:   4 * 1024, // 4GB
+			atLeastFileSize: false,
+			blockSize:       6 * 1024, // 2GB
+			method:          "OVER_TIME",
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			config := struct {
+				Duration  int    `json:"duration"`
+				Path      string `json:"path"`
+				Size      int    `json:"size"`
+				Mode      string `json:"mode"`
+				BlockSize int    `json:"blocksize"`
+				Method    string `json:"method"`
+			}{Duration: 60000, Size: testCase.size, Mode: testCase.mode, Method: testCase.method, BlockSize: testCase.blockSize, Path: "/host-tmp/filldiskng"}
+
+			action, err := e.RunAction(fmt.Sprintf("%s.fill_disk", exthost.BaseActionID), getTarget(m), config, executionContext)
+			defer func() { _ = action.Cancel() }()
+			require.NoError(t, err)
+
+			if testCase.method == "OVER_TIME" {
+				e2e.AssertProcessRunningInContainer(t, m, e.Pod, "steadybit-extension-host", "dd", false)
+			}
+			e2e.AssertFileHasSize(t, m, e.Pod, "steadybit-extension-host", "/host-tmp/filldiskng/disk-fill", testCase.checkFileSize, testCase.atLeastFileSize)
+			require.NoError(t, action.Cancel())
+
+			if testCase.method == "OVER_TIME" {
+				e2e.AssertProcessNOTRunningInContainer(t, m, e.Pod, "nginx", "dd")
+			} else {
+				e2e.AssertProcessNOTRunningInContainer(t, m, e.Pod, "nginx", "fallocate")
+			}
+
+			out, err := m.PodExec(e.Pod, "nginx", "ls", "/host-tmp/filldiskng")
+			require.NoError(t, err)
+			space := strings.TrimSpace(out)
+			require.Empty(t, space, "no fill disk directories must be present")
 		})
 	}
 }
