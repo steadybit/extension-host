@@ -182,13 +182,11 @@ func testStressIo(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 				MbytesPerWorker int    `json:"mbytes_per_worker"`
 				Workers         int    `json:"workers"`
 				Mode            string `json:"mode"`
-			}{Duration: 2000000, Workers: 1, MbytesPerWorker: 50, Path: "/stressng", Mode: mode}
+			}{Duration: 20000, Workers: 1, MbytesPerWorker: 50, Path: "/stressng", Mode: mode}
 
 			action, err := e.RunAction("com.steadybit.extension_host.stress-io", getTarget(m), config, executionContext)
 			defer func() { _ = action.Cancel() }()
 			require.NoError(t, err)
-
-			time.Sleep(2000 * time.Second)
 
 			e2e.AssertProcessRunningInContainer(t, m, e.Pod, "steadybit-extension-host", "stress-ng", true)
 			require.NoError(t, action.Cancel())
@@ -212,29 +210,17 @@ func testTimeTravel(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 		DisableNtp bool `json:"disableNtp"`
 	}{Duration: 30000, Offset: int((360 * time.Second).Milliseconds()), DisableNtp: true}
 
-	duration := float64(time.Duration(config.Offset) * time.Millisecond)
-	min := float64(duration) * 0.8
-	max := float64(duration) * 1.2
-
-	now := time.Now()
 	action, err := e.RunAction("com.steadybit.extension_host.timetravel", getTarget(m), config, nil)
-
-	require.NoError(t, err)
 	defer func() { _ = action.Cancel() }()
 	require.NoError(t, err)
-	diff := getTimeDiffBetweenNowAndContainerTime(t, m, e, now)
-	log.Debug().Msgf("diff: %f", diff.Seconds())
+	diff := getTimeDiffBetweenNowAndContainerTime(t, m, e, time.Now())
 	// check if is in tolerance
-	assert.True(t, min <= float64(diff) && float64(diff) <= max, "time travel failed")
+	assert.Truef(t, 355*time.Second <= diff && diff <= 365*time.Second, "time travel failed. time diff is %f", diff.Seconds())
 
 	// rollback
 	require.NoError(t, action.Cancel())
-
-	now = time.Now()
-	diff = getTimeDiffBetweenNowAndContainerTime(t, m, e, now)
-	log.Debug().Msgf("diff: %f", diff.Seconds())
-	assert.True(t, min <= float64(diff) && float64(diff) <= max, "time travel failed to rollback properly")
-
+	diff = getTimeDiffBetweenNowAndContainerTime(t, m, e, time.Now())
+	assert.Truef(t, -5*time.Second <= diff && diff <= 5*time.Second, "time travel failed to rollback properly. time diff is %f", diff.Seconds())
 }
 
 func getTimeDiffBetweenNowAndContainerTime(t *testing.T, m *e2e.Minikube, e *e2e.Extension, now time.Time) time.Duration {
