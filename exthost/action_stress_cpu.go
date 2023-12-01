@@ -8,14 +8,16 @@ import (
 	"fmt"
 	"github.com/pkg/errors"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
+	"github.com/steadybit/action-kit/go/action_kit_commons/runc"
+	"github.com/steadybit/action-kit/go/action_kit_commons/stress"
 	"github.com/steadybit/action-kit/go/action_kit_sdk"
 	"github.com/steadybit/extension-kit/extbuild"
 	"github.com/steadybit/extension-kit/extutil"
 	"time"
 )
 
-func NewStressCPUAction() action_kit_sdk.Action[StressActionState] {
-	return &stressAction{description: getStressCpuDescription(), optsProvider: stressCpu}
+func NewStressCpuAction(r runc.Runc) action_kit_sdk.Action[StressActionState] {
+	return newStressAction(r, getStressCpuDescription, stressCpu)
 }
 
 func getStressCpuDescription() action_kit_api.ActionDescription {
@@ -84,14 +86,14 @@ func getStressCpuDescription() action_kit_api.ActionDescription {
 	}
 }
 
-func stressCpu(request action_kit_api.PrepareActionRequestBody) (Opts, error) {
+func stressCpu(request action_kit_api.PrepareActionRequestBody) (stress.Opts, error) {
 	duration := time.Duration(extutil.ToInt64(request.Config["duration"])) * time.Millisecond
 
 	if duration < 1*time.Second {
-		return Opts{}, errors.New("duration must be greater / equal than 1s")
+		return stress.Opts{}, errors.New("duration must be greater / equal than 1s")
 	}
 
-	return Opts{
+	return stress.Opts{
 		CpuWorkers: extutil.Ptr(extutil.ToInt(request.Config["workers"])),
 		CpuLoad:    extutil.ToInt(request.Config["cpuLoad"]),
 		Timeout:    duration,

@@ -18,7 +18,7 @@ RUN echo 'deb [trusted=yes] https://repo.goreleaser.com/apt/ /' > /etc/apt/sourc
 COPY . .
 
 RUN GOOS=$TARGETOS GOARCH=$TARGETARCH goreleaser build --snapshot="${BUILD_SNAPSHOT}" --single-target -o extension \
-    && setcap "cap_sys_boot,cap_sys_time,cap_setuid,cap_setgid,cap_net_raw,cap_net_admin,cap_sys_admin,cap_dac_override+eip" ./extension
+    && setcap "cap_sys_boot,cap_sys_time,cap_setuid,cap_sys_chroot,cap_setgid,cap_net_raw,cap_net_admin,cap_sys_admin,cap_dac_override+eip" ./extension
 
 
 ##
@@ -31,19 +31,25 @@ LABEL "steadybit.com.discovery-disabled"="true"
 ARG USERNAME=steadybit
 ARG USER_UID=10000
 ARG USER_GID=$USER_UID
+ARG TARGETARCH
+
+ENV STEADYBIT_EXTENSION_RUNC_ROOT="/run/steadybit/runc"
+ENV STEADYBIT_EXTENSION_RUNC_NSMOUNT_PATH="/nsmount"
 
 RUN groupadd --gid $USER_GID $USERNAME \
     && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME
 
 RUN apt-get -qq update \
-    && apt-get -qq install -y --no-install-recommends procps stress-ng iptables iproute2 dnsutils libcap2-bin \
+    && apt-get -qq install -y --no-install-recommends procps stress-ng iptables iproute2 dnsutils runc libcap2-bin \
     && apt-get -y autoremove \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && mkdir -p /run/systemd/system /sidecar
 
 USER $USERNAME
 
 WORKDIR /
 
+COPY ./nsmount/target/${TARGETARCH}-unknown-linux-gnu/release/nsmount /nsmount
 COPY --from=build /app/extension /extension
 COPY --from=build /app/licenses /licenses
 

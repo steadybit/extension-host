@@ -4,10 +4,10 @@ metadata:
   name: {{ include "extensionlib.names.fullname" . }}
   namespace: {{ .Release.Namespace }}
   labels:
+  {{- include "extensionlib.labels" (list .) | nindent 4 }}
   {{- range $key, $value := .Values.extraLabels }}
     {{ $key }}: {{ $value }}
   {{- end }}
-  {{- include "extensionlib.labels" (list .) | nindent 4 }}
 spec:
   selector:
     matchLabels:
@@ -85,6 +85,10 @@ spec:
           volumeMounts:
             - name: tmp-dir
               mountPath: /tmp
+            - name: cgroup-root
+              mountPath: /sys/fs/cgroup
+            - name: runc-root
+              mountPath: /run/steadybit/runc
             {{- include "extensionlib.deployment.volumeMounts" (list .) | nindent 12 }}
           livenessProbe:
             initialDelaySeconds: {{ .Values.probes.liveness.initialDelaySeconds }}
@@ -108,17 +112,20 @@ spec:
             seccompProfile:
               type: Unconfined
             capabilities:
-              drop:
-                - ALL
               add: {{ toJson .Values.securityContext.capabilities.add }}
             readOnlyRootFilesystem: true
             runAsNonRoot: true
             runAsUser: 10000
             runAsGroup: 10000
-            allowPrivilegeEscalation: false
       volumes:
         - name: tmp-dir
-          emptyDir: { }
+          emptyDir: {}
+        - name: cgroup-root
+          hostPath:
+            path: /sys/fs/cgroup
+            type: Directory
+        - name: runc-root
+          emptyDir: {}
           {{- include "extensionlib.deployment.volumes" (list .) | nindent 8 }}
       serviceAccountName: {{ .Values.serviceAccount.name }}
           {{- with .Values.nodeSelector }}

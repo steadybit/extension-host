@@ -8,6 +8,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
+	"github.com/steadybit/action-kit/go/action_kit_commons/runc"
+	"github.com/steadybit/action-kit/go/action_kit_commons/stress"
 	"github.com/steadybit/action-kit/go/action_kit_sdk"
 	"github.com/steadybit/extension-kit/extbuild"
 	"github.com/steadybit/extension-kit/extutil"
@@ -22,8 +24,8 @@ const (
 	ModeFlush             Mode = "flush"
 )
 
-func NewStressIOAction() action_kit_sdk.Action[StressActionState] {
-	return &stressAction{description: getStressIoDescription(), optsProvider: stressIo}
+func NewStressIoAction(r runc.Runc) action_kit_sdk.Action[StressActionState] {
+	return newStressAction(r, getStressIoDescription, stressIo)
 }
 
 // Describe returns the action description for the platform with all required information.
@@ -126,7 +128,7 @@ func getStressIoDescription() action_kit_api.ActionDescription {
 	}
 }
 
-func stressIo(request action_kit_api.PrepareActionRequestBody) (Opts, error) {
+func stressIo(request action_kit_api.PrepareActionRequestBody) (stress.Opts, error) {
 	workers := extutil.ToInt(request.Config["workers"])
 	mode := extutil.ToString(request.Config["mode"])
 	if mode == "" {
@@ -135,10 +137,10 @@ func stressIo(request action_kit_api.PrepareActionRequestBody) (Opts, error) {
 
 	duration := time.Duration(extutil.ToInt64(request.Config["duration"])) * time.Millisecond
 	if duration < 1*time.Second {
-		return Opts{}, errors.New("duration must be greater / equal than 1s")
+		return stress.Opts{}, errors.New("duration must be greater / equal than 1s")
 	}
 
-	opts := Opts{
+	opts := stress.Opts{
 		TempPath: extutil.ToString(request.Config["path"]),
 		Timeout:  duration,
 	}

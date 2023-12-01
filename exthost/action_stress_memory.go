@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"github.com/elastic/go-sysinfo"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
+	"github.com/steadybit/action-kit/go/action_kit_commons/runc"
+	"github.com/steadybit/action-kit/go/action_kit_commons/stress"
 	"github.com/steadybit/action-kit/go/action_kit_sdk"
 	"github.com/steadybit/extension-kit/extbuild"
 	"github.com/steadybit/extension-kit/extutil"
@@ -16,8 +18,8 @@ import (
 	"time"
 )
 
-func NewStressMemoryAction() action_kit_sdk.Action[StressActionState] {
-	return &stressAction{description: getStressMemoryDescription(), optsProvider: stressMemory}
+func NewStressMemoryAction(r runc.Runc) action_kit_sdk.Action[StressActionState] {
+	return newStressAction(r, getStressMemoryDescription, stressMemory)
 }
 
 func getStressMemoryDescription() action_kit_api.ActionDescription {
@@ -72,23 +74,32 @@ func getStressMemoryDescription() action_kit_api.ActionDescription {
 				Required:     extutil.Ptr(true),
 				Order:        extutil.Ptr(2),
 			},
+			{
+				Name:         "failOnOomKill",
+				Label:        "Fail on OOM Kill",
+				Description:  extutil.Ptr("Should an OOM kill be considered a failure?"),
+				Type:         action_kit_api.Boolean,
+				DefaultValue: extutil.Ptr("false"),
+				Required:     extutil.Ptr(true),
+				Order:        extutil.Ptr(3),
+			},
 		},
 		Stop: extutil.Ptr(action_kit_api.MutatingEndpointReference{}),
 	}
 }
 
-func stressMemory(request action_kit_api.PrepareActionRequestBody) (Opts, error) {
+func stressMemory(request action_kit_api.PrepareActionRequestBody) (stress.Opts, error) {
 	duration := time.Duration(extutil.ToInt64(request.Config["duration"])) * time.Millisecond
 	if duration < 1*time.Second {
-		return Opts{}, errors.New("duration must be greater / equal than 1s")
+		return stress.Opts{}, errors.New("duration must be greater / equal than 1s")
 	}
 
 	memory, err := getMemory(extutil.ToUInt(request.Config["percentage"]))
 	if err != nil {
-		return Opts{}, err
+		return stress.Opts{}, err
 	}
 
-	return Opts{
+	return stress.Opts{
 		VmWorkers: extutil.Ptr(1),
 		VmBytes:   memory,
 		VmHang:    0,

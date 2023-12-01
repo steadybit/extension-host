@@ -6,7 +6,9 @@ package main
 
 import (
 	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
+	"github.com/steadybit/action-kit/go/action_kit_commons/runc"
 	"github.com/steadybit/action-kit/go/action_kit_sdk"
 	"github.com/steadybit/discovery-kit/go/discovery_kit_api"
 	"github.com/steadybit/discovery-kit/go/discovery_kit_sdk"
@@ -52,13 +54,16 @@ func main() {
 	// by the Steadybit agent to obtain the extension's capabilities.
 	exthttp.RegisterHttpHandler("/", exthttp.GetterAsHandler(getExtensionList))
 
+	r := runc.NewRunc(runc.ConfigFromEnvironment())
+	log.Info().Interface("cfg", runc.ConfigFromEnvironment())
+
 	// This is a section you will most likely want to change: The registration of HTTP handlers
 	// for your extension. You might want to change these because the names do not fit, or because
 	// you do not have a need for all of them.
 	discovery_kit_sdk.Register(exthost.NewHostDiscovery())
-	action_kit_sdk.RegisterAction(exthost.NewStressCPUAction())
-	action_kit_sdk.RegisterAction(exthost.NewStressMemoryAction())
-	action_kit_sdk.RegisterAction(exthost.NewStressIOAction())
+	action_kit_sdk.RegisterAction(exthost.NewStressCpuAction(r))
+	action_kit_sdk.RegisterAction(exthost.NewStressMemoryAction(r))
+	action_kit_sdk.RegisterAction(exthost.NewStressIoAction(r))
 	action_kit_sdk.RegisterAction(exthost.NewTimetravelAction())
 	action_kit_sdk.RegisterAction(exthost.NewStopProcessAction())
 	action_kit_sdk.RegisterAction(exthost.NewShutdownAction())

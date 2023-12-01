@@ -8,7 +8,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/rs/zerolog/log"
-	"github.com/steadybit/action-kit/go/action_kit_commons/networkutils"
+	networkutils "github.com/steadybit/action-kit/go/action_kit_commons/network"
 	"os"
 	"os/exec"
 	"syscall"

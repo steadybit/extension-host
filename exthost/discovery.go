@@ -8,7 +8,7 @@ import (
 	"context"
 	"github.com/elastic/go-sysinfo"
 	"github.com/rs/zerolog/log"
-	"github.com/steadybit/action-kit/go/action_kit_commons/networkutils"
+	networkutils "github.com/steadybit/action-kit/go/action_kit_commons/network"
 	"github.com/steadybit/discovery-kit/go/discovery_kit_api"
 	"github.com/steadybit/discovery-kit/go/discovery_kit_commons"
 	"github.com/steadybit/discovery-kit/go/discovery_kit_sdk"

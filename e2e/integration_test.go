@@ -77,7 +77,7 @@ func TestWithMinikube(t *testing.T) {
 			return []string{
 				"--set", fmt.Sprintf("container.runtime=%s", m.Runtime),
 				"--set", "discovery.attributes.excludes.host={host.nic}",
-				//"--set", "logging.level=debug",
+				"--set", "logging.level=debug",
 			}
 		},
 	}
@@ -171,16 +171,37 @@ func testStressMemory(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 }
 
 func testStressIo(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
-	log.Info().Msg("Starting testStressIo")
-	config := struct {
-		Duration   int `json:"duration"`
-		Percentage int `json:"percentage"`
-		Workers    int `json:"workers"`
-	}{Duration: 50000, Workers: 1, Percentage: 50}
-	exec, err := e.RunAction("com.steadybit.extension_host.stress-io", getTarget(m), config, nil)
+	err := m.SshExec("sudo", "mkdir", "-p", "/stressng").Run()
 	require.NoError(t, err)
-	e2e.AssertProcessRunningInContainer(t, m, e.Pod, "steadybit-extension-host", "stress-ng", true)
-	require.NoError(t, exec.Cancel())
+
+	for _, mode := range []string{"read_write_and_flush", "read_write", "flush"} {
+		t.Run(mode, func(t *testing.T) {
+			config := struct {
+				Duration        int    `json:"duration"`
+				Path            string `json:"path"`
+				MbytesPerWorker int    `json:"mbytes_per_worker"`
+				Workers         int    `json:"workers"`
+				Mode            string `json:"mode"`
+			}{Duration: 2000000, Workers: 1, MbytesPerWorker: 50, Path: "/stressng", Mode: mode}
+
+			action, err := e.RunAction("com.steadybit.extension_host.stress-io", getTarget(m), config, executionContext)
+			defer func() { _ = action.Cancel() }()
+			require.NoError(t, err)
+
+			time.Sleep(2000 * time.Second)
+
+			e2e.AssertProcessRunningInContainer(t, m, e.Pod, "steadybit-extension-host", "stress-ng", true)
+			require.NoError(t, action.Cancel())
+			e2e.AssertProcessNOTRunningInContainer(t, m, e.Pod, "steadybit-extension-host", "stress-ng")
+
+			cmd := m.SshExec("ls", "/stressng")
+			cmd.Stdout = nil
+			cmd.Stderr = nil
+			out, err := cmd.CombinedOutput()
+			require.NoError(t, err)
+			require.Empty(t, strings.TrimSpace(string(out)), "no stress-ng directories must be present")
+		})
+	}
 }
 
 func testTimeTravel(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
