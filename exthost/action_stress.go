@@ -124,7 +124,7 @@ func (a *stressAction) Start(ctx context.Context, state *StressActionState) (*ac
 		Messages: extutil.Ptr([]action_kit_api.Message{
 			{
 				Level:   extutil.Ptr(action_kit_api.Info),
-				Message: fmt.Sprintf("Starting stress hist with args %s", strings.Join(state.StressOpts.Args(), " ")),
+				Message: fmt.Sprintf("Starting stress host with args %s", strings.Join(state.StressOpts.Args(), " ")),
 			},
 		}),
 	}, nil

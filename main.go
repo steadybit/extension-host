@@ -73,8 +73,9 @@ func main() {
 	action_kit_sdk.RegisterAction(exthost.NewNetworkDelayContainerAction())
 	action_kit_sdk.RegisterAction(exthost.NewNetworkBlockDnsContainerAction())
 	action_kit_sdk.RegisterAction(exthost.NewNetworkPackageLossContainerAction())
+	action_kit_sdk.RegisterAction(exthost.NewFillDiskContainerAction(r))
 
-	//This will install a signal handlder, that will stop active actions when receiving a SIGURS1, SIGTERM or SIGINT
+	//This will install a signal handler, that will stop active actions when receiving a SIGURS1, SIGTERM or SIGINT
 	action_kit_sdk.InstallSignalHandler()
 
 	action_kit_sdk.RegisterCoverageEndpoints()
