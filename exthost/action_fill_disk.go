@@ -260,7 +260,7 @@ func (a *fillDiskAction) Stop(ctx context.Context, state *FillDiskActionState) (
 	if stopped {
 		messages = append(messages, action_kit_api.Message{
 			Level:   extutil.Ptr(action_kit_api.Info),
-			Message: fmt.Sprintf("Canceled fill disk on host"),
+			Message: "Canceled fill disk on host",
 		})
 	}
 
