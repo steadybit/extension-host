@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"os"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -77,7 +78,7 @@ func TestWithMinikube(t *testing.T) {
 			return []string{
 				"--set", fmt.Sprintf("container.runtime=%s", m.Runtime),
 				"--set", "discovery.attributes.excludes.host={host.nic}",
-				"--set", "logging.level=debug",
+				"--set", "logging.level=trace",
 			}
 		},
 	}
@@ -142,12 +143,10 @@ func TestWithMinikube(t *testing.T) {
 			Name: "fill disk",
 			Test: testFillDisk,
 		},
-		// deactivated cause otherwise the shutdown will prevent the coverage collection from the tests above
-		//{
-		// must be the last test, because it will shutdown the minikube host (minikube cannot be restarted)
-		//Name: "shutdown host",
-		//Test: testShutdownHost, // if you run this test locally, you will need to restart your docker machine
-		//},
+		{
+			Name: "shutdown host",
+			Test: testShutdownHost, // if you run this test locally, you will need to restart your docker machine
+		},
 	})
 }
 
@@ -200,10 +199,7 @@ func testStressIo(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			require.NoError(t, action.Cancel())
 			e2e.AssertProcessNOTRunningInContainer(t, m, e.Pod, "steadybit-extension-host", "stress-ng")
 
-			cmd := m.SshExec("ls", "/stressng")
-			cmd.Stdout = nil
-			cmd.Stderr = nil
-			out, err := cmd.CombinedOutput()
+			out, err := runInMinikube(m, "ls", "/stressng")
 			require.NoError(t, err)
 			require.Empty(t, strings.TrimSpace(string(out)), "no stress-ng directories must be present")
 		})
@@ -216,22 +212,30 @@ func testTimeTravel(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 		Duration   int  `json:"duration"`
 		Offset     int  `json:"offset"`
 		DisableNtp bool `json:"disableNtp"`
-	}{Duration: 30000, Offset: int((360 * time.Second).Milliseconds()), DisableNtp: true}
+	}{
+		Duration:   30000,
+		Offset:     int((360 * time.Second).Milliseconds()),
+		DisableNtp: true,
+	}
 
 	action, err := e.RunAction("com.steadybit.extension_host.timetravel", getTarget(m), config, nil)
 	defer func() { _ = action.Cancel() }()
 	require.NoError(t, err)
-	diff := getTimeDiffBetweenNowAndContainerTime(t, m, e, time.Now())
-	// check if is in tolerance
-	assert.Truef(t, 355*time.Second <= diff && diff <= 365*time.Second, "time travel failed. time diff is %f", diff.Seconds())
+
+	assert.EventuallyWithT(t, func(c *assert.CollectT) {
+		diff := getTimeDiffBetweenNowAndContainerTime(t, m, e)
+		assert.InDelta(t, config.Offset, diff.Milliseconds(), 2000)
+	}, 10*time.Second, 1*time.Second, "time travel failed to apply offset")
 
 	// rollback
 	require.NoError(t, action.Cancel())
-	diff = getTimeDiffBetweenNowAndContainerTime(t, m, e, time.Now())
-	assert.Truef(t, -5*time.Second <= diff && diff <= 5*time.Second, "time travel failed to rollback properly. time diff is %f", diff.Seconds())
+	assert.EventuallyWithT(t, func(c *assert.CollectT) {
+		diff := getTimeDiffBetweenNowAndContainerTime(t, m, e)
+		assert.InDelta(t, 0, diff.Milliseconds(), 2000)
+	}, 10*time.Second, 1*time.Second, "time travel failed to rollback offset")
 }
 
-func getTimeDiffBetweenNowAndContainerTime(t *testing.T, m *e2e.Minikube, e *e2e.Extension, now time.Time) time.Duration {
+func getTimeDiffBetweenNowAndContainerTime(t *testing.T, m *e2e.Minikube, e *e2e.Extension) time.Duration {
 	out, err := m.PodExec(e.Pod, "steadybit-extension-host", "date", "+%s")
 	if err != nil {
 		t.Fatal(err)
@@ -243,11 +247,7 @@ func getTimeDiffBetweenNowAndContainerTime(t *testing.T, m *e2e.Minikube, e *e2e
 		return 0
 	}
 	containerTime := time.Unix(containerSecondsSinceEpoch, 0)
-	diff := containerTime.Sub(now)
-	if diff < 0 {
-		diff = diff * -1
-	}
-	return diff
+	return time.Until(containerTime)
 }
 
 func validateDiscovery(t *testing.T, _ *e2e.Minikube, e *e2e.Extension) {
@@ -291,6 +291,8 @@ func testStopProcess(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	require.NoError(t, exec.Cancel())
 }
 func testShutdownHost(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
+	t.Skip("Deactivated cause otherwise the shutdown will prevent the coverage collection from the tests above must be the last test, because it will shutdown the minikube host (minikube cannot be restarted")
+
 	log.Info().Msg("Starting testShutdownHost")
 	config := struct {
 		Reboot bool `json:"reboot"`
@@ -509,9 +511,6 @@ func testNetworkPackageLoss(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 		}
 
 		t.Run(tt.name, func(t *testing.T) {
-			if runsInCi() {
-				time.Sleep(5 * time.Second)
-			}
 			action, err := e.RunAction(exthost.BaseActionID+".network_package_loss", getTarget(m), config, executionContext)
 			defer func() { _ = action.Cancel() }()
 			require.NoError(t, err)
@@ -583,9 +582,6 @@ func testNetworkPackageCorruption(t *testing.T, m *e2e.Minikube, e *e2e.Extensio
 
 		t.Run(tt.name, func(t *testing.T) {
 			e2e.Retry(t, 3, 1*time.Second, func(r *e2e.R) {
-				if runsInCi() {
-					time.Sleep(5 * time.Second)
-				}
 				action, err := e.RunAction(exthost.BaseActionID+".network_package_corruption", getTarget(m), config, executionContext)
 				defer func() { _ = action.Cancel() }()
 				if err != nil {
@@ -756,8 +752,7 @@ func testNetworkBlockDns(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 }
 
 func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
-
-	err := m.SshExec("sudo", "mkdir", "-p", "/host-tmp/filldisk").Run()
+	err := m.SshExec("sudo", "mkdir", "-p", "/filldisk").Run()
 	require.NoError(t, err)
 
 	type testCase struct {
@@ -844,7 +839,7 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 				Mode      string `json:"mode"`
 				BlockSize int    `json:"blocksize"`
 				Method    string `json:"method"`
-			}{Duration: 60000, Size: testCase.size, Mode: testCase.mode, Method: testCase.method, BlockSize: testCase.blockSize, Path: "/host-tmp/filldiskng"}
+			}{Duration: 60_000, Size: testCase.size, Mode: testCase.mode, Method: testCase.method, BlockSize: testCase.blockSize, Path: "/filldisk"}
 
 			action, err := e.RunAction(fmt.Sprintf("%s.fill_disk", exthost.BaseActionID), getTarget(m), config, executionContext)
 			defer func() { _ = action.Cancel() }()
@@ -853,19 +848,56 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			if testCase.method == "OVER_TIME" {
 				e2e.AssertProcessRunningInContainer(t, m, e.Pod, "steadybit-extension-host", "dd", false)
 			}
-			e2e.AssertFileHasSize(t, m, e.Pod, "steadybit-extension-host", "/host-tmp/filldiskng/disk-fill", testCase.checkFileSize, testCase.atLeastFileSize)
+
+			assertFileHasSize(t, m, "/filldisk/disk-fill", testCase.checkFileSize, testCase.atLeastFileSize)
 			require.NoError(t, action.Cancel())
 
 			if testCase.method == "OVER_TIME" {
-				e2e.AssertProcessNOTRunningInContainer(t, m, e.Pod, "nginx", "dd")
+				e2e.AssertProcessNOTRunningInContainer(t, m, e.Pod, "steadybit-extension-host", "dd")
 			} else {
-				e2e.AssertProcessNOTRunningInContainer(t, m, e.Pod, "nginx", "fallocate")
+				e2e.AssertProcessNOTRunningInContainer(t, m, e.Pod, "steadybit-extension-host", "fallocate")
 			}
 
-			out, err := m.PodExec(e.Pod, "nginx", "ls", "/host-tmp/filldiskng")
-			require.NoError(t, err)
-			space := strings.TrimSpace(out)
-			require.Empty(t, space, "no fill disk directories must be present")
+			out, _ := runInMinikube(m, "ls", "/filldisk/disk-fill")
+			assert.Contains(t, string(out), "No such file or directory")
 		})
 	}
+}
+
+func assertFileHasSize(t *testing.T, m *e2e.Minikube, filepath string, sizeInMb int, atLeastSize bool) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	var sizeInBytes = sizeInMb * 1024 * 1024
+	var lastOutput []byte
+	for {
+		select {
+		case <-ctx.Done():
+			assert.Failf(t, "file not found", "file %s not found.\n%s", filepath, lastOutput)
+			return
+
+		case <-time.After(200 * time.Millisecond):
+			var out []byte
+			var err error
+			out, err = runInMinikube(m, "wc", "-c", filepath)
+			if err == nil {
+				for _, line := range strings.Split(string(out), " ") {
+					if lineSize, err := strconv.Atoi(line); err == nil {
+						if lineSize == sizeInBytes || (atLeastSize && lineSize >= sizeInBytes) {
+							return
+						} else {
+							log.Trace().Msgf("filesize is %s, expected %s", line, fmt.Sprint(sizeInBytes))
+						}
+					}
+				}
+			}
+			lastOutput = out
+		}
+	}
+}
+
+func runInMinikube(m *e2e.Minikube, arg ...string) ([]byte, error) {
+	cmd := m.SshExec(arg...)
+	cmd.Stdout = nil
+	cmd.Stderr = nil
+	return cmd.CombinedOutput()
 }

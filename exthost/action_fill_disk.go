@@ -27,7 +27,6 @@ type fillDiskAction struct {
 }
 
 type FillDiskActionState struct {
-	ContainerId  string
 	ExecutionId  uuid.UUID
 	Sidecar      diskfill.SidecarOpts
 	FillDiskOpts diskfill.Opts
@@ -137,7 +136,7 @@ func (a *fillDiskAction) Describe() action_kit_api.ActionDescription {
 				Label:        "Block Size (in MBytes) of the File to Write for method `At Once`",
 				Description:  extutil.Ptr("Define the block size for writing the file with the dd command. If the block size is larger than the fill value, the fill value will be used as block size."),
 				Type:         action_kit_api.Integer,
-				DefaultValue: extutil.Ptr(fmt.Sprintf("%d", diskfill.DefaultBlockSize)),
+				DefaultValue: extutil.Ptr("5"),
 				Required:     extutil.Ptr(true),
 				Order:        extutil.Ptr(6),
 				MinValue:     extutil.Ptr(1),
