@@ -16,7 +16,6 @@ import (
 	"github.com/steadybit/extension-kit/extutil"
 	"golang.org/x/sync/syncmap"
 	"runtime/trace"
-	"strings"
 )
 
 var ID = fmt.Sprintf("%s.fill_disk", BaseActionID)
@@ -221,17 +220,6 @@ func (a *fillDiskAction) Start(ctx context.Context, state *FillDiskActionState) 
 
 	a.diskfills.Store(state.ExecutionId, diskFill)
 
-	if !diskFill.HasSomethingToDo() {
-		return &action_kit_api.StartResult{
-			Messages: extutil.Ptr([]action_kit_api.Message{
-				{
-					Level:   extutil.Ptr(action_kit_api.Warn),
-					Message: "Nothing to do for host fill disk",
-				},
-			}),
-		}, nil
-	}
-
 	if err := diskFill.Start(); err != nil {
 		return nil, extension_kit.ToError("Failed to fill disk on host", err)
 	}
@@ -240,7 +228,7 @@ func (a *fillDiskAction) Start(ctx context.Context, state *FillDiskActionState) 
 		Messages: extutil.Ptr([]action_kit_api.Message{
 			{
 				Level:   extutil.Ptr(action_kit_api.Info),
-				Message: fmt.Sprintf("Starting fill disk on host with args %s", strings.Join(diskFill.Args(), " ")),
+				Message: fmt.Sprintf("Starting fill disk on host with args %s", diskFill.Args()),
 			},
 		}),
 	}, nil
@@ -254,8 +242,7 @@ func (a *fillDiskAction) Stop(ctx context.Context, state *FillDiskActionState) (
 
 	messages := make([]action_kit_api.Message, 0)
 
-	copiedOpts := state.FillDiskOpts
-	stopped := a.stopFillDiskContainer(ctx, state.ExecutionId, a.runc, state.Sidecar, copiedOpts)
+	stopped := a.stopFillDiskContainer(state.ExecutionId)
 	if stopped {
 		messages = append(messages, action_kit_api.Message{
 			Level:   extutil.Ptr(action_kit_api.Info),
@@ -276,11 +263,11 @@ func (a *fillDiskAction) fillDiskExited(executionId uuid.UUID) (bool, error) {
 	return s.(*diskfill.DiskFill).Exited()
 }
 
-func (a *fillDiskAction) stopFillDiskContainer(ctx context.Context, executionId uuid.UUID, r runc.Runc, sidecar diskfill.SidecarOpts, opts diskfill.Opts) bool {
+func (a *fillDiskAction) stopFillDiskContainer(executionId uuid.UUID) bool {
 	s, ok := a.diskfills.LoadAndDelete(executionId)
 	if !ok {
 		return false
 	}
-	err := s.(*diskfill.DiskFill).Stop(ctx, r, sidecar, opts)
+	err := s.(*diskfill.DiskFill).Stop()
 	return err == nil
 }
