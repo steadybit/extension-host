@@ -8,16 +8,18 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
-	networkutils "github.com/steadybit/action-kit/go/action_kit_commons/network"
+	"github.com/steadybit/action-kit/go/action_kit_commons/network"
+	"github.com/steadybit/action-kit/go/action_kit_commons/runc"
 	"github.com/steadybit/action-kit/go/action_kit_sdk"
 	"github.com/steadybit/extension-kit/extbuild"
 	"github.com/steadybit/extension-kit/extutil"
 	"time"
 )
 
-func NewNetworkDelayContainerAction() action_kit_sdk.Action[NetworkActionState] {
+func NewNetworkDelayContainerAction(r runc.Runc) action_kit_sdk.Action[NetworkActionState] {
 	return &networkAction{
-		optsProvider: delay(),
+		runc:         r,
+		optsProvider: delay(r),
 		optsDecoder:  delayDecode,
 		description:  getNetworkDelayDescription(),
 	}
@@ -69,8 +71,8 @@ func getNetworkDelayDescription() action_kit_api.ActionDescription {
 	}
 }
 
-func delay() networkOptsProvider {
-	return func(ctx context.Context, request action_kit_api.PrepareActionRequestBody) (networkutils.Opts, error) {
+func delay(r runc.Runc) networkOptsProvider {
+	return func(ctx context.Context, sidecar network.SidecarOpts, request action_kit_api.PrepareActionRequestBody) (network.Opts, error) {
 		_, err := CheckTargetHostname(request.Target.Attributes)
 		if err != nil {
 			return nil, err
@@ -83,14 +85,14 @@ func delay() networkOptsProvider {
 			jitter = delay * 30 / 100
 		}
 
-		filter, err := mapToNetworkFilter(ctx, request.Config, getRestrictedEndpoints(request))
+		filter, err := mapToNetworkFilter(ctx, r, sidecar, request.Config, getRestrictedEndpoints(request))
 		if err != nil {
 			return nil, err
 		}
 
 		interfaces := extutil.ToStringArray(request.Config["networkInterface"])
 		if len(interfaces) == 0 {
-			interfaces, err = readNetworkInterfaces(ctx)
+			interfaces, err = readNetworkInterfaces(ctx, r, sidecar)
 			if err != nil {
 				return nil, err
 			}
@@ -100,7 +102,7 @@ func delay() networkOptsProvider {
 			return nil, fmt.Errorf("no network interfaces specified")
 		}
 
-		return &networkutils.DelayOpts{
+		return &network.DelayOpts{
 			Filter:     filter,
 			Delay:      delay,
 			Jitter:     jitter,
@@ -109,8 +111,8 @@ func delay() networkOptsProvider {
 	}
 }
 
-func delayDecode(data json.RawMessage) (networkutils.Opts, error) {
-	var opts networkutils.DelayOpts
+func delayDecode(data json.RawMessage) (network.Opts, error) {
+	var opts network.DelayOpts
 	err := json.Unmarshal(data, &opts)
 	return &opts, err
 }

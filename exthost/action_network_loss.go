@@ -8,15 +8,17 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
-	networkutils "github.com/steadybit/action-kit/go/action_kit_commons/network"
+	"github.com/steadybit/action-kit/go/action_kit_commons/network"
+	"github.com/steadybit/action-kit/go/action_kit_commons/runc"
 	"github.com/steadybit/action-kit/go/action_kit_sdk"
 	"github.com/steadybit/extension-kit/extbuild"
 	"github.com/steadybit/extension-kit/extutil"
 )
 
-func NewNetworkPackageLossContainerAction() action_kit_sdk.Action[NetworkActionState] {
+func NewNetworkPackageLossContainerAction(r runc.Runc) action_kit_sdk.Action[NetworkActionState] {
 	return &networkAction{
-		optsProvider: packageLoss(),
+		runc:         r,
+		optsProvider: packageLoss(r),
 		optsDecoder:  packageLossDecode,
 		description:  getNetworkPackageLossDescription(),
 	}
@@ -59,22 +61,22 @@ func getNetworkPackageLossDescription() action_kit_api.ActionDescription {
 	}
 }
 
-func packageLoss() networkOptsProvider {
-	return func(ctx context.Context, request action_kit_api.PrepareActionRequestBody) (networkutils.Opts, error) {
+func packageLoss(r runc.Runc) networkOptsProvider {
+	return func(ctx context.Context, sidecar network.SidecarOpts, request action_kit_api.PrepareActionRequestBody) (network.Opts, error) {
 		_, err := CheckTargetHostname(request.Target.Attributes)
 		if err != nil {
 			return nil, err
 		}
 		loss := extutil.ToUInt(request.Config["percentage"])
 
-		filter, err := mapToNetworkFilter(ctx, request.Config, getRestrictedEndpoints(request))
+		filter, err := mapToNetworkFilter(ctx, r, sidecar, request.Config, getRestrictedEndpoints(request))
 		if err != nil {
 			return nil, err
 		}
 
 		interfaces := extutil.ToStringArray(request.Config["networkInterface"])
 		if len(interfaces) == 0 {
-			interfaces, err = readNetworkInterfaces(ctx)
+			interfaces, err = readNetworkInterfaces(ctx, r, sidecar)
 			if err != nil {
 				return nil, err
 			}
@@ -84,7 +86,7 @@ func packageLoss() networkOptsProvider {
 			return nil, fmt.Errorf("no network interfaces specified")
 		}
 
-		return &networkutils.PackageLossOpts{
+		return &network.PackageLossOpts{
 			Filter:     filter,
 			Loss:       loss,
 			Interfaces: interfaces,
@@ -92,8 +94,8 @@ func packageLoss() networkOptsProvider {
 	}
 }
 
-func packageLossDecode(data json.RawMessage) (networkutils.Opts, error) {
-	var opts networkutils.PackageLossOpts
+func packageLossDecode(data json.RawMessage) (network.Opts, error) {
+	var opts network.PackageLossOpts
 	err := json.Unmarshal(data, &opts)
 	return &opts, err
 }

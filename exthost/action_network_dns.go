@@ -7,14 +7,16 @@ import (
 	"context"
 	"fmt"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
-	networkutils "github.com/steadybit/action-kit/go/action_kit_commons/network"
+	"github.com/steadybit/action-kit/go/action_kit_commons/network"
+	"github.com/steadybit/action-kit/go/action_kit_commons/runc"
 	"github.com/steadybit/action-kit/go/action_kit_sdk"
 	"github.com/steadybit/extension-kit/extbuild"
 	"github.com/steadybit/extension-kit/extutil"
 )
 
-func NewNetworkBlockDnsContainerAction() action_kit_sdk.Action[NetworkActionState] {
+func NewNetworkBlockDnsContainerAction(r runc.Runc) action_kit_sdk.Action[NetworkActionState] {
 	return &networkAction{
+		runc:         r,
 		optsProvider: blockDns(),
 		optsDecoder:  blackholeDecode,
 		description:  getNetworkBlockDnsDescription(),
@@ -61,15 +63,15 @@ func getNetworkBlockDnsDescription() action_kit_api.ActionDescription {
 }
 
 func blockDns() networkOptsProvider {
-	return func(ctx context.Context, request action_kit_api.PrepareActionRequestBody) (networkutils.Opts, error) {
+	return func(ctx context.Context, sidecar network.SidecarOpts, request action_kit_api.PrepareActionRequestBody) (network.Opts, error) {
 		_, err := CheckTargetHostname(request.Target.Attributes)
 		if err != nil {
 			return nil, err
 		}
 		dnsPort := uint16(extutil.ToUInt(request.Config["dnsPort"]))
 
-		return &networkutils.BlackholeOpts{
-			Filter: networkutils.Filter{Include: networkutils.NewNetWithPortRanges(networkutils.NetAny, networkutils.PortRange{From: dnsPort, To: dnsPort})},
+		return &network.BlackholeOpts{
+			Filter: network.Filter{Include: network.NewNetWithPortRanges(network.NetAny, network.PortRange{From: dnsPort, To: dnsPort})},
 		}, nil
 	}
 }

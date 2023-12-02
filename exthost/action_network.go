@@ -10,20 +10,21 @@ import (
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
-	networkutils "github.com/steadybit/action-kit/go/action_kit_commons/network"
+	"github.com/steadybit/action-kit/go/action_kit_commons/network"
+	"github.com/steadybit/action-kit/go/action_kit_commons/runc"
 	"github.com/steadybit/action-kit/go/action_kit_sdk"
 	"github.com/steadybit/extension-host/config"
-	"github.com/steadybit/extension-host/exthost/network"
-	extension_kit "github.com/steadybit/extension-kit"
+	"github.com/steadybit/extension-kit"
 	"github.com/steadybit/extension-kit/extutil"
 	"net"
 )
 
-type networkOptsProvider func(ctx context.Context, request action_kit_api.PrepareActionRequestBody) (networkutils.Opts, error)
+type networkOptsProvider func(ctx context.Context, sidecar network.SidecarOpts, request action_kit_api.PrepareActionRequestBody) (network.Opts, error)
 
-type networkOptsDecoder func(data json.RawMessage) (networkutils.Opts, error)
+type networkOptsDecoder func(data json.RawMessage) (network.Opts, error)
 
 type networkAction struct {
+	runc         runc.Runc
 	description  action_kit_api.ActionDescription
 	optsProvider networkOptsProvider
 	optsDecoder  networkOptsDecoder
@@ -32,6 +33,7 @@ type networkAction struct {
 type NetworkActionState struct {
 	ExecutionId uuid.UUID
 	NetworkOpts json.RawMessage
+	Sidecar     network.SidecarOpts
 }
 
 // Make sure networkAction implements all required interfaces
@@ -91,7 +93,17 @@ func (a *networkAction) Prepare(ctx context.Context, state *NetworkActionState, 
 		return nil, err
 	}
 
-	opts, err := a.optsProvider(ctx, request)
+	initProcess, err := runc.ReadLinuxProcessInfo(ctx, 1)
+	if err != nil {
+		return nil, extension_kit.ToError("Failed to prepare network settings.", err)
+	}
+	state.Sidecar = network.SidecarOpts{
+		TargetProcess: initProcess,
+		IdSuffix:      "host",
+		ImagePath:     "/",
+	}
+
+	opts, err := a.optsProvider(ctx, state.Sidecar, request)
 	if err != nil {
 		return nil, extension_kit.ToError("Failed to prepare network settings.", err)
 	}
@@ -111,11 +123,10 @@ func (a *networkAction) Start(ctx context.Context, state *NetworkActionState) (*
 		return nil, extension_kit.ToError("Failed to deserialize network settings.", err)
 	}
 
-	hostname, err := osHostname()
 	if err != nil {
 		return nil, extension_kit.ToError("Failed to get hostname.", err)
 	}
-	err = network.Apply(ctx, hostname, opts)
+	err = network.Apply(ctx, a.runc, state.Sidecar, opts)
 	if err != nil {
 		return nil, extension_kit.ToError("Failed to apply network settings.", err)
 	}
@@ -137,11 +148,7 @@ func (a *networkAction) Stop(ctx context.Context, state *NetworkActionState) (*a
 		return nil, extension_kit.ToError("Failed to deserialize network settings.", err)
 	}
 
-	hostname, err := osHostname()
-	if err != nil {
-		return nil, extension_kit.ToError("Failed to get hostname.", err)
-	}
-	err = network.Revert(ctx, hostname, opts)
+	err = network.Revert(ctx, a.runc, state.Sidecar, opts)
 	if err != nil {
 		return nil, extension_kit.ToError("Failed to revert network settings.", err)
 	}
@@ -149,18 +156,18 @@ func (a *networkAction) Stop(ctx context.Context, state *NetworkActionState) (*a
 	return nil, nil
 }
 
-func parsePortRanges(raw []string) ([]networkutils.PortRange, error) {
+func parsePortRanges(raw []string) ([]network.PortRange, error) {
 	if raw == nil {
 		return nil, nil
 	}
 
-	var ranges []networkutils.PortRange
+	var ranges []network.PortRange
 
 	for _, r := range raw {
 		if len(r) == 0 {
 			continue
 		}
-		parsed, err := networkutils.ParsePortRange(r)
+		parsed, err := network.ParsePortRange(r)
 		if err != nil {
 			return nil, err
 		}
@@ -170,60 +177,62 @@ func parsePortRanges(raw []string) ([]networkutils.PortRange, error) {
 	return ranges, nil
 }
 
-func mapToNetworkFilter(ctx context.Context, actionConfig map[string]interface{}, restrictedEndpoints []action_kit_api.RestrictedEndpoint) (networkutils.Filter, error) {
+func mapToNetworkFilter(ctx context.Context, r runc.Runc, sidecar network.SidecarOpts, actionConfig map[string]interface{}, restrictedEndpoints []action_kit_api.RestrictedEndpoint) (network.Filter, error) {
 	toResolve := append(
 		extutil.ToStringArray(actionConfig["ip"]),
 		extutil.ToStringArray(actionConfig["hostname"])...,
 	)
 
-	includeIps, err := networkutils.Resolve(ctx, toResolve...)
+	dig := network.HostnameResolver{Dig: &network.RuncDigRunner{Runc: r, Sidecar: sidecar}}
+
+	includeIps, err := dig.Resolve(ctx, toResolve...)
 	if err != nil {
-		return networkutils.Filter{}, err
+		return network.Filter{}, err
 	}
 	//if no hostname/ip specified we affect all ips
-	includeCidrs := networkutils.NetAny
+	includeCidrs := network.NetAny
 	if len(includeIps) > 0 {
-		includeCidrs = networkutils.IpToNet(includeIps)
+		includeCidrs = network.IpToNet(includeIps)
 	}
 
 	portRanges, err := parsePortRanges(extutil.ToStringArray(actionConfig["port"]))
 	if err != nil {
-		return networkutils.Filter{}, err
+		return network.Filter{}, err
 	}
 	if len(portRanges) == 0 {
 		//if no hostname/ip specified we affect all ports
-		portRanges = []networkutils.PortRange{networkutils.PortRangeAny}
+		portRanges = []network.PortRange{network.PortRangeAny}
 	}
 
-	includes := networkutils.NewNetWithPortRanges(includeCidrs, portRanges...)
-	var excludes []networkutils.NetWithPortRange
+	includes := network.NewNetWithPortRanges(includeCidrs, portRanges...)
+	var excludes []network.NetWithPortRange
 
 	for _, restrictedEndpoint := range restrictedEndpoints {
 		log.Debug().Msgf("Adding restricted endpoint %s (%s) => %s:%d-%d", restrictedEndpoint.Name, restrictedEndpoint.Url, restrictedEndpoint.Cidr, restrictedEndpoint.PortMin, restrictedEndpoint.PortMax)
 		_, cidr, err := net.ParseCIDR(restrictedEndpoint.Cidr)
 		if err != nil {
-			return networkutils.Filter{}, fmt.Errorf("invalid cidr %s: %w", restrictedEndpoint.Cidr, err)
+			return network.Filter{}, fmt.Errorf("invalid cidr %s: %w", restrictedEndpoint.Cidr, err)
 		}
-		excludes = append(excludes, networkutils.NewNetWithPortRanges([]net.IPNet{*cidr}, networkutils.PortRange{From: uint16(restrictedEndpoint.PortMin), To: uint16(restrictedEndpoint.PortMax)})...)
+		excludes = append(excludes, network.NewNetWithPortRanges([]net.IPNet{*cidr}, network.PortRange{From: uint16(restrictedEndpoint.PortMin), To: uint16(restrictedEndpoint.PortMax)})...)
 	}
 
-	ownIps := networkutils.GetOwnIPs()
+	ownIps := network.GetOwnIPs()
 	ownPort := config.Config.Port
 	ownHealthPort := config.Config.HealthPort
-	nets := networkutils.IpToNet(ownIps)
+	nets := network.IpToNet(ownIps)
 
 	log.Debug().Msgf("Adding own ip %s to exclude list (Ports %d and %d)", ownIps, ownPort, ownHealthPort)
-	excludes = append(excludes, networkutils.NewNetWithPortRanges(nets, networkutils.PortRange{From: ownPort, To: ownPort})...)
-	excludes = append(excludes, networkutils.NewNetWithPortRanges(nets, networkutils.PortRange{From: ownHealthPort, To: ownHealthPort})...)
+	excludes = append(excludes, network.NewNetWithPortRanges(nets, network.PortRange{From: ownPort, To: ownPort})...)
+	excludes = append(excludes, network.NewNetWithPortRanges(nets, network.PortRange{From: ownHealthPort, To: ownHealthPort})...)
 
-	return networkutils.Filter{
+	return network.Filter{
 		Include: includes,
 		Exclude: excludes,
 	}, nil
 }
 
-func readNetworkInterfaces(ctx context.Context) ([]string, error) {
-	ifcs, err := network.ListInterfaces(ctx)
+func readNetworkInterfaces(ctx context.Context, r runc.Runc, sidecar network.SidecarOpts) ([]string, error) {
+	ifcs, err := network.ListInterfaces(ctx, r, sidecar)
 	if err != nil {
 		return nil, err
 	}

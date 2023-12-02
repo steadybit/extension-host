@@ -1,3 +1,0 @@
-package timetravel
-
-const ()

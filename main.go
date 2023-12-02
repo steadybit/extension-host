@@ -67,12 +67,12 @@ func main() {
 	action_kit_sdk.RegisterAction(exthost.NewTimetravelAction())
 	action_kit_sdk.RegisterAction(exthost.NewStopProcessAction())
 	action_kit_sdk.RegisterAction(exthost.NewShutdownAction())
-	action_kit_sdk.RegisterAction(exthost.NewNetworkBlackholeContainerAction())
-	action_kit_sdk.RegisterAction(exthost.NewNetworkLimitBandwidthContainerAction())
-	action_kit_sdk.RegisterAction(exthost.NewNetworkCorruptPackagesContainerAction())
-	action_kit_sdk.RegisterAction(exthost.NewNetworkDelayContainerAction())
-	action_kit_sdk.RegisterAction(exthost.NewNetworkBlockDnsContainerAction())
-	action_kit_sdk.RegisterAction(exthost.NewNetworkPackageLossContainerAction())
+	action_kit_sdk.RegisterAction(exthost.NewNetworkBlackholeContainerAction(r))
+	action_kit_sdk.RegisterAction(exthost.NewNetworkLimitBandwidthContainerAction(r))
+	action_kit_sdk.RegisterAction(exthost.NewNetworkCorruptPackagesContainerAction(r))
+	action_kit_sdk.RegisterAction(exthost.NewNetworkDelayContainerAction(r))
+	action_kit_sdk.RegisterAction(exthost.NewNetworkBlockDnsContainerAction(r))
+	action_kit_sdk.RegisterAction(exthost.NewNetworkPackageLossContainerAction(r))
 	action_kit_sdk.RegisterAction(exthost.NewFillDiskContainerAction(r))
 
 	//This will install a signal handler, that will stop active actions when receiving a SIGURS1, SIGTERM or SIGINT

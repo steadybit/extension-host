@@ -8,15 +8,17 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
-	networkutils "github.com/steadybit/action-kit/go/action_kit_commons/network"
+	"github.com/steadybit/action-kit/go/action_kit_commons/network"
+	"github.com/steadybit/action-kit/go/action_kit_commons/runc"
 	"github.com/steadybit/action-kit/go/action_kit_sdk"
 	"github.com/steadybit/extension-kit/extbuild"
 	"github.com/steadybit/extension-kit/extutil"
 )
 
-func NewNetworkBlackholeContainerAction() action_kit_sdk.Action[NetworkActionState] {
+func NewNetworkBlackholeContainerAction(r runc.Runc) action_kit_sdk.Action[NetworkActionState] {
 	return &networkAction{
-		optsProvider: blackhole(),
+		runc:         r,
+		optsProvider: blackhole(r),
 		optsDecoder:  blackholeDecode,
 		description:  getNetworkBlackholeDescription(),
 	}
@@ -40,24 +42,24 @@ func getNetworkBlackholeDescription() action_kit_api.ActionDescription {
 	}
 }
 
-func blackhole() networkOptsProvider {
-	return func(ctx context.Context, request action_kit_api.PrepareActionRequestBody) (networkutils.Opts, error) {
+func blackhole(r runc.Runc) networkOptsProvider {
+	return func(ctx context.Context, sidecar network.SidecarOpts, request action_kit_api.PrepareActionRequestBody) (network.Opts, error) {
 		_, err := CheckTargetHostname(request.Target.Attributes)
 		if err != nil {
 			return nil, err
 		}
 
-		filter, err := mapToNetworkFilter(ctx, request.Config, getRestrictedEndpoints(request))
+		filter, err := mapToNetworkFilter(ctx, r, sidecar, request.Config, getRestrictedEndpoints(request))
 		if err != nil {
 			return nil, err
 		}
 
-		return &networkutils.BlackholeOpts{Filter: filter}, nil
+		return &network.BlackholeOpts{Filter: filter}, nil
 	}
 }
 
-func blackholeDecode(data json.RawMessage) (networkutils.Opts, error) {
-	var opts networkutils.BlackholeOpts
+func blackholeDecode(data json.RawMessage) (network.Opts, error) {
+	var opts network.BlackholeOpts
 	err := json.Unmarshal(data, &opts)
 	return &opts, err
 }

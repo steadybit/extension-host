@@ -3,24 +3,21 @@
 package resources
 
 import (
-	"fmt"
 	"github.com/rs/zerolog/log"
 	"github.com/steadybit/extension-host/exthost/common"
 	"os"
-	"os/exec"
+	"path/filepath"
+	"strconv"
 )
 
 func AdjustOOMScoreAdj() {
-	log.Debug().Msg("Adjusting OOM score adj")
-	myPid := os.Getpid()
-	path := "/proc/" + fmt.Sprintf("%d", myPid) + "/oom_score_adj"
-	err := common.RunAsRoot("sh", "-c", "echo -997 > "+path)
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to adjust OOM score adj")
+	log.Debug().Msg("Adjusting OOM score")
+	path := filepath.Join("/proc", strconv.Itoa(os.Getpid()), "oom_score_adj")
+	if err := common.RunAsRoot("sh", "-c", "echo -997 > "+path); err != nil {
+		log.Warn().Err(err).Msg("Failed to adjust OOM score")
 	}
-	output, err := exec.Command("cat", path).CombinedOutput()
-	if err != nil {
-		return
+
+	if oomScore, err := os.ReadFile(path); err == nil {
+		log.Debug().Msgf("%s: %s", path, oomScore)
 	}
-	log.Debug().Msgf("OOM score adj: %s", output)
 }

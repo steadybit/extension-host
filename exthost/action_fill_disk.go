@@ -11,7 +11,7 @@ import (
 	"github.com/steadybit/action-kit/go/action_kit_commons/diskfill"
 	"github.com/steadybit/action-kit/go/action_kit_commons/runc"
 	"github.com/steadybit/action-kit/go/action_kit_sdk"
-	extension_kit "github.com/steadybit/extension-kit"
+	"github.com/steadybit/extension-kit"
 	"github.com/steadybit/extension-kit/extbuild"
 	"github.com/steadybit/extension-kit/extutil"
 	"golang.org/x/sync/syncmap"

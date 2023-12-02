@@ -8,15 +8,17 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
-	networkutils "github.com/steadybit/action-kit/go/action_kit_commons/network"
+	"github.com/steadybit/action-kit/go/action_kit_commons/network"
+	"github.com/steadybit/action-kit/go/action_kit_commons/runc"
 	"github.com/steadybit/action-kit/go/action_kit_sdk"
 	"github.com/steadybit/extension-kit/extbuild"
 	"github.com/steadybit/extension-kit/extutil"
 )
 
-func NewNetworkLimitBandwidthContainerAction() action_kit_sdk.Action[NetworkActionState] {
+func NewNetworkLimitBandwidthContainerAction(r runc.Runc) action_kit_sdk.Action[NetworkActionState] {
 	return &networkAction{
-		optsProvider: limitBandwidth(),
+		runc:         r,
+		optsProvider: limitBandwidth(r),
 		optsDecoder:  limitBandwidthDecode,
 		description:  getNetworkLimitBandwidthDescription(),
 	}
@@ -59,22 +61,22 @@ func getNetworkLimitBandwidthDescription() action_kit_api.ActionDescription {
 	}
 }
 
-func limitBandwidth() networkOptsProvider {
-	return func(ctx context.Context, request action_kit_api.PrepareActionRequestBody) (networkutils.Opts, error) {
+func limitBandwidth(r runc.Runc) networkOptsProvider {
+	return func(ctx context.Context, sidecar network.SidecarOpts, request action_kit_api.PrepareActionRequestBody) (network.Opts, error) {
 		_, err := CheckTargetHostname(request.Target.Attributes)
 		if err != nil {
 			return nil, err
 		}
 		bandwidth := extutil.ToString(request.Config["bandwidth"])
 
-		filter, err := mapToNetworkFilter(ctx, request.Config, getRestrictedEndpoints(request))
+		filter, err := mapToNetworkFilter(ctx, r, sidecar, request.Config, getRestrictedEndpoints(request))
 		if err != nil {
 			return nil, err
 		}
 
 		interfaces := extutil.ToStringArray(request.Config["networkInterface"])
 		if len(interfaces) == 0 {
-			interfaces, err = readNetworkInterfaces(ctx)
+			interfaces, err = readNetworkInterfaces(ctx, r, sidecar)
 			if err != nil {
 				return nil, err
 			}
@@ -84,7 +86,7 @@ func limitBandwidth() networkOptsProvider {
 			return nil, fmt.Errorf("no network interfaces specified")
 		}
 
-		return &networkutils.LimitBandwidthOpts{
+		return &network.LimitBandwidthOpts{
 			Filter:     filter,
 			Bandwidth:  bandwidth,
 			Interfaces: interfaces,
@@ -92,8 +94,8 @@ func limitBandwidth() networkOptsProvider {
 	}
 }
 
-func limitBandwidthDecode(data json.RawMessage) (networkutils.Opts, error) {
-	var opts networkutils.LimitBandwidthOpts
+func limitBandwidthDecode(data json.RawMessage) (network.Opts, error) {
+	var opts network.LimitBandwidthOpts
 	err := json.Unmarshal(data, &opts)
 	return &opts, err
 }

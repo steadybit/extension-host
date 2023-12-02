@@ -38,9 +38,9 @@ func AdjustTime(offset time.Duration, negate bool) error {
 	if offset < 0 {
 		normalizedOffset = -normalizedOffset
 	}
-	min := normalizedOffset * 0.8
-	max := normalizedOffset * 1.2
-	if float64(diff) >= min && float64(diff) <= max {
+	minDiff := normalizedOffset * 0.8
+	maxDiff := normalizedOffset * 1.2
+	if float64(diff) >= minDiff && float64(diff) <= maxDiff {
 		return nil
 	} else {
 		return errors.New("time offset not applied")
