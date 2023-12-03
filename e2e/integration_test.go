@@ -136,10 +136,6 @@ func TestWithMinikube(t *testing.T) {
 			Test: testNetworkPackageCorruption,
 		},
 		{
-			Name: "network package corruption",
-			Test: testNetworkPackageCorruption,
-		},
-		{
 			Name: "fill disk",
 			Test: testFillDisk,
 		},
@@ -162,6 +158,7 @@ func testStressCpu(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 
 	e2e.AssertProcessRunningInContainer(t, m, e.Pod, "steadybit-extension-host", "stress-ng", true)
 	require.NoError(t, exec.Cancel())
+	requireAllSidecarsCleanedUp(t, m, e)
 }
 
 func testStressMemory(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
@@ -204,6 +201,7 @@ func testStressIo(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			require.Empty(t, strings.TrimSpace(string(out)), "no stress-ng directories must be present")
 		})
 	}
+	requireAllSidecarsCleanedUp(t, m, e)
 }
 
 func testTimeTravel(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
@@ -383,6 +381,7 @@ func testNetworkBlackhole(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			nginx.AssertCanReach(t, "https://steadybit.com", true)
 		})
 	}
+	requireAllSidecarsCleanedUp(t, m, e)
 }
 
 func testNetworkDelay(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
@@ -458,6 +457,7 @@ func testNetworkDelay(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			netperf.AssertLatency(t, 0, unaffectedLatency*110/100)
 		})
 	}
+	requireAllSidecarsCleanedUp(t, m, e)
 }
 
 func testNetworkPackageLoss(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
@@ -527,6 +527,7 @@ func testNetworkPackageLoss(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			iperf.AssertPackageLoss(t, 0, 5)
 		})
 	}
+	requireAllSidecarsCleanedUp(t, m, e)
 }
 
 func testNetworkPackageCorruption(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
@@ -610,6 +611,7 @@ func testNetworkPackageCorruption(t *testing.T, m *e2e.Minikube, e *e2e.Extensio
 			})
 		})
 	}
+	requireAllSidecarsCleanedUp(t, m, e)
 }
 
 func testNetworkLimitBandwidth(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
@@ -684,6 +686,7 @@ func testNetworkLimitBandwidth(t *testing.T, m *e2e.Minikube, e *e2e.Extension) 
 			iperf.AssertBandwidth(t, unlimited*0.95, unlimited*1.05)
 		})
 	}
+	requireAllSidecarsCleanedUp(t, m, e)
 }
 
 func testNetworkBlockDns(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
@@ -751,6 +754,7 @@ func testNetworkBlockDns(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			nginx.AssertCanReach(t, "https://steadybit.com", true)
 		})
 	}
+	requireAllSidecarsCleanedUp(t, m, e)
 }
 
 func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
@@ -864,6 +868,7 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			assert.Contains(t, string(out), "No such file or directory")
 		})
 	}
+	requireAllSidecarsCleanedUp(t, m, e)
 }
 
 func assertFileHasSize(t *testing.T, m *e2e.Minikube, filepath string, sizeInMb int, atLeastSize bool) {
@@ -902,4 +907,11 @@ func runInMinikube(m *e2e.Minikube, arg ...string) ([]byte, error) {
 	cmd.Stdout = nil
 	cmd.Stderr = nil
 	return cmd.CombinedOutput()
+}
+
+func requireAllSidecarsCleanedUp(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
+	out, err := m.PodExec(e.Pod, "steadybit-extension-host", "ls", "/run/steadybit/runc")
+	require.NoError(t, err)
+	space := strings.TrimSpace(out)
+	require.Empty(t, space, "no sidecar directories must be present")
 }
