@@ -3,6 +3,7 @@ before:
   hooks:
     - go mod download
     - make licenses-report
+
 release:
   prerelease: "false"
 
@@ -27,6 +28,8 @@ builds:
       - -X github.com/steadybit/extension-kit/extbuild.ExtensionName={{.ProjectName}}
       - -X github.com/steadybit/extension-kit/extbuild.Version={{.Version}}
       - -X github.com/steadybit/extension-kit/extbuild.Revision={{.Commit}}
+    hooks:
+      post: sh -c "curl -sfL \"https://github.com/steadybit/nsmount/releases/download/v1.0.0/nsmount.{{ .Arch }}\" -o \"./dist/nsmount.{{ .Arch }}\" && chmod a+x \"./dist/nsmount.{{ .Arch }}\""
 
 archives:
   - name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
@@ -62,6 +65,7 @@ nfpms:
       - iptables
       - iproute2
       - bind9-dnsutils
+      - runc
       - libcap2-bin
     bindir: /opt/steadybit/extension-host
     contents:
@@ -72,6 +76,8 @@ nfpms:
       - src: ./linuxpkg/config
         dst: /etc
         type: config
+      - src: ./dist/nsmount.{{ .Arch }}
+        dst: /opt/steadybit/extension-host/nsmount
       - src: ./licenses
         dst: /opt/steadybit/extension-host/licenses
 
@@ -91,11 +97,12 @@ nfpms:
     overrides:
       rpm:
         dependencies:
-        - /usr/bin/ps
-        - /usr/bin/stress-ng
-        - /usr/sbin/tc
-        - /usr/sbin/ip
-        - /usr/bin/dig
-        - /usr/sbin/capsh
+          - /usr/bin/ps
+          - /usr/bin/stress-ng
+          - /usr/sbin/tc
+          - /usr/sbin/ip
+          - /usr/bin/dig
+          - runc
+          - /usr/sbin/capsh
         recommends:
           - kernel-modules-extra

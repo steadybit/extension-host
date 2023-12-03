@@ -57,7 +57,6 @@ chartlint:
 build:
 	goreleaser build --clean --snapshot --single-target -o extension
 
-
 ## run: run the extension
 .PHONY: run
 run: tidy build

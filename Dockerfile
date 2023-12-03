@@ -49,7 +49,7 @@ USER $USERNAME
 
 WORKDIR /
 
-COPY ./nsmount/target/${TARGETARCH}-unknown-linux-gnu/release/nsmount /nsmount
+COPY --from=build /app/dist/nsmount.${TARGETARCH} /nsmount
 COPY --from=build /app/extension /extension
 COPY --from=build /app/licenses /licenses
 
