@@ -21,7 +21,8 @@ env:
 jobs:
   audit:
     name: Audit
-    runs-on: ubuntu-latest
+    runs-on:
+      labels: steadybit_runner_ubuntu_latest_4cores_16GB
     timeout-minutes: 60
     steps:
       - name: Checkout repository
@@ -36,7 +37,11 @@ jobs:
       - name: Audit
         run: |
           go mod download
-          make audit
+          minikube config set WantUpdateNotification false
+          minikube config set cpus max
+          minikube config set memory 8g
+          # exec in a new sell for the group change to take effect
+          sudo -u $USER env "PATH=$PATH" make audit
 
       - name: Check Sonar Token
         id: check-sonar
