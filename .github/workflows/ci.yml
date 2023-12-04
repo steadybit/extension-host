@@ -41,7 +41,7 @@ jobs:
           minikube config set cpus max
           minikube config set memory 8g
           # exec in a new sell for the group change to take effect
-          sudo -u $USER env "PATH=$PATH" make audit
+          sudo -u $USER env "PATH=$PATH" "E2E_RUNTIMES=docker" make audit
 
       - name: Check Sonar Token
         id: check-sonar

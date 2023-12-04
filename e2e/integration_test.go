@@ -18,6 +18,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"math"
 	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 	"testing"
@@ -85,7 +86,7 @@ func TestWithMinikube(t *testing.T) {
 		},
 	}
 
-	e2e.WithDefaultMinikube(t, &extFactory, []e2e.WithMinikubeTestCase{
+	e2e.WithMinikube(t, getMinikubeOptions(), &extFactory, []e2e.WithMinikubeTestCase{
 		{
 			Name: "validate discovery",
 			Test: validateDiscovery,
@@ -917,4 +918,36 @@ func requireAllSidecarsCleanedUp(t *testing.T, m *e2e.Minikube, e *e2e.Extension
 	require.NoError(t, err)
 	space := strings.TrimSpace(out)
 	require.Empty(t, space, "no sidecar directories must be present")
+}
+
+func getMinikubeOptions() e2e.MinikubeOpts {
+	var runtimes []e2e.Runtime
+	if rawRuntimes, _ := os.LookupEnv("E2E_RUNTIMES"); rawRuntimes != "" {
+		runtimes = []e2e.Runtime{}
+	OUTER:
+		for _, rawRuntime := range strings.Split(rawRuntimes, ",") {
+			lower := strings.ToLower(strings.TrimSpace(rawRuntime))
+			for _, runtime := range e2e.AllRuntimes {
+				if lower == string(runtime) {
+					runtimes = append(runtimes, runtime)
+					continue OUTER
+				}
+			}
+			log.Info().Msgf("Ignoring unknown runtime %s", rawRuntime)
+		}
+	} else {
+		runtimes = e2e.AllRuntimes
+	}
+
+	mOpts := e2e.DefaultMinikubeOpts().WithRuntimes(runtimes...)
+
+	if exec.Command("kvm-ok").Run() != nil {
+		log.Info().Msg("KVM is not available, using docker driver")
+		mOpts.WithDriver("docker")
+	} else {
+		log.Info().Msg("KVM is available, using kvm2 driver")
+		mOpts.WithDriver("kvm2")
+	}
+
+	return mOpts
 }
