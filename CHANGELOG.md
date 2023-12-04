@@ -3,6 +3,7 @@
 ## next
 
 - add flush, read_write, read_write_and_flush mode to stress io
+- fill disk attack
 
 ## v1.1.12
 

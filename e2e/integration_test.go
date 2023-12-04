@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/rs/zerolog/log"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
+	"github.com/steadybit/action-kit/go/action_kit_commons/diskfill"
 	"github.com/steadybit/action-kit/go/action_kit_test/e2e"
 	"github.com/steadybit/discovery-kit/go/discovery_kit_api"
 	"github.com/steadybit/discovery-kit/go/discovery_kit_test/validate"
@@ -764,74 +765,74 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 
 	type testCase struct {
 		name           string
-		mode           string
+		mode           diskfill.Mode
 		size           int
 		blockSize      int
-		method         string
+		method         diskfill.Method
 		wantedFileSize int
 		wantedDelta    int
 	}
 	testCases := []testCase{
 		{
 			name:           "fill disk with percentage (fallocate)",
-			mode:           "PERCENTAGE",
+			mode:           diskfill.Percentage,
 			size:           50,
 			blockSize:      0,
-			method:         "AT_ONCE",
+			method:         diskfill.AtOnce,
 			wantedFileSize: 3 * 1024,
 			wantedDelta:    512,
 		},
 		{
 			name:           "fill disk with megabytes to fill (fallocate)",
-			mode:           "MB_TO_FILL",
+			mode:           diskfill.MBToFill,
 			size:           4 * 1024, // 4GB
 			blockSize:      0,
-			method:         "AT_ONCE",
+			method:         diskfill.AtOnce,
 			wantedFileSize: 4 * 1024,
 			wantedDelta:    0,
 		},
 		{
 			name:           "fill disk with megabytes left (fallocate)",
-			mode:           "MB_LEFT",
+			mode:           diskfill.MBLeft,
 			size:           4 * 1024, // 4GB
 			blockSize:      0,
-			method:         "AT_ONCE",
+			method:         diskfill.AtOnce,
 			wantedFileSize: 3 * 1024,
 			wantedDelta:    512,
 		},
 		{
 			name:           "fill disk with percentage (dd)",
-			mode:           "PERCENTAGE",
+			mode:           diskfill.Percentage,
 			size:           50,
 			blockSize:      1024,
-			method:         "OVER_TIME",
+			method:         diskfill.OverTime,
 			wantedFileSize: 3 * 1024,
 			wantedDelta:    512,
 		},
 		{
 			name:           "fill disk with megabytes to fill (dd)",
-			mode:           "MB_TO_FILL",
+			mode:           diskfill.MBToFill,
 			size:           4 * 1024, // 4GB
 			blockSize:      1024,
-			method:         "OVER_TIME",
+			method:         diskfill.OverTime,
 			wantedFileSize: 4 * 1024,
 			wantedDelta:    0,
 		},
 		{
 			name:           "fill disk with megabytes left (dd)",
-			mode:           "MB_LEFT",
+			mode:           diskfill.MBLeft,
 			size:           4 * 1024, // 4GB
 			blockSize:      1024,
-			method:         "OVER_TIME",
+			method:         diskfill.OverTime,
 			wantedFileSize: 3 * 1024,
 			wantedDelta:    512,
 		},
 		{
 			name:           "fill disk with bigger blocksize (dd)",
-			mode:           "MB_TO_FILL",
+			mode:           diskfill.MBToFill,
 			size:           4 * 1024, // 4GB
 			blockSize:      6 * 1024, // 2GB
-			method:         "OVER_TIME",
+			method:         diskfill.OverTime,
 			wantedFileSize: 4 * 1024, // 4GB
 			wantedDelta:    512,
 		},
@@ -846,7 +847,7 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 				Mode      string `json:"mode"`
 				BlockSize int    `json:"blocksize"`
 				Method    string `json:"method"`
-			}{Duration: 60_000, Size: testCase.size, Mode: testCase.mode, Method: testCase.method, BlockSize: testCase.blockSize, Path: "/filldisk"}
+			}{Duration: 60_000, Size: testCase.size, Mode: string(testCase.mode), Method: string(testCase.method), BlockSize: testCase.blockSize, Path: "/filldisk"}
 
 			action, err := e.RunAction(fmt.Sprintf("%s.fill_disk", exthost.BaseActionID), getTarget(m), config, executionContext)
 			defer func() { _ = action.Cancel() }()
