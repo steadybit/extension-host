@@ -69,10 +69,6 @@ func getTarget(m *e2e.Minikube) *action_kit_api.Target {
 	}
 }
 
-func runsInCi() bool {
-	return os.Getenv("CI") != ""
-}
-
 func TestWithMinikube(t *testing.T) {
 	extFactory := e2e.HelmExtensionFactory{
 		Name: "extension-host",
@@ -945,8 +941,8 @@ func getMinikubeOptions() e2e.MinikubeOpts {
 		log.Info().Msg("KVM is not available, using docker driver")
 		mOpts.WithDriver("docker")
 	} else {
-		log.Info().Msg("KVM is available, using kvm2 driver")
-		mOpts.WithDriver("kvm2")
+		log.Info().Msg("KVM is available, using kvm driver")
+		mOpts.WithDriver("kvm")
 	}
 
 	return mOpts
