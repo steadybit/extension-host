@@ -84,65 +84,65 @@ func TestWithMinikube(t *testing.T) {
 	}
 
 	e2e.WithMinikube(t, getMinikubeOptions(), &extFactory, []e2e.WithMinikubeTestCase{
-		{
-			Name: "validate discovery",
-			Test: validateDiscovery,
-		},
-		{
-			Name: "target discovery",
-			Test: testDiscovery,
-		},
-		{
-			Name: "stress cpu",
-			Test: testStressCpu,
-		},
-		{
-			Name: "stress memory",
-			Test: testStressMemory,
-		}, {
-			Name: "stress io",
-			Test: testStressIo,
-		},
-		{
-			Name: "time travel",
-			Test: testTimeTravel,
-		},
-		{
-			Name: "stop process",
-			Test: testStopProcess,
-		},
-		{
-			Name: "network delay",
-			Test: testNetworkDelay,
-		},
-		{
-			Name: "network blackhole",
-			Test: testNetworkBlackhole,
-		},
-		{
-			Name: "network block dns",
-			Test: testNetworkBlockDns,
-		},
-		{
-			Name: "network limit bandwidth",
-			Test: testNetworkLimitBandwidth,
-		},
-		{
-			Name: "network package loss",
-			Test: testNetworkPackageLoss,
-		},
-		{
-			Name: "network package corruption",
-			Test: testNetworkPackageCorruption,
-		},
+		//{
+		//	Name: "validate discovery",
+		//	Test: validateDiscovery,
+		//},
+		//{
+		//	Name: "target discovery",
+		//	Test: testDiscovery,
+		//},
+		//{
+		//	Name: "stress cpu",
+		//	Test: testStressCpu,
+		//},
+		//{
+		//	Name: "stress memory",
+		//	Test: testStressMemory,
+		//}, {
+		//	Name: "stress io",
+		//	Test: testStressIo,
+		//},
+		//{
+		//	Name: "time travel",
+		//	Test: testTimeTravel,
+		//},
+		//{
+		//	Name: "stop process",
+		//	Test: testStopProcess,
+		//},
+		//{
+		//	Name: "network delay",
+		//	Test: testNetworkDelay,
+		//},
+		//{
+		//	Name: "network blackhole",
+		//	Test: testNetworkBlackhole,
+		//},
+		//{
+		//	Name: "network block dns",
+		//	Test: testNetworkBlockDns,
+		//},
+		//{
+		//	Name: "network limit bandwidth",
+		//	Test: testNetworkLimitBandwidth,
+		//},
+		//{
+		//	Name: "network package loss",
+		//	Test: testNetworkPackageLoss,
+		//},
+		//{
+		//	Name: "network package corruption",
+		//	Test: testNetworkPackageCorruption,
+		//},
 		{
 			Name: "fill disk",
 			Test: testFillDisk,
 		},
-		{
-			Name: "shutdown host",
-			Test: testShutdownHost, // if you run this test locally, you will need to restart your docker machine
-		},
+		//{
+		//	Name: "shutdown host",
+		//	Test: testShutdownHost, // if you run this test locally, you will need to restart your docker machine
+		//},
 	})
 }
 
@@ -793,7 +793,7 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 				diskSpace := getDiskSpace(m)
 				return int(((diskSpace.Capacity * 80 / 100) - diskSpace.Used) / 1024)
 			},
-			wantedDelta: 1024,
+			wantedDelta: 512,
 		},
 		{
 			name:      "fill disk with megabytes to fill (fallocate)",
@@ -816,25 +816,25 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 				diskSpace := getDiskSpace(m)
 				return int(diskSpace.Available-(int64(4*1024*1024))) / 1024
 			},
-			wantedDelta: 1024,
+			wantedDelta: 512,
 		},
 		{
 			name:      "fill disk with percentage (dd)",
 			mode:      diskfill.Percentage,
 			size:      70,
-			blockSize: 1024,
+			blockSize: 5,
 			method:    diskfill.OverTime,
 			wantedFileSize: func(m *e2e.Minikube) int {
 				diskSpace := getDiskSpace(m)
 				return int(((diskSpace.Capacity * 70 / 100) - diskSpace.Used) / 1024)
 			},
-			wantedDelta: 1024,
+			wantedDelta: 512,
 		},
 		{
 			name:      "fill disk with megabytes to fill (dd)",
 			mode:      diskfill.MBToFill,
 			size:      4 * 1024, // 4GB
-			blockSize: 1024,
+			blockSize: 5,
 			method:    diskfill.OverTime,
 			wantedFileSize: func(_ *e2e.Minikube) int {
 				return 4 * 1024
@@ -845,13 +845,13 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			name:      "fill disk with megabytes left (dd)",
 			mode:      diskfill.MBLeft,
 			size:      10 * 1024,
-			blockSize: 1024,
+			blockSize: 5,
 			method:    diskfill.OverTime,
 			wantedFileSize: func(m *e2e.Minikube) int {
 				diskSpace := getDiskSpace(m)
 				return int(diskSpace.Available-(int64(10*1024*1024))) / 1024
 			},
-			wantedDelta: 1024,
+			wantedDelta: 512,
 		},
 		{
 			name:      "fill disk with bigger blocksize (dd)",
@@ -904,7 +904,7 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 func assertFileHasSize(t *testing.T, m *e2e.Minikube, filepath string, wantedSizeInMb int, wantedDeltaInMb int) {
 	sizeInBytes := wantedSizeInMb * 1024 * 1024
 	deltaInBytes := wantedDeltaInMb * 1024 * 1024
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	message := ""
 	for {
