@@ -15,6 +15,7 @@ import (
 	"github.com/steadybit/extension-kit/extutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -762,77 +763,77 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	require.NoError(t, err)
 
 	type testCase struct {
-		name            string
-		mode            string
-		size            int
-		checkFileSize   int
-		atLeastFileSize bool
-		blockSize       int
-		method          string
+		name           string
+		mode           string
+		size           int
+		blockSize      int
+		method         string
+		wantedFileSize int
+		wantedDelta    int
 	}
 	testCases := []testCase{
 		{
-			name:            "fill disk with percentage (fallocate)",
-			mode:            "PERCENTAGE",
-			size:            50,
-			checkFileSize:   3 * 1024,
-			atLeastFileSize: true,
-			blockSize:       0,
-			method:          "AT_ONCE",
+			name:           "fill disk with percentage (fallocate)",
+			mode:           "PERCENTAGE",
+			size:           50,
+			blockSize:      0,
+			method:         "AT_ONCE",
+			wantedFileSize: 3 * 1024,
+			wantedDelta:    512,
 		},
 		{
-			name:            "fill disk with megabytes to fill (fallocate)",
-			mode:            "MB_TO_FILL",
-			size:            4 * 1024, // 4GB
-			checkFileSize:   4 * 1024,
-			atLeastFileSize: false,
-			blockSize:       0,
-			method:          "AT_ONCE",
+			name:           "fill disk with megabytes to fill (fallocate)",
+			mode:           "MB_TO_FILL",
+			size:           4 * 1024, // 4GB
+			blockSize:      0,
+			method:         "AT_ONCE",
+			wantedFileSize: 4 * 1024,
+			wantedDelta:    0,
 		},
 		{
-			name:            "fill disk with megabytes left (fallocate)",
-			mode:            "MB_LEFT",
-			size:            4 * 1024, // 4GB
-			checkFileSize:   3 * 1024,
-			atLeastFileSize: true,
-			blockSize:       0,
-			method:          "AT_ONCE",
+			name:           "fill disk with megabytes left (fallocate)",
+			mode:           "MB_LEFT",
+			size:           4 * 1024, // 4GB
+			blockSize:      0,
+			method:         "AT_ONCE",
+			wantedFileSize: 3 * 1024,
+			wantedDelta:    512,
 		},
 		{
-			name:            "fill disk with percentage (dd)",
-			mode:            "PERCENTAGE",
-			size:            50,
-			checkFileSize:   3 * 1024,
-			atLeastFileSize: true,
-			blockSize:       1024,
-			method:          "OVER_TIME",
+			name:           "fill disk with percentage (dd)",
+			mode:           "PERCENTAGE",
+			size:           50,
+			blockSize:      1024,
+			method:         "OVER_TIME",
+			wantedFileSize: 3 * 1024,
+			wantedDelta:    512,
 		},
 		{
-			name:            "fill disk with megabytes to fill (dd)",
-			mode:            "MB_TO_FILL",
-			size:            4 * 1024, // 4GB
-			checkFileSize:   4 * 1024,
-			atLeastFileSize: false,
-			blockSize:       1024,
-			method:          "OVER_TIME",
+			name:           "fill disk with megabytes to fill (dd)",
+			mode:           "MB_TO_FILL",
+			size:           4 * 1024, // 4GB
+			blockSize:      1024,
+			method:         "OVER_TIME",
+			wantedFileSize: 4 * 1024,
+			wantedDelta:    0,
 		},
 		{
-			name:            "fill disk with megabytes left (dd)",
-			mode:            "MB_LEFT",
-			size:            4 * 1024, // 4GB
-			checkFileSize:   3 * 1024,
-			atLeastFileSize: true,
-			blockSize:       1024,
-			method:          "OVER_TIME",
+			name:           "fill disk with megabytes left (dd)",
+			mode:           "MB_LEFT",
+			size:           4 * 1024, // 4GB
+			blockSize:      1024,
+			method:         "OVER_TIME",
+			wantedFileSize: 3 * 1024,
+			wantedDelta:    512,
 		},
 		{
-			name:            "fill disk with bigger blocksize (dd)",
-			mode:            "MB_TO_FILL",
-			size:            4 * 1024, // 4GB
-			checkFileSize:   4 * 1024, // 4GB
-			atLeastFileSize: false,
-			blockSize:       6 * 1024, // 2GB
-			method:          "OVER_TIME",
+			name:           "fill disk with bigger blocksize (dd)",
+			mode:           "MB_TO_FILL",
+			size:           4 * 1024, // 4GB
+			blockSize:      6 * 1024, // 2GB
+			method:         "OVER_TIME",
+			wantedFileSize: 4 * 1024, // 4GB
+			wantedDelta:    512,
 		},
 	}
 
@@ -855,7 +856,7 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 				e2e.AssertProcessRunningInContainer(t, m, e.Pod, "steadybit-extension-host", "dd", false)
 			}
 
-			assertFileHasSize(t, m, "/filldisk/disk-fill", testCase.checkFileSize, testCase.atLeastFileSize)
+			assertFileHasSize(t, m, "/filldisk/disk-fill", testCase.wantedFileSize, testCase.wantedDelta)
 			require.NoError(t, action.Cancel())
 
 			if testCase.method == "OVER_TIME" {
@@ -871,33 +872,34 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	requireAllSidecarsCleanedUp(t, m, e)
 }
 
-func assertFileHasSize(t *testing.T, m *e2e.Minikube, filepath string, sizeInMb int, atLeastSize bool) {
+func assertFileHasSize(t *testing.T, m *e2e.Minikube, filepath string, wantedSizeInMb int, wantedDeltaInMb int) {
+	sizeInBytes := wantedSizeInMb * 1024 * 1024
+	deltaInBytes := wantedDeltaInMb * 1024 * 1024
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	var sizeInBytes = sizeInMb * 1024 * 1024
-	var lastOutput []byte
+	message := ""
 	for {
 		select {
 		case <-ctx.Done():
-			assert.Failf(t, "file not found", "file %s not found.\n%s", filepath, lastOutput)
+			assert.Fail(t, "file has not the expected size", message)
 			return
 
 		case <-time.After(200 * time.Millisecond):
-			var out []byte
-			var err error
-			out, err = runInMinikube(m, "wc", "-c", filepath)
-			if err == nil {
-				for _, line := range strings.Split(string(out), " ") {
-					if lineSize, err := strconv.Atoi(line); err == nil {
-						if lineSize == sizeInBytes || (atLeastSize && lineSize >= sizeInBytes) {
-							return
-						} else {
-							log.Trace().Msgf("filesize is %s, expected %s", line, fmt.Sprint(sizeInBytes))
-						}
-					}
-				}
+			out, err := runInMinikube(m, "stat", "-c", "%s", filepath)
+			if err != nil {
+				message = fmt.Sprintf("%s: %s", err.Error(), out)
+				continue
 			}
-			lastOutput = out
+			if fileSize, err := strconv.Atoi(strings.TrimSpace(string(out))); err == nil {
+				actualDelta := int(math.Abs(float64(fileSize - sizeInBytes)))
+				if actualDelta <= deltaInBytes {
+					return
+				} else {
+					message = fmt.Sprintf("file size is %d, wanted %d, delta of %d exceeds allowed delta of %d", fileSize, sizeInBytes, actualDelta, deltaInBytes)
+				}
+			} else {
+				message = fmt.Sprintf("cannot parse file size: %s", err.Error())
+			}
 		}
 	}
 }
