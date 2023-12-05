@@ -81,15 +81,15 @@ func (a *fillDiskAction) Describe() action_kit_api.ActionDescription {
 				Options: extutil.Ptr([]action_kit_api.ParameterOption{
 					action_kit_api.ExplicitParameterOption{
 						Label: "Overall percentage of filled disk space in percent",
-						Value: "PERCENTAGE",
+						Value: string(diskfill.Percentage),
 					},
 					action_kit_api.ExplicitParameterOption{
 						Label: "Megabytes to write",
-						Value: "MB_TO_FILL",
+						Value: string(diskfill.MBToFill),
 					},
 					action_kit_api.ExplicitParameterOption{
 						Label: "Megabytes to leave free on disk",
-						Value: "MB_LEFT",
+						Value: string(diskfill.MBLeft),
 					},
 				}),
 			},
@@ -123,11 +123,11 @@ func (a *fillDiskAction) Describe() action_kit_api.ActionDescription {
 				Options: extutil.Ptr([]action_kit_api.ParameterOption{
 					action_kit_api.ExplicitParameterOption{
 						Label: "At once (fallocate)",
-						Value: "AT_ONCE",
+						Value: string(diskfill.AtOnce),
 					},
 					action_kit_api.ExplicitParameterOption{
 						Label: "Over time (dd)",
-						Value: "OVER_TIME",
+						Value: string(diskfill.OverTime),
 					},
 				}),
 			},
@@ -155,21 +155,21 @@ func fillDiskOpts(request action_kit_api.PrepareActionRequestBody) (diskfill.Opt
 	opts.BlockSize = int(request.Config["blocksize"].(float64))
 	opts.Size = int(request.Config["size"].(float64))
 	switch request.Config["mode"] {
-	case "PERCENTAGE":
-		opts.Mode = "PERCENTAGE"
-	case "MB_TO_FILL":
-		opts.Mode = "MB_TO_FILL"
-	case "MB_LEFT":
-		opts.Mode = "MB_LEFT"
+	case string(diskfill.Percentage):
+		opts.Mode = diskfill.Percentage
+	case string(diskfill.MBToFill):
+		opts.Mode = diskfill.MBToFill
+	case string(diskfill.MBLeft):
+		opts.Mode = diskfill.MBLeft
 	default:
 		return opts, fmt.Errorf("invalid mode %s", request.Config["mode"])
 	}
 
 	switch request.Config["method"] {
-	case "OVER_TIME":
-		opts.Method = "OVER_TIME"
-	case "AT_ONCE":
-		opts.Method = "AT_ONCE"
+	case string(diskfill.OverTime):
+		opts.Method = diskfill.OverTime
+	case string(diskfill.AtOnce):
+		opts.Method = diskfill.AtOnce
 	default:
 		return opts, fmt.Errorf("invalid method %s", request.Config["method"])
 	}
