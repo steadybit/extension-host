@@ -222,7 +222,6 @@ func testTimeTravel(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 
 	assert.EventuallyWithT(t, func(c *assert.CollectT) {
 		diff := getTimeDiffBetweenNowAndContainerTime(t, m, e)
-		log.Info().Msgf("Time diff between now and container : %v", diff)
 		assert.InDelta(t, config.Offset, diff.Milliseconds(), 2000)
 	}, 10*time.Second, 1*time.Second, "time travel failed to apply offset")
 
@@ -230,7 +229,6 @@ func testTimeTravel(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	require.NoError(t, action.Cancel())
 	assert.EventuallyWithT(t, func(c *assert.CollectT) {
 		diff := getTimeDiffBetweenNowAndContainerTime(t, m, e)
-		log.Info().Msgf("Time diff between now and container : %v", diff)
 		assert.InDelta(t, 0, diff.Milliseconds(), 2000)
 	}, 10*time.Second, 1*time.Second, "time travel failed to rollback offset")
 }
@@ -881,7 +879,7 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			defer func() { _ = action.Cancel() }()
 			require.NoError(t, err)
 
-			if testCase.method == diskfill.OverTime{
+			if testCase.method == diskfill.OverTime {
 				e2e.AssertProcessRunningInContainer(t, m, e.Pod, "steadybit-extension-host", "dd", true)
 			}
 
