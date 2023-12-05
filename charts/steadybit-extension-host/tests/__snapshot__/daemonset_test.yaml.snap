@@ -72,10 +72,10 @@ manifest should match snapshot using podAnnotations, podLabels and resources:
                   cpu: 200m
                   memory: 256Mi
               securityContext:
-                allowPrivilegeEscalation: false
                 capabilities:
                   add:
                     - SYS_ADMIN
+                    - SYS_CHROOT
                     - SYS_RESOURCE
                     - SYS_BOOT
                     - NET_RAW
@@ -87,8 +87,6 @@ manifest should match snapshot using podAnnotations, podLabels and resources:
                     - SETUID
                     - SETGID
                     - AUDIT_WRITE
-                  drop:
-                    - ALL
                 readOnlyRootFilesystem: true
                 runAsGroup: 10000
                 runAsNonRoot: true
@@ -98,6 +96,10 @@ manifest should match snapshot using podAnnotations, podLabels and resources:
               volumeMounts:
                 - mountPath: /tmp
                   name: tmp-dir
+                - mountPath: /sys/fs/cgroup
+                  name: cgroup-root
+                - mountPath: /run/steadybit/runc
+                  name: runc-root
           dnsPolicy: ClusterFirstWithHostNet
           hostNetwork: true
           hostPID: true
@@ -105,6 +107,12 @@ manifest should match snapshot using podAnnotations, podLabels and resources:
           volumes:
             - emptyDir: {}
               name: tmp-dir
+            - hostPath:
+                path: /sys/fs/cgroup
+                type: Directory
+              name: cgroup-root
+            - emptyDir: {}
+              name: runc-root
       updateStrategy:
         rollingUpdate:
           maxUnavailable: 1
@@ -185,10 +193,10 @@ manifest should match snapshot with TLS:
                   cpu: 50m
                   memory: 32Mi
               securityContext:
-                allowPrivilegeEscalation: false
                 capabilities:
                   add:
                     - SYS_ADMIN
+                    - SYS_CHROOT
                     - SYS_RESOURCE
                     - SYS_BOOT
                     - NET_RAW
@@ -200,8 +208,6 @@ manifest should match snapshot with TLS:
                     - SETUID
                     - SETGID
                     - AUDIT_WRITE
-                  drop:
-                    - ALL
                 readOnlyRootFilesystem: true
                 runAsGroup: 10000
                 runAsNonRoot: true
@@ -211,6 +217,10 @@ manifest should match snapshot with TLS:
               volumeMounts:
                 - mountPath: /tmp
                   name: tmp-dir
+                - mountPath: /sys/fs/cgroup
+                  name: cgroup-root
+                - mountPath: /run/steadybit/runc
+                  name: runc-root
                 - mountPath: /etc/extension/certificates/server-cert
                   name: certificate-server-cert
                   readOnly: true
@@ -221,6 +231,12 @@ manifest should match snapshot with TLS:
           volumes:
             - emptyDir: {}
               name: tmp-dir
+            - hostPath:
+                path: /sys/fs/cgroup
+                type: Directory
+              name: cgroup-root
+            - emptyDir: {}
+              name: runc-root
             - name: certificate-server-cert
               secret:
                 optional: false
@@ -301,10 +317,10 @@ manifest should match snapshot with different containerPorts:
                   cpu: 50m
                   memory: 32Mi
               securityContext:
-                allowPrivilegeEscalation: false
                 capabilities:
                   add:
                     - SYS_ADMIN
+                    - SYS_CHROOT
                     - SYS_RESOURCE
                     - SYS_BOOT
                     - NET_RAW
@@ -316,8 +332,6 @@ manifest should match snapshot with different containerPorts:
                     - SETUID
                     - SETGID
                     - AUDIT_WRITE
-                  drop:
-                    - ALL
                 readOnlyRootFilesystem: true
                 runAsGroup: 10000
                 runAsNonRoot: true
@@ -327,6 +341,10 @@ manifest should match snapshot with different containerPorts:
               volumeMounts:
                 - mountPath: /tmp
                   name: tmp-dir
+                - mountPath: /sys/fs/cgroup
+                  name: cgroup-root
+                - mountPath: /run/steadybit/runc
+                  name: runc-root
           dnsPolicy: ClusterFirstWithHostNet
           hostNetwork: true
           hostPID: true
@@ -334,6 +352,12 @@ manifest should match snapshot with different containerPorts:
           volumes:
             - emptyDir: {}
               name: tmp-dir
+            - hostPath:
+                path: /sys/fs/cgroup
+                type: Directory
+              name: cgroup-root
+            - emptyDir: {}
+              name: runc-root
       updateStrategy:
         rollingUpdate:
           maxUnavailable: 1
@@ -417,10 +441,10 @@ manifest should match snapshot with extra env vars:
                   cpu: 50m
                   memory: 32Mi
               securityContext:
-                allowPrivilegeEscalation: false
                 capabilities:
                   add:
                     - SYS_ADMIN
+                    - SYS_CHROOT
                     - SYS_RESOURCE
                     - SYS_BOOT
                     - NET_RAW
@@ -432,8 +456,6 @@ manifest should match snapshot with extra env vars:
                     - SETUID
                     - SETGID
                     - AUDIT_WRITE
-                  drop:
-                    - ALL
                 readOnlyRootFilesystem: true
                 runAsGroup: 10000
                 runAsNonRoot: true
@@ -443,6 +465,10 @@ manifest should match snapshot with extra env vars:
               volumeMounts:
                 - mountPath: /tmp
                   name: tmp-dir
+                - mountPath: /sys/fs/cgroup
+                  name: cgroup-root
+                - mountPath: /run/steadybit/runc
+                  name: runc-root
           dnsPolicy: ClusterFirstWithHostNet
           hostNetwork: true
           hostPID: true
@@ -450,6 +476,12 @@ manifest should match snapshot with extra env vars:
           volumes:
             - emptyDir: {}
               name: tmp-dir
+            - hostPath:
+                path: /sys/fs/cgroup
+                type: Directory
+              name: cgroup-root
+            - emptyDir: {}
+              name: runc-root
       updateStrategy:
         rollingUpdate:
           maxUnavailable: 1
@@ -528,10 +560,10 @@ manifest should match snapshot with extra labels:
                   cpu: 50m
                   memory: 32Mi
               securityContext:
-                allowPrivilegeEscalation: false
                 capabilities:
                   add:
                     - SYS_ADMIN
+                    - SYS_CHROOT
                     - SYS_RESOURCE
                     - SYS_BOOT
                     - NET_RAW
@@ -543,8 +575,6 @@ manifest should match snapshot with extra labels:
                     - SETUID
                     - SETGID
                     - AUDIT_WRITE
-                  drop:
-                    - ALL
                 readOnlyRootFilesystem: true
                 runAsGroup: 10000
                 runAsNonRoot: true
@@ -554,6 +584,10 @@ manifest should match snapshot with extra labels:
               volumeMounts:
                 - mountPath: /tmp
                   name: tmp-dir
+                - mountPath: /sys/fs/cgroup
+                  name: cgroup-root
+                - mountPath: /run/steadybit/runc
+                  name: runc-root
           dnsPolicy: ClusterFirstWithHostNet
           hostNetwork: true
           hostPID: true
@@ -561,6 +595,12 @@ manifest should match snapshot with extra labels:
           volumes:
             - emptyDir: {}
               name: tmp-dir
+            - hostPath:
+                path: /sys/fs/cgroup
+                type: Directory
+              name: cgroup-root
+            - emptyDir: {}
+              name: runc-root
       updateStrategy:
         rollingUpdate:
           maxUnavailable: 1
@@ -643,10 +683,10 @@ manifest should match snapshot with mutual TLS:
                   cpu: 50m
                   memory: 32Mi
               securityContext:
-                allowPrivilegeEscalation: false
                 capabilities:
                   add:
                     - SYS_ADMIN
+                    - SYS_CHROOT
                     - SYS_RESOURCE
                     - SYS_BOOT
                     - NET_RAW
@@ -658,8 +698,6 @@ manifest should match snapshot with mutual TLS:
                     - SETUID
                     - SETGID
                     - AUDIT_WRITE
-                  drop:
-                    - ALL
                 readOnlyRootFilesystem: true
                 runAsGroup: 10000
                 runAsNonRoot: true
@@ -669,6 +707,10 @@ manifest should match snapshot with mutual TLS:
               volumeMounts:
                 - mountPath: /tmp
                   name: tmp-dir
+                - mountPath: /sys/fs/cgroup
+                  name: cgroup-root
+                - mountPath: /run/steadybit/runc
+                  name: runc-root
                 - mountPath: /etc/extension/certificates/client-cert-a
                   name: certificate-client-cert-a
                   readOnly: true
@@ -682,6 +724,12 @@ manifest should match snapshot with mutual TLS:
           volumes:
             - emptyDir: {}
               name: tmp-dir
+            - hostPath:
+                path: /sys/fs/cgroup
+                type: Directory
+              name: cgroup-root
+            - emptyDir: {}
+              name: runc-root
             - name: certificate-client-cert-a
               secret:
                 optional: false
@@ -772,10 +820,10 @@ manifest should match snapshot with mutual TLS using containerPaths:
                   cpu: 50m
                   memory: 32Mi
               securityContext:
-                allowPrivilegeEscalation: false
                 capabilities:
                   add:
                     - SYS_ADMIN
+                    - SYS_CHROOT
                     - SYS_RESOURCE
                     - SYS_BOOT
                     - NET_RAW
@@ -787,8 +835,6 @@ manifest should match snapshot with mutual TLS using containerPaths:
                     - SETUID
                     - SETGID
                     - AUDIT_WRITE
-                  drop:
-                    - ALL
                 readOnlyRootFilesystem: true
                 runAsGroup: 10000
                 runAsNonRoot: true
@@ -798,6 +844,10 @@ manifest should match snapshot with mutual TLS using containerPaths:
               volumeMounts:
                 - mountPath: /tmp
                   name: tmp-dir
+                - mountPath: /sys/fs/cgroup
+                  name: cgroup-root
+                - mountPath: /run/steadybit/runc
+                  name: runc-root
           dnsPolicy: ClusterFirstWithHostNet
           hostNetwork: true
           hostPID: true
@@ -805,6 +855,12 @@ manifest should match snapshot with mutual TLS using containerPaths:
           volumes:
             - emptyDir: {}
               name: tmp-dir
+            - hostPath:
+                path: /sys/fs/cgroup
+                type: Directory
+              name: cgroup-root
+            - emptyDir: {}
+              name: runc-root
       updateStrategy:
         rollingUpdate:
           maxUnavailable: 1
@@ -881,10 +937,10 @@ manifest should match snapshot with podSecurityContext:
                   cpu: 50m
                   memory: 32Mi
               securityContext:
-                allowPrivilegeEscalation: false
                 capabilities:
                   add:
                     - SYS_ADMIN
+                    - SYS_CHROOT
                     - SYS_RESOURCE
                     - SYS_BOOT
                     - NET_RAW
@@ -896,8 +952,6 @@ manifest should match snapshot with podSecurityContext:
                     - SETUID
                     - SETGID
                     - AUDIT_WRITE
-                  drop:
-                    - ALL
                 readOnlyRootFilesystem: true
                 runAsGroup: 10000
                 runAsNonRoot: true
@@ -907,6 +961,10 @@ manifest should match snapshot with podSecurityContext:
               volumeMounts:
                 - mountPath: /tmp
                   name: tmp-dir
+                - mountPath: /sys/fs/cgroup
+                  name: cgroup-root
+                - mountPath: /run/steadybit/runc
+                  name: runc-root
           dnsPolicy: ClusterFirstWithHostNet
           hostNetwork: true
           hostPID: true
@@ -916,6 +974,12 @@ manifest should match snapshot with podSecurityContext:
           volumes:
             - emptyDir: {}
               name: tmp-dir
+            - hostPath:
+                path: /sys/fs/cgroup
+                type: Directory
+              name: cgroup-root
+            - emptyDir: {}
+              name: runc-root
       updateStrategy:
         rollingUpdate:
           maxUnavailable: 1
@@ -992,10 +1056,10 @@ manifest should match snapshot with priority class:
                   cpu: 50m
                   memory: 32Mi
               securityContext:
-                allowPrivilegeEscalation: false
                 capabilities:
                   add:
                     - SYS_ADMIN
+                    - SYS_CHROOT
                     - SYS_RESOURCE
                     - SYS_BOOT
                     - NET_RAW
@@ -1007,8 +1071,6 @@ manifest should match snapshot with priority class:
                     - SETUID
                     - SETGID
                     - AUDIT_WRITE
-                  drop:
-                    - ALL
                 readOnlyRootFilesystem: true
                 runAsGroup: 10000
                 runAsNonRoot: true
@@ -1018,6 +1080,10 @@ manifest should match snapshot with priority class:
               volumeMounts:
                 - mountPath: /tmp
                   name: tmp-dir
+                - mountPath: /sys/fs/cgroup
+                  name: cgroup-root
+                - mountPath: /run/steadybit/runc
+                  name: runc-root
           dnsPolicy: ClusterFirstWithHostNet
           hostNetwork: true
           hostPID: true
@@ -1026,6 +1092,12 @@ manifest should match snapshot with priority class:
           volumes:
             - emptyDir: {}
               name: tmp-dir
+            - hostPath:
+                path: /sys/fs/cgroup
+                type: Directory
+              name: cgroup-root
+            - emptyDir: {}
+              name: runc-root
       updateStrategy:
         rollingUpdate:
           maxUnavailable: 1
@@ -1102,10 +1174,10 @@ manifest should match snapshot with update strategy:
                   cpu: 50m
                   memory: 32Mi
               securityContext:
-                allowPrivilegeEscalation: false
                 capabilities:
                   add:
                     - SYS_ADMIN
+                    - SYS_CHROOT
                     - SYS_RESOURCE
                     - SYS_BOOT
                     - NET_RAW
@@ -1117,8 +1189,6 @@ manifest should match snapshot with update strategy:
                     - SETUID
                     - SETGID
                     - AUDIT_WRITE
-                  drop:
-                    - ALL
                 readOnlyRootFilesystem: true
                 runAsGroup: 10000
                 runAsNonRoot: true
@@ -1128,6 +1198,10 @@ manifest should match snapshot with update strategy:
               volumeMounts:
                 - mountPath: /tmp
                   name: tmp-dir
+                - mountPath: /sys/fs/cgroup
+                  name: cgroup-root
+                - mountPath: /run/steadybit/runc
+                  name: runc-root
           dnsPolicy: ClusterFirstWithHostNet
           hostNetwork: true
           hostPID: true
@@ -1135,6 +1209,12 @@ manifest should match snapshot with update strategy:
           volumes:
             - emptyDir: {}
               name: tmp-dir
+            - hostPath:
+                path: /sys/fs/cgroup
+                type: Directory
+              name: cgroup-root
+            - emptyDir: {}
+              name: runc-root
       updateStrategy:
         rollingUpdate:
           maxUnavailable: 5
@@ -1211,10 +1291,10 @@ manifest should match snapshot without TLS:
                   cpu: 50m
                   memory: 32Mi
               securityContext:
-                allowPrivilegeEscalation: false
                 capabilities:
                   add:
                     - SYS_ADMIN
+                    - SYS_CHROOT
                     - SYS_RESOURCE
                     - SYS_BOOT
                     - NET_RAW
@@ -1226,8 +1306,6 @@ manifest should match snapshot without TLS:
                     - SETUID
                     - SETGID
                     - AUDIT_WRITE
-                  drop:
-                    - ALL
                 readOnlyRootFilesystem: true
                 runAsGroup: 10000
                 runAsNonRoot: true
@@ -1237,6 +1315,10 @@ manifest should match snapshot without TLS:
               volumeMounts:
                 - mountPath: /tmp
                   name: tmp-dir
+                - mountPath: /sys/fs/cgroup
+                  name: cgroup-root
+                - mountPath: /run/steadybit/runc
+                  name: runc-root
           dnsPolicy: ClusterFirstWithHostNet
           hostNetwork: true
           hostPID: true
@@ -1244,6 +1326,12 @@ manifest should match snapshot without TLS:
           volumes:
             - emptyDir: {}
               name: tmp-dir
+            - hostPath:
+                path: /sys/fs/cgroup
+                type: Directory
+              name: cgroup-root
+            - emptyDir: {}
+              name: runc-root
       updateStrategy:
         rollingUpdate:
           maxUnavailable: 1
