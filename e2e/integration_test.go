@@ -881,14 +881,14 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			defer func() { _ = action.Cancel() }()
 			require.NoError(t, err)
 
-			if testCase.method == "OVER_TIME" {
+			if testCase.method == diskfill.OverTime{
 				e2e.AssertProcessRunningInContainer(t, m, e.Pod, "steadybit-extension-host", "dd", true)
 			}
 
 			assertFileHasSize(t, m, "/filldisk/disk-fill", wantedFileSize, testCase.wantedDelta)
 			require.NoError(t, action.Cancel())
 
-			if testCase.method == "OVER_TIME" {
+			if testCase.method == diskfill.OverTime {
 				e2e.AssertProcessNOTRunningInContainer(t, m, e.Pod, "steadybit-extension-host", "dd")
 			} else {
 				e2e.AssertProcessNOTRunningInContainer(t, m, e.Pod, "steadybit-extension-host", "fallocate")
