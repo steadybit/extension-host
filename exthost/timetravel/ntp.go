@@ -2,59 +2,32 @@ package timetravel
 
 import (
 	"context"
-	"github.com/rs/zerolog/log"
-	"os/exec"
-	"strings"
-	"syscall"
-	"time"
+	"github.com/steadybit/action-kit/go/action_kit_commons/network"
+	"github.com/steadybit/action-kit/go/action_kit_commons/runc"
 )
 
-func AdjustNtpTrafficRules(allowNtpTraffic bool) error {
-	if allowNtpTraffic {
-		err := executeIpTablesCommand("-A", "OUTPUT", "-p", "udp", "--dport", "123", "-j", "ACCEPT")
-		if err != nil {
-			log.Error().Err(err).Msg("Failed to execute iptables command")
-			return err
-		}
-		err = executeIpTablesCommand("-A", "OUTPUT", "-p", "udp", "--sport", "123", "-j", "ACCEPT")
-		if err != nil {
-			log.Error().Err(err).Msg("Failed to execute iptables command")
-			return err
-		}
-	} else {
-		err := executeIpTablesCommand("-A", "OUTPUT", "-p", "udp", "--dport", "123", "-j", "DROP")
-		if err != nil {
-			log.Error().Err(err).Msg("Failed to execute iptables command")
-			return err
-		}
-		err = executeIpTablesCommand("-A", "OUTPUT", "-p", "udp", "--sport", "123", "-j", "DROP")
-		if err != nil {
-			log.Error().Err(err).Msg("Failed to execute iptables command")
-			return err
-		}
-	}
-	return nil
-}
-
-func executeIpTablesCommand(args ...string) error {
-	log.Debug().Msg("Executing iptables command")
-	log.Debug().Msg(strings.Join(args, " "))
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-	cmd := exec.CommandContext(ctx, "iptables", args...)
-	cmd.SysProcAttr = &syscall.SysProcAttr{
-		Credential: &syscall.Credential{
-			Uid: 0,
-			Gid: 0,
-		},
-	}
-
-	cmd.Env = append(cmd.Env, "XTABLES_LOCKFILE=/tmp/xtables.lock")
-	out, err := cmd.CombinedOutput()
+func AdjustNtpTrafficRules(ctx context.Context, r runc.Runc, allowNtpTraffic bool) error {
+	initProcess, err := runc.ReadLinuxProcessInfo(ctx, 1)
 	if err != nil {
-		log.Error().Err(err).Str("output", string(out)).Msg("Failed to execute iptables command")
 		return err
 	}
 
-	return nil
+	sidecar := network.SidecarOpts{
+		TargetProcess: initProcess,
+		IdSuffix:      "host",
+		ImagePath:     "/",
+	}
+
+	opts := &network.BlackholeOpts{
+		IpProto: network.IpProtoUdp,
+		Filter: network.Filter{
+			Include: network.NewNetWithPortRanges(network.NetAny, network.PortRange{From: 123, To: 123}),
+		},
+	}
+
+	if allowNtpTraffic {
+		return network.Revert(ctx, r, sidecar, opts)
+	} else {
+		return network.Apply(ctx, r, sidecar, opts)
+	}
 }

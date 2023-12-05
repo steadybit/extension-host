@@ -4,7 +4,6 @@ import (
 	"context"
 	"github.com/google/uuid"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
-	"github.com/steadybit/extension-kit"
 	"github.com/steadybit/extension-kit/extutil"
 	"github.com/stretchr/testify/assert"
 	"testing"
@@ -18,7 +17,7 @@ func TestActionTimeTravel_Prepare(t *testing.T) {
 	tests := []struct {
 		name        string
 		requestBody action_kit_api.PrepareActionRequestBody
-		wantedError error
+		wantedError string
 		wantedState *TimeTravelActionState
 	}{
 		{
@@ -49,7 +48,7 @@ func TestActionTimeTravel_Prepare(t *testing.T) {
 				Config: map[string]interface{}{
 					"action":     "prepare",
 					"duration":   "0",
-					"offset":     "1000",
+					"offset":     "999",
 					"disableNtp": "true",
 				},
 				ExecutionId: uuid.New(),
@@ -60,10 +59,10 @@ func TestActionTimeTravel_Prepare(t *testing.T) {
 				}),
 			},
 
-			wantedError: extension_kit.ToError("Duration must be greater / equal than 1s", nil),
+			wantedError: "Duration must be greater / equal than 1s",
 		},
 	}
-	action := NewTimetravelAction()
+	action := NewTimetravelAction(nil)
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			//Given
@@ -73,10 +72,14 @@ func TestActionTimeTravel_Prepare(t *testing.T) {
 			result, err := action.Prepare(context.Background(), &state, request)
 
 			//Then
-			if tt.wantedError != nil && err != nil {
-				assert.EqualError(t, err, tt.wantedError.Error())
-			} else if tt.wantedError != nil && result != nil {
-				assert.Equal(t, result.Error.Title, tt.wantedError.Error())
+			if tt.wantedError != "" {
+				if err != nil {
+					assert.EqualError(t, err, tt.wantedError)
+				} else if result != nil && result.Error != nil {
+					assert.Equal(t, tt.wantedError, result.Error.Title)
+				} else {
+					assert.Fail(t, "Expected error but no error or result with error was returned")
+				}
 			}
 			if tt.wantedState != nil {
 				assert.NoError(t, err)

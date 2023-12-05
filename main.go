@@ -64,7 +64,7 @@ func main() {
 	action_kit_sdk.RegisterAction(exthost.NewStressCpuAction(r))
 	action_kit_sdk.RegisterAction(exthost.NewStressMemoryAction(r))
 	action_kit_sdk.RegisterAction(exthost.NewStressIoAction(r))
-	action_kit_sdk.RegisterAction(exthost.NewTimetravelAction())
+	action_kit_sdk.RegisterAction(exthost.NewTimetravelAction(r))
 	action_kit_sdk.RegisterAction(exthost.NewStopProcessAction())
 	action_kit_sdk.RegisterAction(exthost.NewShutdownAction())
 	action_kit_sdk.RegisterAction(exthost.NewNetworkBlackholeContainerAction(r))

@@ -16,7 +16,7 @@ func AdjustTime(offset time.Duration, negate bool) error {
 		log.Err(err).Msg("Could not change time offset - Gettimeofday")
 		return err
 	}
-	seconds := int64(offset) / int64(time.Second)
+	seconds := int64(offset.Seconds())
 	if negate {
 		seconds = -seconds
 	}

@@ -4,7 +4,6 @@ import (
 	"context"
 	"github.com/google/uuid"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
-	"github.com/steadybit/extension-kit"
 	"github.com/steadybit/extension-kit/extutil"
 	"github.com/stretchr/testify/assert"
 	"testing"
@@ -20,7 +19,7 @@ func TestActionStopProcess_Prepare(t *testing.T) {
 	tests := []struct {
 		name        string
 		requestBody action_kit_api.PrepareActionRequestBody
-		wantedError error
+		wantedError string
 		wantedState *StopProcessActionState
 	}{
 		{
@@ -65,7 +64,7 @@ func TestActionStopProcess_Prepare(t *testing.T) {
 				}),
 			},
 
-			wantedError: extutil.Ptr(extension_kit.ToError("Duration is required", nil)),
+			wantedError: "Duration is required",
 		},
 	}
 	action := NewStopProcessAction()
@@ -80,10 +79,14 @@ func TestActionStopProcess_Prepare(t *testing.T) {
 			result, err := action.Prepare(context.Background(), &state, request)
 
 			//Then
-			if tt.wantedError != nil && err != nil {
-				assert.EqualError(t, err, tt.wantedError.Error())
-			} else if tt.wantedError != nil && result != nil {
-				assert.Equal(t, result.Error.Title, tt.wantedError.Error())
+			if tt.wantedError != "" {
+				if err != nil {
+					assert.EqualError(t, err, tt.wantedError)
+				} else if result != nil && result.Error != nil {
+					assert.Equal(t, tt.wantedError, result.Error.Title)
+				} else {
+					assert.Fail(t, "Expected error but no error or result with error was returned")
+				}
 			}
 			if tt.wantedState != nil {
 				assert.NoError(t, err)
