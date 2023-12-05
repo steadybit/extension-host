@@ -84,65 +84,65 @@ func TestWithMinikube(t *testing.T) {
 	}
 
 	e2e.WithMinikube(t, getMinikubeOptions(), &extFactory, []e2e.WithMinikubeTestCase{
-		//{
-		//	Name: "validate discovery",
-		//	Test: validateDiscovery,
-		//},
-		//{
-		//	Name: "target discovery",
-		//	Test: testDiscovery,
-		//},
-		//{
-		//	Name: "stress cpu",
-		//	Test: testStressCpu,
-		//},
-		//{
-		//	Name: "stress memory",
-		//	Test: testStressMemory,
-		//}, {
-		//	Name: "stress io",
-		//	Test: testStressIo,
-		//},
-		//{
-		//	Name: "time travel",
-		//	Test: testTimeTravel,
-		//},
-		//{
-		//	Name: "stop process",
-		//	Test: testStopProcess,
-		//},
-		//{
-		//	Name: "network delay",
-		//	Test: testNetworkDelay,
-		//},
-		//{
-		//	Name: "network blackhole",
-		//	Test: testNetworkBlackhole,
-		//},
-		//{
-		//	Name: "network block dns",
-		//	Test: testNetworkBlockDns,
-		//},
-		//{
-		//	Name: "network limit bandwidth",
-		//	Test: testNetworkLimitBandwidth,
-		//},
-		//{
-		//	Name: "network package loss",
-		//	Test: testNetworkPackageLoss,
-		//},
-		//{
-		//	Name: "network package corruption",
-		//	Test: testNetworkPackageCorruption,
-		//},
+		{
+			Name: "validate discovery",
+			Test: validateDiscovery,
+		},
+		{
+			Name: "target discovery",
+			Test: testDiscovery,
+		},
+		{
+			Name: "stress cpu",
+			Test: testStressCpu,
+		},
+		{
+			Name: "stress memory",
+			Test: testStressMemory,
+		}, {
+			Name: "stress io",
+			Test: testStressIo,
+		},
+		{
+			Name: "time travel",
+			Test: testTimeTravel,
+		},
+		{
+			Name: "stop process",
+			Test: testStopProcess,
+		},
+		{
+			Name: "network delay",
+			Test: testNetworkDelay,
+		},
+		{
+			Name: "network blackhole",
+			Test: testNetworkBlackhole,
+		},
+		{
+			Name: "network block dns",
+			Test: testNetworkBlockDns,
+		},
+		{
+			Name: "network limit bandwidth",
+			Test: testNetworkLimitBandwidth,
+		},
+		{
+			Name: "network package loss",
+			Test: testNetworkPackageLoss,
+		},
+		{
+			Name: "network package corruption",
+			Test: testNetworkPackageCorruption,
+		},
 		{
 			Name: "fill disk",
 			Test: testFillDisk,
 		},
-		//{
-		//	Name: "shutdown host",
-		//	Test: testShutdownHost, // if you run this test locally, you will need to restart your docker machine
-		//},
+		{
+			Name: "shutdown host",
+			Test: testShutdownHost, // if you run this test locally, you will need to restart your docker machine
+		},
 	})
 }
 
