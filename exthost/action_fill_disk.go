@@ -5,6 +5,7 @@ package exthost
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
@@ -242,12 +243,16 @@ func (a *fillDiskAction) Stop(ctx context.Context, state *FillDiskActionState) (
 
 	messages := make([]action_kit_api.Message, 0)
 
-	stopped := a.stopFillDiskContainer(state.ExecutionId)
+	stopped, err := a.stopFillDiskContainer(state.ExecutionId)
 	if stopped {
 		messages = append(messages, action_kit_api.Message{
 			Level:   extutil.Ptr(action_kit_api.Info),
 			Message: "Canceled fill disk on host",
 		})
+	}
+
+	if err != nil {
+		return nil, extension_kit.ToError("Failed to stop fill disk on host", err)
 	}
 
 	return &action_kit_api.StopResult{
@@ -263,11 +268,11 @@ func (a *fillDiskAction) fillDiskExited(executionId uuid.UUID) (bool, error) {
 	return s.(*diskfill.DiskFill).Exited()
 }
 
-func (a *fillDiskAction) stopFillDiskContainer(executionId uuid.UUID) bool {
+func (a *fillDiskAction) stopFillDiskContainer(executionId uuid.UUID) (bool, error) {
 	s, ok := a.diskfills.LoadAndDelete(executionId)
 	if !ok {
-		return false
+		return false, errors.New("no diskfill container found")
 	}
 	err := s.(*diskfill.DiskFill).Stop()
-	return err == nil
+	return err == nil, err
 }
