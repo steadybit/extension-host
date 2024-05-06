@@ -1037,5 +1037,5 @@ func getMinikubeOptions() e2e.MinikubeOpts {
 		mOpts = mOpts.WithDriver("kvm2")
 	}
 
-	return mOpts
+	return mOpts.WithStartArgs("--iso-url=https://storage.googleapis.com/minikube/iso/minikube-v1.32.1-amd64.iso,https://github.com/kubernetes/minikube/releases/download/v1.32.1/minikube-v1.32.1-amd64.iso,https://kubernetes.oss-cn-hangzhou.aliyuncs.com/minikube/iso/minikube-v1.32.1-amd64.iso")
 }
