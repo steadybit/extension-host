@@ -1,0 +1,61 @@
+name: test
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches:
+      - 'fix/ci_build'
+
+
+jobs:
+  extension-ci-test:
+    runs-on: steadybit_runner_ubuntu_latest_4cores_16GB
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Remove non-semver tags (from helmchart) for goreleaser to work properly
+        run: |
+          git tag -d $(git tag -l | grep -v "^v[0-9]*.[0-9]*.[0-9]*")
+
+      - name: Setup minikube version v1.32.0
+        run: |
+          curl -fsSL -O https://storage.googleapis.com/minikube/releases/download/v1.32.0/minikube-linux-amd64
+          sudo install minikube-linux-amd64 /usr/local/bin/minikube
+          minikube version
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Enable KVM group perms
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          sudo apt-get update
+          sudo apt-get install -y libvirt-clients libvirt-daemon-system libvirt-daemon virtinst bridge-utils qemu qemu-system-x86
+          sudo usermod -a -G kvm,libvirt $USER
+
+      - name: Prepare audit
+        run: |
+          make prepare_audit
+      #      - name: Setup tmate session
+      #        uses: mxschmitt/action-tmate@v3
+      #        with:
+      #          limit-access-to-actor: false
+      #          detached: true
+      - name: Setup upterm session
+        uses: lhotari/action-upterm@v1
+        with:
+          ## limits ssh access and adds the ssh public key for the user which triggered the workflow
+          limit-access-to-actor: true
+          ## limits ssh access and adds the ssh public keys of the listed GitHub users
+          limit-access-to-users: ansgarschulte,joshiste
+      - name: Audit
+        run: |
+          go mod download
+          echo 'exec in a new sell for the group change to take effect'
+          sudo -u $USER env "PATH=$PATH" make audit
