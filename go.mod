@@ -15,7 +15,7 @@ require (
 	github.com/steadybit/action-kit/go/action_kit_api/v2 v2.9.0
 	github.com/steadybit/action-kit/go/action_kit_commons v1.1.9
 	github.com/steadybit/action-kit/go/action_kit_sdk v1.1.9
-	github.com/steadybit/action-kit/go/action_kit_test v1.2.12-0.20240507135009-c1078fa8a3fb
+	github.com/steadybit/action-kit/go/action_kit_test v1.2.12-0.20240507142705-2b99d2fecf14
 	github.com/steadybit/discovery-kit/go/discovery_kit_api v1.5.2
 	github.com/steadybit/discovery-kit/go/discovery_kit_commons v0.1.0
 	github.com/steadybit/discovery-kit/go/discovery_kit_sdk v1.0.6
