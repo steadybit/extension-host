@@ -20,11 +20,11 @@ jobs:
         run: |
           git tag -d $(git tag -l | grep -v "^v[0-9]*.[0-9]*.[0-9]*")
 
-      - name: Setup minikube version v1.32.0
-        run: |
-          curl -fsSL -O https://storage.googleapis.com/minikube/releases/v1.32.0/minikube-linux-amd64
-          sudo install minikube-linux-amd64 /usr/local/bin/minikube
-          minikube version
+#      - name: Setup minikube version v1.32.0
+#        run: |
+#          curl -fsSL -O https://storage.googleapis.com/minikube/releases/v1.32.0/minikube-linux-amd64
+#          sudo install minikube-linux-amd64 /usr/local/bin/minikube
+#          minikube version
 
       - uses: actions/setup-go@v5
         with:

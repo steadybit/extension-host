@@ -1036,6 +1036,8 @@ func getMinikubeOptions() e2e.MinikubeOpts {
 		log.Info().Msg("KVM is available, using kvm2 driver")
 		mOpts = mOpts.WithDriver("kvm2")
 	}
-
+	mOpts.AfterStart(func(m *e2e.Minikube) error {
+		return m.SshExec("sudo", "mount", "-o", "remount,rw,nosuid,nodev,noexec,relatime", "-t", "cgroup2", "none", "/sys/fs/cgroup").Run()
+	})
 	return mOpts
 }
