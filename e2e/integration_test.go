@@ -18,7 +18,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"math"
-	"os/exec"
 	"strconv"
 	"strings"
 	"testing"
@@ -1029,13 +1028,5 @@ func requireAllSidecarsCleanedUp(t *testing.T, m *e2e.Minikube, e *e2e.Extension
 
 func getMinikubeOptions() e2e.MinikubeOpts {
 	mOpts := e2e.DefaultMinikubeOpts().WithRuntimes(e2e.RuntimeDocker)
-	if exec.Command("kvm-ok").Run() != nil {
-		log.Info().Msg("KVM is not available, using docker driver")
-		mOpts = mOpts.WithDriver("docker")
-	} else {
-		log.Info().Msg("KVM is available, using kvm2 driver")
-		mOpts = mOpts.WithDriver("kvm2")
-	}
-
 	return mOpts
 }
