@@ -4,7 +4,7 @@ on:
   workflow_dispatch: {}
   push:
     branches:
-      - 'fix/ci_build'
+      - 'fix/downgrade_minikube'
 
 
 jobs:
