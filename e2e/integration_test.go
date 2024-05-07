@@ -83,73 +83,73 @@ func TestWithMinikube(t *testing.T) {
 	}
 
 	e2e.WithMinikube(t, getMinikubeOptions(), &extFactory, []e2e.WithMinikubeTestCase{
-		//{
-		//	Name: "validate discovery",
-		//	Test: validateDiscovery,
-		//},
-		//{
-		//	Name: "target discovery",
-		//	Test: testDiscovery,
-		//},
-		//{
-		//	Name: "stress cpu",
-		//	Test: testStressCpu,
-		//},
-		//{
-		//	Name: "stress memory",
-		//	Test: testStressMemory,
-		//}, {
-		//	Name: "stress io",
-		//	Test: testStressIo,
-		//},
-		//{
-		//	Name: "stress combine cpu and memory on same container",
-		//	Test: testStressCombined,
-		//},
-		//{
-		//	Name: "time travel",
-		//	Test: testTimeTravel,
-		//},
-		//{
-		//	Name: "stop process",
-		//	Test: testStopProcess,
-		//},
+		{
+			Name: "validate discovery",
+			Test: validateDiscovery,
+		},
+		{
+			Name: "target discovery",
+			Test: testDiscovery,
+		},
+		{
+			Name: "stress cpu",
+			Test: testStressCpu,
+		},
+		{
+			Name: "stress memory",
+			Test: testStressMemory,
+		}, {
+			Name: "stress io",
+			Test: testStressIo,
+		},
+		{
+			Name: "stress combine cpu and memory on same container",
+			Test: testStressCombined,
+		},
+		{
+			Name: "time travel",
+			Test: testTimeTravel,
+		},
+		{
+			Name: "stop process",
+			Test: testStopProcess,
+		},
 		{
 			Name: "network delay",
 			Test: testNetworkDelay,
 		},
-		//{
-		//	Name: "network blackhole",
-		//	Test: testNetworkBlackhole,
-		//},
-		//{
-		//	Name: "network block dns",
-		//	Test: testNetworkBlockDns,
-		//},
-		//{
-		//	Name: "network limit bandwidth",
-		//	Test: testNetworkLimitBandwidth,
-		//},
-		//{
-		//	Name: "network package loss",
-		//	Test: testNetworkPackageLoss,
-		//},
-		//{
-		//	Name: "network package corruption",
-		//	Test: testNetworkPackageCorruption,
-		//},
-		//{
-		//	Name: "network delay and bandwidth on the same container should error",
-		//	Test: testNetworkDelayAndBandwidthOnSameContainer,
-		//},
-		//{
-		//	Name: "fill disk",
-		//	Test: testFillDisk,
-		//},
-		//{
-		//	Name: "shutdown host",
-		//	Test: testShutdownHost, // if you run this test locally, you will need to restart your docker machine
-		//},
+		{
+			Name: "network blackhole",
+			Test: testNetworkBlackhole,
+		},
+		{
+			Name: "network block dns",
+			Test: testNetworkBlockDns,
+		},
+		{
+			Name: "network limit bandwidth",
+			Test: testNetworkLimitBandwidth,
+		},
+		{
+			Name: "network package loss",
+			Test: testNetworkPackageLoss,
+		},
+		{
+			Name: "network package corruption",
+			Test: testNetworkPackageCorruption,
+		},
+		{
+			Name: "network delay and bandwidth on the same container should error",
+			Test: testNetworkDelayAndBandwidthOnSameContainer,
+		},
+		{
+			Name: "fill disk",
+			Test: testFillDisk,
+		},
+		{
+			Name: "shutdown host",
+			Test: testShutdownHost, // if you run this test locally, you will need to restart your docker machine
+		},
 	})
 }
 
