@@ -22,7 +22,7 @@ jobs:
 
       - name: Setup minikube version v1.32.0
         run: |
-          curl -fsSL -O https://storage.googleapis.com/minikube/releases/download/v1.32.0/minikube-linux-amd64
+          curl -fsSL -O https://storage.googleapis.com/minikube/releases/v1.32.0/minikube-linux-amd64
           sudo install minikube-linux-amd64 /usr/local/bin/minikube
           minikube version
 
