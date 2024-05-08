@@ -256,9 +256,6 @@ func getTimeDiffBetweenNowAndContainerTime(t *testing.T, m *e2e.Minikube, e *e2e
 }
 
 func validateDiscovery(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
-	log.Info().Msg("Starting validateDiscovery")
-	log.Info().Msg("Modifying cgroup2 to remove cgroup2 nsdelegate")
-	m.SshExec("sudo", "mount", "-o", "remount,rw,nosuid,nodev,noexec,relatime", "-t", "cgroup2", "none", "/sys/fs/cgroup").Run()
 	assert.NoError(t, validate.ValidateEndpointReferences("/", e.Client))
 }
 
@@ -1039,7 +1036,7 @@ func getMinikubeOptions() e2e.MinikubeOpts {
 		log.Info().Msg("KVM is available, using kvm2 driver")
 		mOpts = mOpts.WithDriver("kvm2")
 	}
-	mOpts.AfterStart(func(m *e2e.Minikube) error {
+	mOpts = mOpts.AfterStart(func(m *e2e.Minikube) error {
 		log.Info().Msg("remounting cgroup2 to allow cgroup2 attacks")
 		return m.SshExec("sudo", "mount", "-o", "remount,rw,nosuid,nodev,noexec,relatime", "-t", "cgroup2", "none", "/sys/fs/cgroup").Run()
 	})
