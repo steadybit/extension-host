@@ -255,7 +255,10 @@ func getTimeDiffBetweenNowAndContainerTime(t *testing.T, m *e2e.Minikube, e *e2e
 	return time.Until(containerTime)
 }
 
-func validateDiscovery(t *testing.T, _ *e2e.Minikube, e *e2e.Extension) {
+func validateDiscovery(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
+	log.Info().Msg("Starting validateDiscovery")
+	log.Info().Msg("Modifying cgroup2 to remove cgroup2 nsdelegate")
+	m.SshExec("sudo", "mount", "-o", "remount,rw,nosuid,nodev,noexec,relatime", "-t", "cgroup2", "none", "/sys/fs/cgroup").Run()
 	assert.NoError(t, validate.ValidateEndpointReferences("/", e.Client))
 }
 
