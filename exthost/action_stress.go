@@ -111,6 +111,12 @@ func (a *stressAction) Prepare(ctx context.Context, state *StressActionState, re
 func (a *stressAction) Start(ctx context.Context, state *StressActionState) (*action_kit_api.StartResult, error) {
 	s, err := stress.New(ctx, a.runc, state.Sidecar, state.StressOpts)
 	if err != nil {
+		if errors.Is(err, runc.ErrCgroup2NsdelegateOptionUsed) {
+			return nil, extension_kit.ExtensionError{
+				Title:  "Failed to stress host",
+				Detail: extutil.Ptr("The cgroup2 filesystem is using the nsdelegate option causing this action to fail.\nTo remount the filesystem without this option run\n\n$ mount -o remount,rw,nosuid,nodev,noexec,relatime -t cgroup2 none /sys/fs/cgroup"),
+			}
+		}
 		return nil, extension_kit.ToError("Failed to stress host", err)
 	}
 
