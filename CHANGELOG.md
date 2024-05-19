@@ -1,8 +1,9 @@
 # Changelog
 
-## v1.2.14
+## v1.2.14 (next)
 
 - fail actions early when cgroup2 nsdelegation is causing problems
+- support cidrs filters for the network attacks
 
 ## v1.2.13
 

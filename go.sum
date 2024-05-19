@@ -1,5 +1,5 @@
-github.com/KimMachineGun/automemlimit v0.6.0 h1:p/BXkH+K40Hax+PuWWPQ478hPjsp9h1CPDhLlA3Z37E=
-github.com/KimMachineGun/automemlimit v0.6.0/go.mod h1:T7xYht7B8r6AG/AqFcUdc7fzd2bIdBKmepfP2S1svPY=
+github.com/KimMachineGun/automemlimit v0.6.1 h1:ILa9j1onAAMadBsyyUJv5cack8Y1WT26yLj/V+ulKp8=
+github.com/KimMachineGun/automemlimit v0.6.1/go.mod h1:T7xYht7B8r6AG/AqFcUdc7fzd2bIdBKmepfP2S1svPY=
 github.com/RaveNoX/go-jsoncommentstrip v1.0.0/go.mod h1:78ihd09MekBnJnxpICcwzCMzGrKSKYe4AqU6PDYYpjk=
 github.com/apapsch/go-jsonmerge/v2 v2.0.0 h1:axGnT1gRIfimI7gJifB699GoE/oq+F2MU7Dml6nw9rQ=
 github.com/apapsch/go-jsonmerge/v2 v2.0.0/go.mod h1:lvDnEdqiQrp0O42VQGgmlKpxL1AP2+08jFMw88y4klk=
@@ -161,8 +161,8 @@ github.com/spf13/pflag v1.0.5/go.mod h1:McXfInJRrz4CZXVZOBLb0bTZqETkiAhM9Iw0y3An
 github.com/spkg/bom v0.0.0-20160624110644-59b7046e48ad/go.mod h1:qLr4V1qq6nMqFKkMo8ZTx3f+BZEkzsRUY10Xsm2mwU0=
 github.com/steadybit/action-kit/go/action_kit_api/v2 v2.9.0 h1:8whTfgk0UpNVj/d0hrXmW+mgAN0HUAvaafMW+yPHbqA=
 github.com/steadybit/action-kit/go/action_kit_api/v2 v2.9.0/go.mod h1:VvrWrWS4lFAmtlYW06wY1G8+L9gbw/Tq0HDceSN21M8=
-github.com/steadybit/action-kit/go/action_kit_commons v1.1.12 h1:jlI//0MBAI5fSvc5uRpHvKMD+6vC46N50WjBUvlLWq8=
-github.com/steadybit/action-kit/go/action_kit_commons v1.1.12/go.mod h1:L+G0MN4AKLJC6LcgZuIEqllYBoBQraWQXaD0fmda2Lc=
+github.com/steadybit/action-kit/go/action_kit_commons v1.2.0 h1:yqhPROikDn/MLVQc1IPWOAYvwxzYOPuf3nxI0mc0CQ0=
+github.com/steadybit/action-kit/go/action_kit_commons v1.2.0/go.mod h1:dgXhnU2I7KllryDW0F3yLCJf7kLhw9UjAlFn+0AGIns=
 github.com/steadybit/action-kit/go/action_kit_sdk v1.1.9 h1:EZCQA7FWxyWpA6du9Kt/5PMAZ2JXn9s1twWHuh8DMQo=
 github.com/steadybit/action-kit/go/action_kit_sdk v1.1.9/go.mod h1:doeEvG/3OQSd3Xvb4UvWpnwmY3VT+Pf9f6NfxV5i2rU=
 github.com/steadybit/action-kit/go/action_kit_test v1.2.14 h1:REoAgS9s54GVHuTAaYam5i8jIC5YOn+wArWqE+n7A3Q=

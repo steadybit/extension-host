@@ -1,3 +1,7 @@
+/*
+ * Copyright 2024 steadybit GmbH. All rights reserved.
+ */
+
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2023 Steadybit GmbH
 
@@ -18,6 +22,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"math"
+	"net"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -59,6 +64,7 @@ var (
 			},
 		}),
 	}
+	steadybitCIDRs = getCIDRsFor("steadybit.com", 16)
 )
 
 func getTarget(m *e2e.Minikube) *action_kit_api.Target {
@@ -329,31 +335,37 @@ func testNetworkBlackhole(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 		ip               []string
 		hostname         []string
 		port             []string
-		WantedReachable  bool
-		WantedReachesUrl bool
+		wantedReachable  bool
+		wantedReachesUrl bool
 	}{
 		{
 			name:             "should blackhole all traffic",
-			WantedReachable:  false,
-			WantedReachesUrl: false,
+			wantedReachable:  false,
+			wantedReachesUrl: false,
 		},
 		{
 			name:             "should blackhole only port 8080 traffic",
 			port:             []string{"8080"},
-			WantedReachable:  true,
-			WantedReachesUrl: true,
+			wantedReachable:  true,
+			wantedReachesUrl: true,
 		},
 		{
 			name:             "should blackhole only port 80, 443 traffic",
 			port:             []string{"80", "443"},
-			WantedReachable:  false,
-			WantedReachesUrl: false,
+			wantedReachable:  false,
+			wantedReachesUrl: false,
 		},
 		{
 			name:             "should blackhole only traffic for steadybit.com",
 			hostname:         []string{"steadybit.com"},
-			WantedReachable:  true,
-			WantedReachesUrl: false,
+			wantedReachable:  true,
+			wantedReachesUrl: false,
+		},
+		{
+			name:             "should blackhole only traffic for steadybit.com",
+			ip:               steadybitCIDRs,
+			wantedReachable:  true,
+			wantedReachesUrl: false,
 		},
 	}
 
@@ -378,8 +390,8 @@ func testNetworkBlackhole(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			defer func() { _ = action.Cancel() }()
 			require.NoError(t, err)
 
-			nginx.AssertIsReachable(t, tt.WantedReachable)
-			nginx.AssertCanReach(t, "https://steadybit.com", tt.WantedReachesUrl)
+			nginx.AssertIsReachable(t, tt.wantedReachable)
+			nginx.AssertCanReach(t, "https://steadybit.com", tt.wantedReachesUrl)
 
 			require.NoError(t, action.Cancel())
 			nginx.AssertIsReachable(t, true)
@@ -402,26 +414,31 @@ func testNetworkDelay(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 		hostname    []string
 		port        []string
 		interfaces  []string
-		WantedDelay bool
+		wantedDelay bool
 	}{
 		{
 			name:        "should delay all traffic",
-			WantedDelay: true,
+			wantedDelay: true,
 		},
 		{
 			name:        "should delay only port 5000 traffic",
 			port:        []string{"5000"},
-			WantedDelay: true,
+			wantedDelay: true,
 		},
 		{
 			name:        "should delay only port 80 traffic",
 			port:        []string{"80"},
-			WantedDelay: false,
+			wantedDelay: false,
 		},
 		{
 			name:        "should delay only traffic for netperf",
 			ip:          []string{netperf.ServerIp},
-			WantedDelay: true,
+			wantedDelay: true,
+		},
+		{
+			name:        "should delay only traffic for netperf using cidr",
+			ip:          []string{netperf.ServerIp + "/32"},
+			wantedDelay: true,
 		},
 	}
 
@@ -452,7 +469,7 @@ func testNetworkDelay(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			defer func() { _ = action.Cancel() }()
 			require.NoError(t, err)
 
-			if tt.WantedDelay {
+			if tt.wantedDelay {
 				netperf.AssertLatency(t, unaffectedLatency+time.Duration(config.Delay)*time.Millisecond*90/100, unaffectedLatency+time.Duration(config.Delay)*time.Millisecond*350/100)
 			} else {
 				netperf.AssertLatency(t, 0, unaffectedLatency*120/100)
@@ -477,26 +494,26 @@ func testNetworkPackageLoss(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 		hostname   []string
 		port       []string
 		interfaces []string
-		WantedLoss bool
+		wantedLoss bool
 	}{
 		{
 			name:       "should loose packages on all traffic",
-			WantedLoss: true,
+			wantedLoss: true,
 		},
 		{
 			name:       "should loose packages only on port 5001 traffic",
 			port:       []string{"5001"},
-			WantedLoss: true,
+			wantedLoss: true,
 		},
 		{
 			name:       "should loose packages only on port 80 traffic",
 			port:       []string{"80"},
-			WantedLoss: false,
+			wantedLoss: false,
 		},
 		{
 			name:       "should loose packages only traffic for iperf server",
 			ip:         []string{iperf.ServerIp},
-			WantedLoss: true,
+			wantedLoss: true,
 		},
 	}
 
@@ -522,7 +539,7 @@ func testNetworkPackageLoss(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			defer func() { _ = action.Cancel() }()
 			require.NoError(t, err)
 
-			if tt.WantedLoss {
+			if tt.wantedLoss {
 				iperf.AssertPackageLoss(t, float64(config.Percentage)*0.7, float64(config.Percentage)*1.4)
 			} else {
 				iperf.AssertPackageLoss(t, 0, 5)
@@ -548,26 +565,26 @@ func testNetworkPackageCorruption(t *testing.T, m *e2e.Minikube, e *e2e.Extensio
 		hostname         []string
 		port             []string
 		interfaces       []string
-		WantedCorruption bool
+		wantedCorruption bool
 	}{
 		{
 			name:             "should corrupt packages on all traffic",
-			WantedCorruption: true,
+			wantedCorruption: true,
 		},
 		{
 			name:             "should corrupt packages only on port 5001 traffic",
 			port:             []string{"5001"},
-			WantedCorruption: true,
+			wantedCorruption: true,
 		},
 		{
 			name:             "should corrupt packages only on port 80 traffic",
 			port:             []string{"80"},
-			WantedCorruption: false,
+			wantedCorruption: false,
 		},
 		{
 			name:             "should corrupt packages only traffic for iperf server",
 			ip:               []string{iperf.ServerIp},
-			WantedCorruption: true,
+			wantedCorruption: true,
 		},
 	}
 
@@ -596,7 +613,7 @@ func testNetworkPackageCorruption(t *testing.T, m *e2e.Minikube, e *e2e.Extensio
 					r.Failed = true
 				}
 
-				if tt.WantedCorruption {
+				if tt.wantedCorruption {
 					packageLossResult := iperf.AssertPackageLossWithRetry(float64(config.Corruption)*0.7, float64(config.Corruption)*1.3, 8)
 					if !packageLossResult {
 						r.Failed = true
@@ -633,26 +650,26 @@ func testNetworkLimitBandwidth(t *testing.T, m *e2e.Minikube, e *e2e.Extension) 
 		hostname    []string
 		port        []string
 		interfaces  []string
-		WantedLimit bool
+		wantedLimit bool
 	}{
 		{
 			name:        "should limit bandwidth on all traffic",
-			WantedLimit: true,
+			wantedLimit: true,
 		},
 		{
 			name:        "should limit bandwidth only on port 5001 traffic",
 			port:        []string{"5001"},
-			WantedLimit: true,
+			wantedLimit: true,
 		},
 		{
 			name:        "should limit bandwidth only on port 80 traffic",
 			port:        []string{"80"},
-			WantedLimit: false,
+			wantedLimit: false,
 		},
 		{
 			name:        "should limit bandwidth only traffic for iperf server",
 			ip:          []string{iperf.ServerIp},
-			WantedLimit: true,
+			wantedLimit: true,
 		},
 	}
 
@@ -682,7 +699,7 @@ func testNetworkLimitBandwidth(t *testing.T, m *e2e.Minikube, e *e2e.Extension) 
 			defer func() { _ = action.Cancel() }()
 			require.NoError(t, err)
 
-			if tt.WantedLimit {
+			if tt.wantedLimit {
 				iperf.AssertBandwidth(t, limited*0.95, limited*1.05)
 			} else {
 				iperf.AssertBandwidth(t, unlimited*0.95, unlimited*1.05)
@@ -706,27 +723,27 @@ func testNetworkBlockDns(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 		ip               []string
 		hostname         []string
 		dnsPort          uint
-		WantedReachable  bool
-		WantedReachesUrl bool
+		wantedReachable  bool
+		wantedReachesUrl bool
 	}{
 		{
 			name:             "should block dns traffic",
 			dnsPort:          53,
-			WantedReachable:  true,
-			WantedReachesUrl: false,
+			wantedReachable:  true,
+			wantedReachesUrl: false,
 		},
 		{
 			name:             "should block dns traffic on port 5353",
 			dnsPort:          5353,
-			WantedReachable:  true,
-			WantedReachesUrl: true,
+			wantedReachable:  true,
+			wantedReachesUrl: true,
 		},
 		{
 			name:             "should block dns only traffic for steadybit.com",
 			dnsPort:          53,
 			hostname:         []string{"steadybit.com"},
-			WantedReachable:  true,
-			WantedReachesUrl: false,
+			wantedReachable:  true,
+			wantedReachesUrl: false,
 		},
 	}
 
@@ -747,8 +764,8 @@ func testNetworkBlockDns(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			defer func() { _ = action.Cancel() }()
 			require.NoError(t, err)
 
-			nginx.AssertIsReachable(t, tt.WantedReachable)
-			if tt.WantedReachesUrl {
+			nginx.AssertIsReachable(t, tt.wantedReachable)
+			if tt.wantedReachesUrl {
 				nginx.AssertCanReach(t, "https://steadybit.com", true)
 			} else {
 				nginx.AssertCannotReach(t, "https://steadybit.com", "Resolving timed out after")
@@ -1041,4 +1058,13 @@ func getMinikubeOptions() e2e.MinikubeOpts {
 		return m.SshExec("sudo", "mount", "-o", "remount,rw,nosuid,nodev,noexec,relatime", "-t", "cgroup2", "none", "/sys/fs/cgroup").Run()
 	})
 	return mOpts
+}
+
+func getCIDRsFor(s string, maskLen int) (cidrs []string) {
+	ips, _ := net.LookupIP(s)
+	for _, p := range ips {
+		cidr := net.IPNet{IP: p.To4(), Mask: net.CIDRMask(maskLen, 32)}
+		cidrs = append(cidrs, cidr.String())
+	}
+	return
 }
