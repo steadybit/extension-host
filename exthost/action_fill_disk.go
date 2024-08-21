@@ -16,7 +16,6 @@ import (
 	"github.com/steadybit/extension-kit/extbuild"
 	"github.com/steadybit/extension-kit/extutil"
 	"golang.org/x/sync/syncmap"
-	"runtime/trace"
 )
 
 var ID = fmt.Sprintf("%s.fill_disk", BaseActionID)
@@ -54,7 +53,7 @@ func (a *fillDiskAction) Describe() action_kit_api.ActionDescription {
 		Version:     extbuild.GetSemverVersionStringOrUnknown(),
 		Icon:        extutil.Ptr(fillDiskIcon),
 		TargetSelection: &action_kit_api.TargetSelection{
-			TargetType:         TargetID,
+			TargetType:         targetID,
 			SelectionTemplates: &targetSelectionTemplates,
 		},
 		Category:    extutil.Ptr("Resource"),
@@ -178,11 +177,6 @@ func fillDiskOpts(request action_kit_api.PrepareActionRequestBody) (diskfill.Opt
 }
 
 func (a *fillDiskAction) Prepare(ctx context.Context, state *FillDiskActionState, request action_kit_api.PrepareActionRequestBody) (*action_kit_api.PrepareResult, error) {
-	ctx, task := trace.NewTask(ctx, "action_fill_disk.Prepare")
-	defer task.End()
-	trace.Log(ctx, "actionId", ID)
-	trace.Log(ctx, "executionId", state.ExecutionId.String())
-
 	if _, err := CheckTargetHostname(request.Target.Attributes); err != nil {
 		return nil, err
 	}
@@ -208,11 +202,6 @@ func (a *fillDiskAction) Prepare(ctx context.Context, state *FillDiskActionState
 }
 
 func (a *fillDiskAction) Start(ctx context.Context, state *FillDiskActionState) (*action_kit_api.StartResult, error) {
-	ctx, task := trace.NewTask(ctx, "action_fill_disk.Start")
-	defer task.End()
-	trace.Log(ctx, "actionId", ID)
-	trace.Log(ctx, "executionId", state.ExecutionId.String())
-
 	copiedOpts := state.FillDiskOpts
 	diskFill, err := diskfill.New(ctx, a.runc, state.Sidecar, copiedOpts)
 	if err != nil {
@@ -245,11 +234,6 @@ func (a *fillDiskAction) Start(ctx context.Context, state *FillDiskActionState) 
 }
 
 func (a *fillDiskAction) Stop(ctx context.Context, state *FillDiskActionState) (*action_kit_api.StopResult, error) {
-	ctx, task := trace.NewTask(ctx, "action_fill_disk.Stop")
-	defer task.End()
-	trace.Log(ctx, "actionId", ID)
-	trace.Log(ctx, "executionId", state.ExecutionId.String())
-
 	messages := make([]action_kit_api.Message, 0)
 
 	stopped, err := a.stopFillDiskHost(state.ExecutionId)

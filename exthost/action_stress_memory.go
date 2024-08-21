@@ -31,7 +31,7 @@ func getStressMemoryDescription() action_kit_api.ActionDescription {
 		Icon:        extutil.Ptr(stressMemoryIcon),
 		TargetSelection: extutil.Ptr(action_kit_api.TargetSelection{
 			// The target type this action is for
-			TargetType: TargetID,
+			TargetType: targetID,
 			// You can provide a list of target templates to help the user select targets.
 			// A template can be used to pre-fill a selection
 			SelectionTemplates: &targetSelectionTemplates,

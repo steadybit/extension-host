@@ -32,7 +32,7 @@ func getNetworkCorruptPackagesDescription() action_kit_api.ActionDescription {
 		Version:     extbuild.GetSemverVersionStringOrUnknown(),
 		Icon:        extutil.Ptr(corruptIcon),
 		TargetSelection: &action_kit_api.TargetSelection{
-			TargetType:         TargetID,
+			TargetType:         targetID,
 			SelectionTemplates: &targetSelectionTemplates,
 		},
 		Category:    extutil.Ptr("network"),

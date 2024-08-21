@@ -3,3 +3,4 @@ STEADYBIT_LOG_FORMAT=text
 STEADYBIT_EXTENSION_RUNC_NSMOUNT_PATH=/opt/steadybit/extension-host/nsmount
 STEADYBIT_EXTENSION_RUNC_ROOT="/run/steadybit/runc"
 STEADYBIT_EXTENSION_UNIX_SOCKET=/run/steadybit/extension-host.sock
+STEADYBIT_EXTENSION_MEMFILL_PATH=/opt/steadybit/extension-host/memfill

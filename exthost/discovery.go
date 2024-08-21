@@ -37,7 +37,7 @@ func NewHostDiscovery() discovery_kit_sdk.TargetDiscovery {
 
 func (d *hostDiscovery) Describe() discovery_kit_api.DiscoveryDescription {
 	return discovery_kit_api.DiscoveryDescription{
-		Id: TargetID,
+		Id: targetID,
 		Discover: discovery_kit_api.DescribingEndpointReferenceWithCallInterval{
 			CallInterval: extutil.Ptr("30s"),
 		},
@@ -46,7 +46,7 @@ func (d *hostDiscovery) Describe() discovery_kit_api.DiscoveryDescription {
 
 func (d *hostDiscovery) DescribeTarget() discovery_kit_api.TargetDescription {
 	return discovery_kit_api.TargetDescription{
-		Id:      TargetID,
+		Id:      targetID,
 		Version: extbuild.GetSemverVersionStringOrUnknown(),
 		Icon:    extutil.Ptr(targetIcon),
 
@@ -131,7 +131,7 @@ func (d *hostDiscovery) DiscoverTargets(ctx context.Context) ([]discovery_kit_ap
 	hostname, _ := os.Hostname()
 	target := discovery_kit_api.Target{
 		Id:         hostname,
-		TargetType: TargetID,
+		TargetType: targetID,
 		Label:      hostname,
 		Attributes: map[string][]string{
 			"host.hostname": {hostname},
