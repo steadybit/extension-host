@@ -12,6 +12,35 @@ entries:
           url: https://hub.steadybit.com
     apiVersion: v2
     appVersion: v1.2.23
+    created: "2024-10-28T11:21:29.759031752Z"
+    dependencies:
+    - name: extensionlib
+      repository: https://steadybit.github.io/helm-charts
+      version: ^1.4.3
+    description: Steadybit host extension Helm chart for Kubernetes.
+    digest: ea350eae780be1135f3b49b7f14c319af7c44d54ed273571cc2917ff7226e125
+    home: https://www.steadybit.com/
+    icon: https://steadybit-website-assets.s3.amazonaws.com/logo-symbol-transparent.png
+    maintainers:
+    - email: ansgar.schulte@steadybit.com
+      name: ansgarschulte
+    name: steadybit-extension-host
+    sources:
+    - https://github.com/steadybit/extension-host
+    urls:
+    - https://github.com/steadybit/extension-host/releases/download/steadybit-extension-host-1.1.24/steadybit-extension-host-1.1.24.tgz
+    version: 1.1.24
+  - annotations:
+      artifacthub.io/images: |
+        - name: logo
+          image: https://steadybit-website-assets.s3.amazonaws.com/logo-symbol-transparent.png
+      artifacthub.io/links: |-
+        - name: Steadybit website
+          url: https://www.steadybit.com
+        - name: Steadybit reliability hub
+          url: https://hub.steadybit.com
+    apiVersion: v2
+    appVersion: v1.2.23
     created: "2024-10-21T14:20:11.22087186Z"
     dependencies:
     - name: extensionlib
@@ -1625,4 +1654,4 @@ entries:
     urls:
     - https://github.com/steadybit/extension-host/releases/download/steadybit-extension-host-1.0.0/steadybit-extension-host-1.0.0.tgz
     version: 1.0.0
-generated: "2024-10-21T14:20:11.221136477Z"
+generated: "2024-10-28T11:21:29.75926744Z"
