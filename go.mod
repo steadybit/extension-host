@@ -2,11 +2,9 @@ module github.com/steadybit/extension-host
 
 go 1.24
 
-toolchain go1.24.1
-
 require (
 	github.com/KimMachineGun/automemlimit v0.7.1
-	github.com/elastic/go-sysinfo v1.15.1
+	github.com/elastic/go-sysinfo v1.15.3
 	github.com/google/uuid v1.6.0
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/mitchellh/go-ps v1.0.0
