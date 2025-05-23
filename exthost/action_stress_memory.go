@@ -7,6 +7,9 @@ package exthost
 import (
 	"errors"
 	"fmt"
+	"math"
+	"time"
+
 	"github.com/elastic/go-sysinfo"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
 	"github.com/steadybit/action-kit/go/action_kit_commons/runc"
@@ -14,8 +17,6 @@ import (
 	"github.com/steadybit/action-kit/go/action_kit_sdk"
 	"github.com/steadybit/extension-kit/extbuild"
 	"github.com/steadybit/extension-kit/extutil"
-	"math"
-	"time"
 )
 
 func NewStressMemoryAction(r runc.Runc) action_kit_sdk.Action[StressActionState] {
@@ -36,7 +37,7 @@ func getStressMemoryDescription() action_kit_api.ActionDescription {
 			// A template can be used to pre-fill a selection
 			SelectionTemplates: &targetSelectionTemplates,
 		}),
-		Technology: extutil.Ptr("Host"),
+		Technology: extutil.Ptr("Linux Host"),
 		// Category for the targets to appear in
 		Category: extutil.Ptr("Resource"),
 
