@@ -7,15 +7,16 @@ package exthost
 import (
 	"context"
 	"fmt"
+	"sync"
+	"time"
+
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
 	"github.com/steadybit/action-kit/go/action_kit_sdk"
-	"github.com/steadybit/extension-host/exthost/process"
+	stopprocess "github.com/steadybit/extension-host/exthost/process"
 	"github.com/steadybit/extension-kit/extbuild"
 	"github.com/steadybit/extension-kit/extutil"
-	"sync"
-	"time"
 )
 
 type stopProcessAction struct {
@@ -60,7 +61,7 @@ func (a *stopProcessAction) Describe() action_kit_api.ActionDescription {
 			// A template can be used to pre-fill a selection
 			SelectionTemplates: extutil.Ptr(targetSelectionTemplates),
 		}),
-		Technology: extutil.Ptr("Host"),
+		Technology: extutil.Ptr("Linux Host"),
 		// Category for the targets to appear in
 		Category: extutil.Ptr("State"),
 

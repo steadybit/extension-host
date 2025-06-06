@@ -5,7 +5,7 @@ go 1.24.0
 toolchain go1.24.1
 
 require (
-	github.com/KimMachineGun/automemlimit v0.7.1
+	github.com/KimMachineGun/automemlimit v0.7.2
 	github.com/elastic/go-sysinfo v1.15.3
 	github.com/google/uuid v1.6.0
 	github.com/kelseyhightower/envconfig v1.4.0
@@ -13,11 +13,11 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/rs/zerolog v1.34.0
 	github.com/steadybit/action-kit/go/action_kit_api/v2 v2.10.0
-	github.com/steadybit/action-kit/go/action_kit_commons v1.2.24
-	github.com/steadybit/action-kit/go/action_kit_sdk v1.1.15
+	github.com/steadybit/action-kit/go/action_kit_commons v1.3.0
+	github.com/steadybit/action-kit/go/action_kit_sdk v1.2.0
 	github.com/steadybit/action-kit/go/action_kit_test v1.4.1
 	github.com/steadybit/discovery-kit/go/discovery_kit_api v1.7.0
-	github.com/steadybit/discovery-kit/go/discovery_kit_commons v0.2.0
+	github.com/steadybit/discovery-kit/go/discovery_kit_commons v0.3.0
 	github.com/steadybit/discovery-kit/go/discovery_kit_sdk v1.3.0
 	github.com/steadybit/discovery-kit/go/discovery_kit_test v1.2.0
 	github.com/steadybit/extension-kit v1.10.0

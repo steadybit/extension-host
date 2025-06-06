@@ -7,18 +7,19 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os/exec"
+	"time"
+
 	"github.com/google/uuid"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
 	"github.com/steadybit/action-kit/go/action_kit_commons/memfill"
 	"github.com/steadybit/action-kit/go/action_kit_commons/runc"
 	"github.com/steadybit/action-kit/go/action_kit_sdk"
 	"github.com/steadybit/extension-host/config"
-	"github.com/steadybit/extension-kit"
+	extension_kit "github.com/steadybit/extension-kit"
 	"github.com/steadybit/extension-kit/extbuild"
 	"github.com/steadybit/extension-kit/extutil"
 	"golang.org/x/sync/syncmap"
-	"os/exec"
-	"time"
 )
 
 type fillMemoryAction struct {
@@ -59,7 +60,7 @@ func (a *fillMemoryAction) Describe() action_kit_api.ActionDescription {
 			TargetType:         targetID,
 			SelectionTemplates: &targetSelectionTemplates,
 		},
-		Technology:  extutil.Ptr("Host"),
+		Technology:  extutil.Ptr("Linux Host"),
 		Category:    extutil.Ptr("Resource"),
 		Kind:        action_kit_api.Attack,
 		TimeControl: action_kit_api.TimeControlExternal,
