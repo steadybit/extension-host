@@ -88,7 +88,7 @@ func (a *timeTravelAction) Describe() action_kit_api.ActionDescription {
 			{
 				Name:         "duration",
 				Label:        "Duration",
-				Description:  extutil.Ptr("How long should CPU be stressed?"),
+				Description:  extutil.Ptr("How long should time travel take?"),
 				Type:         action_kit_api.Duration,
 				DefaultValue: extutil.Ptr("30s"),
 				Required:     extutil.Ptr(true),
