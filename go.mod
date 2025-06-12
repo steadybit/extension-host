@@ -13,7 +13,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/rs/zerolog v1.34.0
 	github.com/steadybit/action-kit/go/action_kit_api/v2 v2.10.0
-	github.com/steadybit/action-kit/go/action_kit_commons v1.3.0
+	github.com/steadybit/action-kit/go/action_kit_commons v1.3.1
 	github.com/steadybit/action-kit/go/action_kit_sdk v1.2.0
 	github.com/steadybit/action-kit/go/action_kit_test v1.4.1
 	github.com/steadybit/discovery-kit/go/discovery_kit_api v1.7.0
@@ -23,8 +23,8 @@ require (
 	github.com/steadybit/extension-kit v1.10.0
 	github.com/stretchr/testify v1.10.0
 	go.uber.org/automaxprocs v1.6.0
-	golang.org/x/exp v0.0.0-20250305212735-054e65f0b394
-	golang.org/x/sync v0.14.0
+	golang.org/x/exp v0.0.0-20250606033433-dcc06ee1d476
+	golang.org/x/sync v0.15.0
 )
 
 require (

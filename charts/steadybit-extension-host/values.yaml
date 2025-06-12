@@ -160,6 +160,7 @@ extraEnv: []
 extraEnvFrom: []
 
 discovery:
+  hostnameFromKubernetes: false # discovery.hostnameFromKubernetes -- If true, the extension will use the spec.nodeName (k8s downward api) as the hostname for the discovery.
   attributes:
     excludes:
       # discovery.attributes.excludes.host -- List of attributes to exclude from VM discovery.

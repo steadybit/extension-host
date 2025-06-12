@@ -128,7 +128,10 @@ func (d *hostDiscovery) DescribeAttributes() []discovery_kit_api.AttributeDescri
 }
 
 func (d *hostDiscovery) DiscoverTargets(ctx context.Context) ([]discovery_kit_api.Target, error) {
-	hostname, _ := os.Hostname()
+	hostname := config.Config.Hostname
+	if hostname == "" {
+		hostname, _ = os.Hostname()
+	}
 	target := discovery_kit_api.Target{
 		Id:         hostname,
 		TargetType: targetID,

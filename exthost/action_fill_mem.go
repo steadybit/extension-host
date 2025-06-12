@@ -1,5 +1,4 @@
-// SPDX-License-Identifier: MIT
-// SPDX-FileCopyrightText: 2023 Steadybit GmbH
+// Copyright 2025 steadybit GmbH. All rights reserved.
 
 package exthost
 
@@ -7,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/opencontainers/runtime-spec/specs-go"
 	"os/exec"
 	"time"
 
@@ -155,7 +155,7 @@ func (a *fillMemoryAction) Prepare(ctx context.Context, state *FillMemoryActionS
 		return nil, err
 	}
 
-	initProcess, err := runc.ReadLinuxProcessInfo(ctx, 1)
+	initProcess, err := runc.ReadLinuxProcessInfo(ctx, 1, specs.PIDNamespace)
 	if err != nil {
 		return nil, extension_kit.ToError("Failed to prepare fill memory settings.", err)
 	}

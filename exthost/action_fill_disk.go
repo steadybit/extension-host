@@ -1,5 +1,4 @@
-// SPDX-License-Identifier: MIT
-// SPDX-FileCopyrightText: 2025 Steadybit GmbH
+// Copyright 2025 steadybit GmbH. All rights reserved.
 
 package exthost
 
@@ -7,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/opencontainers/runtime-spec/specs-go"
 
 	"github.com/google/uuid"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
@@ -189,7 +189,7 @@ func (a *fillDiskAction) Prepare(ctx context.Context, state *FillDiskActionState
 		return nil, err
 	}
 
-	initProcess, err := runc.ReadLinuxProcessInfo(ctx, 1)
+	initProcess, err := runc.ReadLinuxProcessInfo(ctx, 1, specs.PIDNamespace)
 	if err != nil {
 		return nil, extension_kit.ToError("Failed to prepare fill disk settings.", err)
 	}

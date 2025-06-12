@@ -17,6 +17,7 @@ type Specification struct {
 	HealthPort                      uint16   `json:"healthPort" split_words:"true" required:"false" default:"8081"`
 	DiscoveryAttributesExcludesHost []string `json:"discoveryAttributesExcludesHost" split_words:"true" required:"false"`
 	MemfillPath                     string   `json:"memfillPath" split_words:"true" required:"false"`
+	Hostname                        string   `json:"hostname" split_words:"true" required:"false"`
 }
 
 var (

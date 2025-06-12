@@ -1,5 +1,4 @@
-// SPDX-License-Identifier: MIT
-// SPDX-FileCopyrightText: 2024 Steadybit GmbH
+// Copyright 2025 steadybit GmbH. All rights reserved.
 
 package exthost
 
@@ -9,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/google/uuid"
+	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/rs/zerolog/log"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
 	"github.com/steadybit/action-kit/go/action_kit_commons/runc"
@@ -93,7 +93,7 @@ func (a *stressAction) Prepare(ctx context.Context, state *StressActionState, re
 		return nil, err
 	}
 
-	initProcess, err := runc.ReadLinuxProcessInfo(ctx, 1)
+	initProcess, err := runc.ReadLinuxProcessInfo(ctx, 1, specs.PIDNamespace, specs.CgroupNamespace)
 	if err != nil {
 		return nil, extension_kit.ToError("Failed to prepare stress settings.", err)
 	}

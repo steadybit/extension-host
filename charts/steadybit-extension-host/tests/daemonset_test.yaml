@@ -78,6 +78,19 @@ tests:
           name: env-secrets
     asserts:
       - matchSnapshot: {}
+  - it: manifest should match snapshot with Steadybit-Extension-host env var
+    set:
+      extraEnv:
+        - name: STEADYBIT_EXTENSION_HOST
+          value: "extension-host.example.com"
+    asserts:
+      - matchSnapshot: {}
+  - it: manifest should match snapshot with hostnameFromKubernetes enabled
+    set:
+      discovery:
+        hostnameFromKubernetes: true
+    asserts:
+      - matchSnapshot: {}
   - it: manifest should match snapshot with different containerPorts
     set:
       containerPorts:

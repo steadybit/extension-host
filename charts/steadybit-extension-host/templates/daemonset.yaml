@@ -84,6 +84,12 @@ spec:
             - name: STEADYBIT_EXTENSION_RUNC_DEBUG
               value: "true"
             {{- end }}
+            {{- if .Values.discovery.hostnameFromKubernetes }}
+            - name: STEADYBIT_EXTENSION_HOSTNAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            {{- end }}
           {{- with .Values.extraEnvFrom }}
           envFrom:
             {{- toYaml . | nindent 12 }}

@@ -23,7 +23,7 @@ RUN echo 'deb [trusted=yes] https://repo.goreleaser.com/apt/ /' > /etc/apt/sourc
 COPY . .
 
 RUN GOOS=$TARGETOS GOARCH=$TARGETARCH goreleaser build --snapshot="${BUILD_SNAPSHOT}" --single-target -o extension \
-    && setcap "cap_sys_boot,cap_sys_time,cap_setuid,cap_sys_chroot,cap_setgid,cap_net_raw,cap_net_admin,cap_sys_admin,cap_dac_override+eip" ./extension
+    && setcap "cap_sys_boot,cap_sys_time,cap_setuid,cap_sys_chroot,cap_setgid,cap_net_raw,cap_net_admin,cap_sys_admin,cap_dac_override,cap_sys_ptrace+eip" ./extension
 
 # As of today the runc binary from debian is built using golang 1.19.8 and will be flagged by CVE scanners as vulnerable to several CVEs.
 # We are dowonloading the runc binary from the official github release page and will use it instead of the one from the debian package.
