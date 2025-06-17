@@ -135,7 +135,7 @@ func (a *fillDiskAction) Describe() action_kit_api.ActionDescription {
 			},
 			{
 				Name:         "blocksize",
-				Label:        "Block Size (in MBytes) of the File to Write for method `At Once`",
+				Label:        "Block Size (in MBytes) of the File to Write for method `Over Time`",
 				Description:  extutil.Ptr("Define the block size for writing the file with the dd command. If the block size is larger than the fill value, the fill value will be used as block size."),
 				Type:         action_kit_api.Integer,
 				DefaultValue: extutil.Ptr("5"),
