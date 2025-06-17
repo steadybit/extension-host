@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.2.36
+
+- fix: experiment execution when using the host.hostname of the k8s downward API
+
 ## v1.2.35
 
 - possibility to set the host.hostname attribute in the discovery by the k8s downward api

@@ -3,6 +3,7 @@ package exthost
 import (
 	"fmt"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
+	"github.com/steadybit/extension-host/config"
 	"github.com/steadybit/extension-kit"
 	"github.com/steadybit/extension-kit/extutil"
 	"os"
@@ -44,7 +45,14 @@ var (
 		},
 	}
 
-	osHostname = os.Hostname
+	osHostname = func() (string, error) {
+		hostname := config.Config.Hostname
+		if hostname == "" {
+			hostname, err := os.Hostname()
+			return hostname, err
+		}
+		return hostname, nil
+	}
 )
 
 func CheckTargetHostname(attributes map[string][]string) (*string, error) {

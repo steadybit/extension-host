@@ -15,7 +15,6 @@ import (
 	"github.com/steadybit/extension-host/config"
 	"github.com/steadybit/extension-kit/extbuild"
 	"github.com/steadybit/extension-kit/extutil"
-	"os"
 	"time"
 )
 
@@ -128,10 +127,7 @@ func (d *hostDiscovery) DescribeAttributes() []discovery_kit_api.AttributeDescri
 }
 
 func (d *hostDiscovery) DiscoverTargets(ctx context.Context) ([]discovery_kit_api.Target, error) {
-	hostname := config.Config.Hostname
-	if hostname == "" {
-		hostname, _ = os.Hostname()
-	}
+	hostname, _ := osHostname()
 	target := discovery_kit_api.Target{
 		Id:         hostname,
 		TargetType: targetID,

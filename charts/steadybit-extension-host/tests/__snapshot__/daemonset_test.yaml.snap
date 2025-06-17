@@ -40,6 +40,10 @@ manifest should match snapshot using podAnnotations, podLabels and resources:
                   value: INFO
                 - name: STEADYBIT_LOG_FORMAT
                   value: text
+                - name: STEADYBIT_EXTENSION_HOSTNAME
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: spec.nodeName
               image: ghcr.io/steadybit/extension-host:v0.0.0
               imagePullPolicy: IfNotPresent
               livenessProbe:
@@ -73,6 +77,132 @@ manifest should match snapshot using podAnnotations, podLabels and resources:
                 requests:
                   cpu: 200m
                   memory: 256Mi
+              securityContext:
+                capabilities:
+                  add:
+                    - SYS_ADMIN
+                    - SYS_CHROOT
+                    - SYS_RESOURCE
+                    - SYS_BOOT
+                    - NET_RAW
+                    - SYS_TIME
+                    - SYS_PTRACE
+                    - KILL
+                    - NET_ADMIN
+                    - DAC_OVERRIDE
+                    - SETUID
+                    - SETGID
+                    - AUDIT_WRITE
+                readOnlyRootFilesystem: true
+                seccompProfile:
+                  type: Unconfined
+              volumeMounts:
+                - mountPath: /tmp
+                  name: tmp-dir
+                - mountPath: /sys/fs/cgroup
+                  name: cgroup-root
+                - mountPath: /run/steadybit/runc
+                  name: runc-root
+          dnsPolicy: ClusterFirstWithHostNet
+          hostNetwork: true
+          hostPID: true
+          securityContext:
+            runAsNonRoot: true
+            seccompProfile:
+              type: Unconfined
+          serviceAccountName: steadybit-extension-host
+          volumes:
+            - emptyDir: {}
+              name: tmp-dir
+            - hostPath:
+                path: /sys/fs/cgroup
+                type: Directory
+              name: cgroup-root
+            - emptyDir: {}
+              name: runc-root
+      updateStrategy:
+        rollingUpdate:
+          maxUnavailable: 1
+        type: RollingUpdate
+manifest should match snapshot with Steadybit-Extension-host env var:
+  1: |
+    apiVersion: apps/v1
+    kind: DaemonSet
+    metadata:
+      labels:
+        steadybit.com/discovery-disabled: "true"
+        steadybit.com/extension: "true"
+      name: RELEASE-NAME-steadybit-extension-host
+      namespace: NAMESPACE
+    spec:
+      selector:
+        matchLabels:
+          app: steadybit-extension-host
+          app.kubernetes.io/name: steadybit-extension-host
+      template:
+        metadata:
+          annotations:
+            container.apparmor.security.beta.kubernetes.io/steadybit-extension-host: unconfined
+            oneagent.dynatrace.com/injection: "false"
+            steadybit.com/extension-auto-discovery: |
+              {"extensions":[{"port":8085,"protocol":"http","types":["ACTION","DISCOVERY"]}]}
+            steadybit.com/extension-auto-registration: |
+              {"extensions":[{"port":8085,"protocol":"http"}]}
+          labels:
+            app: steadybit-extension-host
+            app.kubernetes.io/name: steadybit-extension-host
+            steadybit.com/discovery-disabled: "true"
+            steadybit.com/extension: "true"
+        spec:
+          containers:
+            - env:
+                - name: STEADYBIT_EXTENSION_PORT
+                  value: "8085"
+                - name: STEADYBIT_EXTENSION_HEALTH_PORT
+                  value: "8081"
+                - name: STEADYBIT_LOG_LEVEL
+                  value: INFO
+                - name: STEADYBIT_LOG_FORMAT
+                  value: text
+                - name: STEADYBIT_EXTENSION_HOST
+                  value: extension-host.example.com
+                - name: STEADYBIT_EXTENSION_HOSTNAME
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: spec.nodeName
+              image: ghcr.io/steadybit/extension-host:v0.0.0
+              imagePullPolicy: IfNotPresent
+              livenessProbe:
+                failureThreshold: 5
+                httpGet:
+                  path: /health/liveness
+                  port: 8081
+                initialDelaySeconds: 10
+                periodSeconds: 10
+                successThreshold: 1
+                timeoutSeconds: 5
+              name: steadybit-extension-host
+              ports:
+                - containerPort: 8085
+                  name: http
+                - containerPort: 8081
+                  name: health
+              readinessProbe:
+                failureThreshold: 3
+                httpGet:
+                  path: /health/readiness
+                  port: 8081
+                initialDelaySeconds: 10
+                periodSeconds: 10
+                successThreshold: 1
+                timeoutSeconds: 1
+              resources:
+                limits:
+                  cpu: 200m
+                  memory: 96Mi
+                requests:
+                  cpu: 50m
+                  memory: 16Mi
               securityContext:
                 capabilities:
                   add:
@@ -164,6 +294,10 @@ manifest should match snapshot with TLS:
                   value: /etc/extension/certificates/server-cert/tls.crt
                 - name: STEADYBIT_EXTENSION_TLS_SERVER_KEY
                   value: /etc/extension/certificates/server-cert/tls.key
+                - name: STEADYBIT_EXTENSION_HOSTNAME
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: spec.nodeName
               image: ghcr.io/steadybit/extension-host:v0.0.0
               imagePullPolicy: IfNotPresent
               livenessProbe:
@@ -290,6 +424,10 @@ manifest should match snapshot with appArmorProfile for k8s >= 1.30:
                   value: INFO
                 - name: STEADYBIT_LOG_FORMAT
                   value: text
+                - name: STEADYBIT_EXTENSION_HOSTNAME
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: spec.nodeName
               image: ghcr.io/steadybit/extension-host:v0.0.0
               imagePullPolicy: IfNotPresent
               livenessProbe:
@@ -412,6 +550,10 @@ manifest should match snapshot with different containerPorts:
                   value: INFO
                 - name: STEADYBIT_LOG_FORMAT
                   value: text
+                - name: STEADYBIT_EXTENSION_HOSTNAME
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: spec.nodeName
               image: ghcr.io/steadybit/extension-host:v0.0.0
               imagePullPolicy: IfNotPresent
               livenessProbe:
@@ -534,6 +676,10 @@ manifest should match snapshot with extra env vars:
                   value: text
                 - name: FOO
                   value: bar
+                - name: STEADYBIT_EXTENSION_HOSTNAME
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: spec.nodeName
               envFrom:
                 - configMapRef: null
                   name: env-configmap
@@ -661,6 +807,134 @@ manifest should match snapshot with extra labels:
                   value: INFO
                 - name: STEADYBIT_LOG_FORMAT
                   value: text
+                - name: STEADYBIT_EXTENSION_HOSTNAME
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: spec.nodeName
+              image: ghcr.io/steadybit/extension-host:v0.0.0
+              imagePullPolicy: IfNotPresent
+              livenessProbe:
+                failureThreshold: 5
+                httpGet:
+                  path: /health/liveness
+                  port: 8081
+                initialDelaySeconds: 10
+                periodSeconds: 10
+                successThreshold: 1
+                timeoutSeconds: 5
+              name: steadybit-extension-host
+              ports:
+                - containerPort: 8085
+                  name: http
+                - containerPort: 8081
+                  name: health
+              readinessProbe:
+                failureThreshold: 3
+                httpGet:
+                  path: /health/readiness
+                  port: 8081
+                initialDelaySeconds: 10
+                periodSeconds: 10
+                successThreshold: 1
+                timeoutSeconds: 1
+              resources:
+                limits:
+                  cpu: 200m
+                  memory: 96Mi
+                requests:
+                  cpu: 50m
+                  memory: 16Mi
+              securityContext:
+                capabilities:
+                  add:
+                    - SYS_ADMIN
+                    - SYS_CHROOT
+                    - SYS_RESOURCE
+                    - SYS_BOOT
+                    - NET_RAW
+                    - SYS_TIME
+                    - SYS_PTRACE
+                    - KILL
+                    - NET_ADMIN
+                    - DAC_OVERRIDE
+                    - SETUID
+                    - SETGID
+                    - AUDIT_WRITE
+                readOnlyRootFilesystem: true
+                seccompProfile:
+                  type: Unconfined
+              volumeMounts:
+                - mountPath: /tmp
+                  name: tmp-dir
+                - mountPath: /sys/fs/cgroup
+                  name: cgroup-root
+                - mountPath: /run/steadybit/runc
+                  name: runc-root
+          dnsPolicy: ClusterFirstWithHostNet
+          hostNetwork: true
+          hostPID: true
+          securityContext:
+            runAsNonRoot: true
+            seccompProfile:
+              type: Unconfined
+          serviceAccountName: steadybit-extension-host
+          volumes:
+            - emptyDir: {}
+              name: tmp-dir
+            - hostPath:
+                path: /sys/fs/cgroup
+                type: Directory
+              name: cgroup-root
+            - emptyDir: {}
+              name: runc-root
+      updateStrategy:
+        rollingUpdate:
+          maxUnavailable: 1
+        type: RollingUpdate
+manifest should match snapshot with hostnameFromKubernetes enabled:
+  1: |
+    apiVersion: apps/v1
+    kind: DaemonSet
+    metadata:
+      labels:
+        steadybit.com/discovery-disabled: "true"
+        steadybit.com/extension: "true"
+      name: RELEASE-NAME-steadybit-extension-host
+      namespace: NAMESPACE
+    spec:
+      selector:
+        matchLabels:
+          app: steadybit-extension-host
+          app.kubernetes.io/name: steadybit-extension-host
+      template:
+        metadata:
+          annotations:
+            container.apparmor.security.beta.kubernetes.io/steadybit-extension-host: unconfined
+            oneagent.dynatrace.com/injection: "false"
+            steadybit.com/extension-auto-discovery: |
+              {"extensions":[{"port":8085,"protocol":"http","types":["ACTION","DISCOVERY"]}]}
+            steadybit.com/extension-auto-registration: |
+              {"extensions":[{"port":8085,"protocol":"http"}]}
+          labels:
+            app: steadybit-extension-host
+            app.kubernetes.io/name: steadybit-extension-host
+            steadybit.com/discovery-disabled: "true"
+            steadybit.com/extension: "true"
+        spec:
+          containers:
+            - env:
+                - name: STEADYBIT_EXTENSION_PORT
+                  value: "8085"
+                - name: STEADYBIT_EXTENSION_HEALTH_PORT
+                  value: "8081"
+                - name: STEADYBIT_LOG_LEVEL
+                  value: INFO
+                - name: STEADYBIT_LOG_FORMAT
+                  value: text
+                - name: STEADYBIT_EXTENSION_HOSTNAME
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: spec.nodeName
               image: ghcr.io/steadybit/extension-host:v0.0.0
               imagePullPolicy: IfNotPresent
               livenessProbe:
@@ -787,6 +1061,10 @@ manifest should match snapshot with mutual TLS:
                   value: /etc/extension/certificates/server-cert/tls.key
                 - name: STEADYBIT_EXTENSION_TLS_CLIENT_CAS
                   value: /etc/extension/certificates/client-cert-a/tls.crt,/etc/extension/certificates/client-cert-a/tls.crt
+                - name: STEADYBIT_EXTENSION_HOSTNAME
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: spec.nodeName
               image: ghcr.io/steadybit/extension-host:v0.0.0
               imagePullPolicy: IfNotPresent
               livenessProbe:
@@ -927,6 +1205,10 @@ manifest should match snapshot with mutual TLS using containerPaths:
                   value: /etc/tls/server.key
                 - name: STEADYBIT_EXTENSION_TLS_CLIENT_CAS
                   value: /etc/tls/ca.crt,/etc/tls/ca2.crt
+                - name: STEADYBIT_EXTENSION_HOSTNAME
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: spec.nodeName
               image: ghcr.io/steadybit/extension-host:v0.0.0
               imagePullPolicy: IfNotPresent
               livenessProbe:
@@ -1047,6 +1329,10 @@ manifest should match snapshot with podSecurityContext:
                   value: INFO
                 - name: STEADYBIT_LOG_FORMAT
                   value: text
+                - name: STEADYBIT_EXTENSION_HOSTNAME
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: spec.nodeName
               image: ghcr.io/steadybit/extension-host:v0.0.0
               imagePullPolicy: IfNotPresent
               livenessProbe:
@@ -1168,6 +1454,10 @@ manifest should match snapshot with priority class:
                   value: INFO
                 - name: STEADYBIT_LOG_FORMAT
                   value: text
+                - name: STEADYBIT_EXTENSION_HOSTNAME
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: spec.nodeName
               image: ghcr.io/steadybit/extension-host:v0.0.0
               imagePullPolicy: IfNotPresent
               livenessProbe:
@@ -1289,6 +1579,10 @@ manifest should match snapshot with update strategy:
                   value: INFO
                 - name: STEADYBIT_LOG_FORMAT
                   value: text
+                - name: STEADYBIT_EXTENSION_HOSTNAME
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: spec.nodeName
               image: ghcr.io/steadybit/extension-host:v0.0.0
               imagePullPolicy: IfNotPresent
               livenessProbe:
@@ -1409,6 +1703,10 @@ manifest should match snapshot without TLS:
                   value: INFO
                 - name: STEADYBIT_LOG_FORMAT
                   value: text
+                - name: STEADYBIT_EXTENSION_HOSTNAME
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: spec.nodeName
               image: ghcr.io/steadybit/extension-host:v0.0.0
               imagePullPolicy: IfNotPresent
               livenessProbe:
