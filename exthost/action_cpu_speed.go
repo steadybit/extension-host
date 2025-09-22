@@ -51,7 +51,7 @@ func (a *cpuSpeedAction) Describe() action_kit_api.ActionDescription {
 		Version:     extbuild.GetSemverVersionStringOrUnknown(),
 		Icon:        extutil.Ptr(changeCPUSpeed),
 		TargetSelection: &action_kit_api.TargetSelection{
-			TargetType:         targetID,
+			TargetType:         targetID + "(host.cpu.min_freq)",
 			SelectionTemplates: &targetSelectionTemplates,
 		},
 		Technology:  extutil.Ptr("Linux Host"),
