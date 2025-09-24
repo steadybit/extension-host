@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Copyright 2025 Roblox Corporation. All rights reserved.
+// SPDX-FileCopyrightText: 2025 Roblox Corporation
 // Author: Tom Handal <thandal@roblox.com>
 
 package exthost
