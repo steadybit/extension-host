@@ -216,7 +216,6 @@ func (a *cpuSpeedAction) Start(_ context.Context, state *CpuSpeedActionState) (*
 		return nil, err
 	}
 
-	// Get current frequency for metrics
 	currentFreq, err := cpufreq.GetCurrentFrequency()
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to get current CPU frequency")
@@ -228,7 +227,7 @@ func (a *cpuSpeedAction) Start(_ context.Context, state *CpuSpeedActionState) (*
 	return &action_kit_api.StartResult{
 		Metrics: extutil.Ptr([]action_kit_api.Metric{
 			{
-				Name: extutil.Ptr("response_time"),
+				Name: extutil.Ptr("cpu_freq"),
 				Metric: map[string]string{
 					"freq_type": "Current",
 				},
@@ -236,7 +235,7 @@ func (a *cpuSpeedAction) Start(_ context.Context, state *CpuSpeedActionState) (*
 				Timestamp: now,
 			},
 			{
-				Name: extutil.Ptr("response_time"),
+				Name: extutil.Ptr("cpu_freq"),
 				Metric: map[string]string{
 					"freq_type": "Minimum",
 				},
@@ -244,7 +243,7 @@ func (a *cpuSpeedAction) Start(_ context.Context, state *CpuSpeedActionState) (*
 				Timestamp: now,
 			},
 			{
-				Name: extutil.Ptr("response_time"),
+				Name: extutil.Ptr("cpu_freq"),
 				Metric: map[string]string{
 					"freq_type": "Maximum",
 				},
@@ -290,7 +289,6 @@ func (a *cpuSpeedAction) Stop(_ context.Context, state *CpuSpeedActionState) (*a
 
 // Status is called to get the current status of the action
 func (a *cpuSpeedAction) Status(_ context.Context, state *CpuSpeedActionState) (*action_kit_api.StatusResult, error) {
-	// Get current frequency for metrics
 	currentFreq, err := cpufreq.GetCurrentFrequency()
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to get current CPU frequency")
@@ -302,7 +300,7 @@ func (a *cpuSpeedAction) Status(_ context.Context, state *CpuSpeedActionState) (
 		Completed: false,
 		Metrics: extutil.Ptr([]action_kit_api.Metric{
 			{
-				Name: extutil.Ptr("response_time"),
+				Name: extutil.Ptr("cpu_freq"),
 				Metric: map[string]string{
 					"freq_type": "Current",
 				},
@@ -310,7 +308,7 @@ func (a *cpuSpeedAction) Status(_ context.Context, state *CpuSpeedActionState) (
 				Timestamp: now,
 			},
 			{
-				Name: extutil.Ptr("response_time"),
+				Name: extutil.Ptr("cpu_freq"),
 				Metric: map[string]string{
 					"freq_type": "Minimum",
 				},
@@ -318,7 +316,7 @@ func (a *cpuSpeedAction) Status(_ context.Context, state *CpuSpeedActionState) (
 				Timestamp: now,
 			},
 			{
-				Name: extutil.Ptr("response_time"),
+				Name: extutil.Ptr("cpu_freq"),
 				Metric: map[string]string{
 					"freq_type": "Maximum",
 				},
