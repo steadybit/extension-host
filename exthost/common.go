@@ -9,7 +9,7 @@ import (
 
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
 	"github.com/steadybit/extension-host/config"
-	extension_kit "github.com/steadybit/extension-kit"
+	"github.com/steadybit/extension-kit"
 	"github.com/steadybit/extension-kit/extutil"
 )
 

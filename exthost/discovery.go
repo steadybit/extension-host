@@ -187,6 +187,8 @@ func (d *hostDiscovery) DiscoverTargets(ctx context.Context) ([]discovery_kit_ap
 	if err == nil {
 		target.Attributes["host.cpu.min_freq"] = []string{fmt.Sprintf("%d", minFreq)}
 		target.Attributes["host.cpu.max_freq"] = []string{fmt.Sprintf("%d", maxFreq)}
+	} else {
+		log.Trace().Err(err).Msg("Failed to get CPU frequency info")
 	}
 
 	for key, value := range getEnvironmentVariables() {
