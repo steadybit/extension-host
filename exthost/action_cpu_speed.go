@@ -7,7 +7,6 @@ package exthost
 import (
 	"context"
 	"fmt"
-	"runtime"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -145,38 +144,27 @@ func (a *cpuSpeedAction) Describe() action_kit_api.ActionDescription {
 }
 
 func (a *cpuSpeedAction) Prepare(_ context.Context, state *CpuSpeedActionState, request action_kit_api.PrepareActionRequestBody) (*action_kit_api.PrepareResult, error) {
-	log.Info().Msg("Preparing CPU speed action")
-
-	// Check if we're running on Linux
-	if runtime.GOOS != "linux" {
-		return &action_kit_api.PrepareResult{
-			Error: extutil.Ptr(action_kit_api.ActionKitError{
-				Title:  "Unsupported operating system",
-				Status: extutil.Ptr(action_kit_api.Errored),
-				Detail: extutil.Ptr("CPU frequency control is only supported on Linux hosts"),
-			}),
-		}, nil
-	}
-
-	_, err := CheckTargetHostname(request.Target.Attributes)
-	if err != nil {
+	if _, err := CheckTargetHostname(request.Target.Attributes); err != nil {
 		return nil, err
 	}
 
-	// Get current frequency limits
 	minFreq, maxFreq, err := cpufreq.GetCPUFrequencyInfo()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get CPU frequency info: %w", err)
+		return &action_kit_api.PrepareResult{
+			Error: extutil.Ptr(action_kit_api.ActionKitError{
+				Title:  "CPU frequency control is not supported on this host",
+				Status: extutil.Ptr(action_kit_api.Errored),
+				Detail: extutil.Ptr(err.Error()),
+			}),
+		}, nil
 	}
 
 	state.OriginalMinFreq = minFreq
 	state.OriginalMaxFreq = maxFreq
 
-	// Parse requested frequencies
-	state.NewMinFreq = uint64(extutil.ToInt64(request.Config["minFreq"]))
-	state.NewMaxFreq = uint64(extutil.ToInt64(request.Config["maxFreq"]))
+	state.NewMinFreq = extutil.ToUInt64(request.Config["minFreq"])
+	state.NewMaxFreq = extutil.ToUInt64(request.Config["maxFreq"])
 
-	// Validate requested frequencies
 	if state.NewMinFreq < minFreq {
 		return &action_kit_api.PrepareResult{
 			Error: extutil.Ptr(action_kit_api.ActionKitError{
