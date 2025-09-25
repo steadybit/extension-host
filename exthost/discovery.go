@@ -1,11 +1,13 @@
-/*
- * Copyright 2023 steadybit GmbH. All rights reserved.
- */
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2025 Steadybit GmbH
 
 package exthost
 
 import (
 	"context"
+	"fmt"
+	"time"
+
 	"github.com/elastic/go-sysinfo"
 	"github.com/rs/zerolog/log"
 	networkutils "github.com/steadybit/action-kit/go/action_kit_commons/network"
@@ -13,9 +15,9 @@ import (
 	"github.com/steadybit/discovery-kit/go/discovery_kit_commons"
 	"github.com/steadybit/discovery-kit/go/discovery_kit_sdk"
 	"github.com/steadybit/extension-host/config"
+	"github.com/steadybit/extension-host/exthost/cpufreq"
 	"github.com/steadybit/extension-kit/extbuild"
 	"github.com/steadybit/extension-kit/extutil"
-	"time"
 )
 
 type hostDiscovery struct {
@@ -123,6 +125,19 @@ func (d *hostDiscovery) DescribeAttributes() []discovery_kit_api.AttributeDescri
 				Other: "OS Versions",
 			},
 		},
+		{
+			Attribute: "host.cpu.min_freq",
+			Label: discovery_kit_api.PluralLabel{
+				One:   "Minimum CPU Frequency (MHz)",
+				Other: "Minimum CPU Frequencies (MHz)",
+			},
+		}, {
+			Attribute: "host.cpu.max_freq",
+			Label: discovery_kit_api.PluralLabel{
+				One:   "Maximum CPU Frequency (MHz)",
+				Other: "Maximum CPU Frequencies (MHz)",
+			},
+		},
 	}
 }
 
@@ -165,6 +180,15 @@ func (d *hostDiscovery) DiscoverTargets(ctx context.Context) ([]discovery_kit_ap
 		}
 	} else {
 		log.Error().Err(err).Msg("Failed to get host info")
+	}
+
+	// Get CPU frequency info
+	minFreq, maxFreq, err := cpufreq.GetCPUFrequencyInfo()
+	if err == nil {
+		target.Attributes["host.cpu.min_freq"] = []string{fmt.Sprintf("%d", minFreq)}
+		target.Attributes["host.cpu.max_freq"] = []string{fmt.Sprintf("%d", maxFreq)}
+	} else {
+		log.Trace().Err(err).Msg("Failed to get CPU frequency info")
 	}
 
 	for key, value := range getEnvironmentVariables() {

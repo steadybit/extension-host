@@ -1,4 +1,5 @@
-// Copyright 2025 steadybit GmbH. All rights reserved.
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2025 Steadybit GmbH
 
 package main
 
@@ -60,6 +61,7 @@ func main() {
 	// you do not have a need for all of them.
 	discovery_kit_sdk.Register(exthost.NewHostDiscovery())
 	action_kit_sdk.RegisterAction(exthost.NewStressCpuAction(r))
+	action_kit_sdk.RegisterAction(exthost.NewCpuSpeedAction())
 	action_kit_sdk.RegisterAction(exthost.NewStressMemoryAction(r))
 	action_kit_sdk.RegisterAction(exthost.NewStressIoAction(r))
 	action_kit_sdk.RegisterAction(exthost.NewTimetravelAction(r))
