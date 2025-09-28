@@ -7,13 +7,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
+
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
 	"github.com/steadybit/action-kit/go/action_kit_commons/network"
 	"github.com/steadybit/action-kit/go/action_kit_commons/ociruntime"
 	"github.com/steadybit/action-kit/go/action_kit_sdk"
 	"github.com/steadybit/extension-kit/extbuild"
 	"github.com/steadybit/extension-kit/extutil"
-	"time"
 )
 
 func NewNetworkDelayContainerAction(r ociruntime.OciRuntime) action_kit_sdk.Action[NetworkActionState] {
@@ -63,6 +64,15 @@ func getNetworkDelayDescription() action_kit_api.ActionDescription {
 				Order:        extutil.Ptr(2),
 			},
 			action_kit_api.ActionParameter{
+				Name:         "networkDelayTcpPshOnly",
+				Label:        "TCP Data Packets Only",
+				Description:  extutil.Ptr("Delay only TCP data packets (PSH flag heuristic). UDP is not delayed."),
+				Type:         action_kit_api.ActionParameterTypeBoolean,
+				DefaultValue: extutil.Ptr("false"),
+				Required:     extutil.Ptr(true),
+				Order:        extutil.Ptr(3),
+			},
+			action_kit_api.ActionParameter{
 				Name:        "networkInterface",
 				Label:       "Network Interface",
 				Description: extutil.Ptr("Target Network Interface which should be affected. All if none specified."),
@@ -82,6 +92,7 @@ func delay(r ociruntime.OciRuntime) networkOptsProvider {
 		}
 		delay := time.Duration(extutil.ToInt64(request.Config["networkDelay"])) * time.Millisecond
 		hasJitter := extutil.ToBool(request.Config["networkDelayJitter"])
+		tcpPshOnly := extutil.ToBool(request.Config["networkDelayTcpPshOnly"])
 
 		jitter := 0 * time.Millisecond
 		if hasJitter {
@@ -110,6 +121,7 @@ func delay(r ociruntime.OciRuntime) networkOptsProvider {
 			Delay:      delay,
 			Jitter:     jitter,
 			Interfaces: interfaces,
+			TcpPshOnly: tcpPshOnly,
 		}, messages, nil
 	}
 }
