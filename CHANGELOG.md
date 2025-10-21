@@ -1,9 +1,10 @@
 # Changelog
 
-# v1.4.4
+# v1.4.3
 
 - feat: Network Delay - add option "TCP Data Packets Only" (PSH heuristic). Uses iptables marks + tc fwmark to delay only TCP data packets; UDP is not delayed. Honors ports/hosts/CIDRs via iptables filtering.
-- chore: debug logging prints prepared iptables-restore scripts and tc/ip batch commands (for add and delete)
+- Add new CPU Frequency attack
+- Update dependencies
 
 # v1.4.3
 
