@@ -61,7 +61,7 @@ spec:
             limits:
               memory: {{ .Values.resources.limits.memory }}
               cpu: {{ .Values.resources.limits.cpu }}
-          name: {{ include "extensionlib.names.name" . }}
+          name: "extension"
           ports:
             - name: http
               containerPort: {{ .Values.containerPorts.http }}
