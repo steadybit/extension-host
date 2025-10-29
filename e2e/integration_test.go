@@ -172,7 +172,7 @@ func testStressCpu(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	action, err := e.RunAction(exthost.BaseActionID+".stress-cpu", getTarget(m), config, nil)
 	require.NoError(t, err)
 
-	e2e.AssertProcessRunningInContainer(t, m, e.Pod, "steadybit-extension-host", "stress-ng", true)
+	e2e.AssertProcessRunningInContainer(t, m, e.Pod, "extension", "stress-ng", true)
 	require.NoError(t, action.Cancel())
 	requireAllSidecarsCleanedUp(t, m, e)
 }
@@ -214,7 +214,7 @@ func testStressMemory(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			defer func() { _ = action.Cancel() }()
 			require.NoError(t, err)
 
-			e2e.AssertProcessRunningInContainer(t, m, e.Pod, "steadybit-extension-host", "stress-ng", true)
+			e2e.AssertProcessRunningInContainer(t, m, e.Pod, "extension", "stress-ng", true)
 
 			if tt.performKill {
 				println("performing kill")
@@ -227,7 +227,7 @@ func testStressMemory(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 				err := action.Wait()
 				require.ErrorContains(t, err, *tt.wantedErr)
 			}
-			e2e.AssertProcessNOTRunningInContainer(t, m, e.Pod, "steadybit-extension-host", "stress-ng")
+			e2e.AssertProcessNOTRunningInContainer(t, m, e.Pod, "extension", "stress-ng")
 		})
 	}
 	requireAllSidecarsCleanedUp(t, m, e)
@@ -251,9 +251,9 @@ func testStressIo(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			defer func() { _ = action.Cancel() }()
 			require.NoError(t, err)
 
-			e2e.AssertProcessRunningInContainer(t, m, e.Pod, "steadybit-extension-host", "stress-ng", true)
+			e2e.AssertProcessRunningInContainer(t, m, e.Pod, "extension", "stress-ng", true)
 			require.NoError(t, action.Cancel())
-			e2e.AssertProcessNOTRunningInContainer(t, m, e.Pod, "steadybit-extension-host", "stress-ng")
+			e2e.AssertProcessNOTRunningInContainer(t, m, e.Pod, "extension", "stress-ng")
 
 			out, err := runInMinikube(m, "ls", "/stressng")
 			require.NoError(t, err)
@@ -297,7 +297,7 @@ func testTimeTravel(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 }
 
 func getContainerTime(t *testing.T, m *e2e.Minikube, e *e2e.Extension) time.Time {
-	out, err := m.PodExec(e.Pod, "steadybit-extension-host", "date", "+%s")
+	out, err := m.PodExec(e.Pod, "extension", "date", "+%s")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -336,16 +336,16 @@ func testStopProcess(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 		Delay    int    `json:"delay"`
 	}{Duration: 10000, Graceful: true, Process: "tail", Delay: 1}
 
-	e2e.AssertProcessNOTRunningInContainer(t, m, e.Pod, "steadybit-extension-host", "tail")
+	e2e.AssertProcessNOTRunningInContainer(t, m, e.Pod, "extension", "tail")
 	go func() {
-		_, _ = m.PodExec(e.Pod, "steadybit-extension-host", "tail", "-f", "/dev/null")
+		_, _ = m.PodExec(e.Pod, "extension", "tail", "-f", "/dev/null")
 	}()
 
-	e2e.AssertProcessRunningInContainer(t, m, e.Pod, "steadybit-extension-host", "tail", true)
+	e2e.AssertProcessRunningInContainer(t, m, e.Pod, "extension", "tail", true)
 
 	action, err := e.RunAction(exthost.BaseActionID+".stop-process", getTarget(m), config, nil)
 	require.NoError(t, err)
-	e2e.AssertProcessNOTRunningInContainer(t, m, e.Pod, "steadybit-extension-host", "tail")
+	e2e.AssertProcessNOTRunningInContainer(t, m, e.Pod, "extension", "tail")
 	require.NoError(t, action.Cancel())
 }
 
@@ -360,7 +360,7 @@ func testShutdownHost(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	_, err := e.RunAction(exthost.BaseActionID+".shutdown", getTarget(m), config, nil)
 	require.NoError(t, err)
 	e2e.Retry(t, 5, 1*time.Second, func(r *e2e.R) {
-		_, err = m.PodExec(e.Pod, "steadybit-extension-host", "tail", "-f", "/dev/null")
+		_, err = m.PodExec(e.Pod, "extension", "tail", "-f", "/dev/null")
 		if err == nil {
 			r.Failed = true
 			_, _ = fmt.Fprintf(r.Log, "expected error but got none")
@@ -970,7 +970,7 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			require.NoError(t, err)
 
 			if testCase.method == diskfill.OverTime {
-				e2e.AssertProcessRunningInContainer(t, m, e.Pod, "steadybit-extension-host", "dd", true)
+				e2e.AssertProcessRunningInContainer(t, m, e.Pod, "extension", "dd", true)
 			}
 
 			if testCase.wantedDelta != -1 {
@@ -984,9 +984,9 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			require.NoError(t, action.Cancel())
 
 			if testCase.method == diskfill.OverTime {
-				e2e.AssertProcessNOTRunningInContainer(t, m, e.Pod, "steadybit-extension-host", "dd")
+				e2e.AssertProcessNOTRunningInContainer(t, m, e.Pod, "extension", "dd")
 			} else {
-				e2e.AssertProcessNOTRunningInContainer(t, m, e.Pod, "steadybit-extension-host", "fallocate")
+				e2e.AssertProcessNOTRunningInContainer(t, m, e.Pod, "extension", "fallocate")
 			}
 
 			out, _ := runInMinikube(m, "ls", "/filldisk/disk-fill")
@@ -1015,12 +1015,12 @@ func testStressCombined(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	defer func() { _ = cpuAction.Cancel() }()
 	require.NoError(t, err)
 
-	e2e.AssertProcessRunningInContainer(t, m, e.Pod, "steadybit-extension-host", "stress-ng", true)
+	e2e.AssertProcessRunningInContainer(t, m, e.Pod, "extension", "stress-ng", true)
 
 	require.NoError(t, memAction.Wait())
 	require.NoError(t, cpuAction.Wait())
 
-	e2e.AssertProcessNOTRunningInContainer(t, m, e.Pod, "steadybit-extension-host", "stress-ng")
+	e2e.AssertProcessNOTRunningInContainer(t, m, e.Pod, "extension", "stress-ng")
 
 	requireAllSidecarsCleanedUp(t, m, e)
 }
@@ -1122,7 +1122,7 @@ func testFillMemory(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			defer func() { _ = action.Cancel() }()
 			require.NoError(t, err)
 
-			e2e.AssertProcessRunningInContainer(t, m, e.Pod, "steadybit-extension-host", "memfill", true)
+			e2e.AssertProcessRunningInContainer(t, m, e.Pod, "extension", "memfill", true)
 
 			if tt.performKill {
 				println("performing kill")
@@ -1135,7 +1135,7 @@ func testFillMemory(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 				err := action.Wait()
 				require.ErrorContains(t, err, *tt.wantedErr)
 			}
-			e2e.AssertProcessNOTRunningInContainer(t, m, e.Pod, "steadybit-extension-host", "memfill")
+			e2e.AssertProcessNOTRunningInContainer(t, m, e.Pod, "extension", "memfill")
 		})
 	}
 	requireAllSidecarsCleanedUp(t, m, e)
@@ -1150,7 +1150,7 @@ func runInMinikube(m *e2e.Minikube, arg ...string) ([]byte, error) {
 
 func requireAllSidecarsCleanedUp(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	require.EventuallyWithT(t, func(t *assert.CollectT) {
-		out, err := m.PodExec(e.Pod, "steadybit-extension-host", "ls", "/run/steadybit/runc")
+		out, err := m.PodExec(e.Pod, "extension", "ls", "/run/steadybit/runc")
 		if strings.Contains(out, "No such file or directory") {
 			return
 		}
