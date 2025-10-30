@@ -11,6 +11,14 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"math"
+	"net"
+	"os/exec"
+	"strconv"
+	"strings"
+	"testing"
+	"time"
+
 	"github.com/rs/zerolog/log"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
 	"github.com/steadybit/action-kit/go/action_kit_commons/diskfill"
@@ -21,13 +29,6 @@ import (
 	"github.com/steadybit/extension-kit/extutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"math"
-	"net"
-	"os/exec"
-	"strconv"
-	"strings"
-	"testing"
-	"time"
 )
 
 var (
@@ -84,7 +85,7 @@ func TestWithMinikube(t *testing.T) {
 				"--set", fmt.Sprintf("container.runtime=%s", m.Runtime),
 				"--set", "discovery.attributes.excludes.host={host.nic}",
 				"--set", "discovery.hostnameFromKubernetes=true",
-				"--set", "logging.level=trace",
+				"--set", "logging.level=debug",
 			}
 		},
 	}
@@ -124,6 +125,10 @@ func TestWithMinikube(t *testing.T) {
 		{
 			Name: "network delay",
 			Test: testNetworkDelay,
+		},
+		{
+			Name: "network delay (TCP PSH)",
+			Test: testNetworkDelayTcpPsh,
 		},
 		{
 			Name: "network blackhole",
@@ -533,6 +538,112 @@ func testNetworkDelay(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 
 			netperf.AssertLatency(t, 0, unaffectedLatency*120/100)
 
+		})
+	}
+	requireAllSidecarsCleanedUp(t, m, e)
+}
+
+func testNetworkDelayTcpPsh(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
+	if m.Runtime == "cri-o" && m.Driver == "docker" {
+		t.Skip("Due to https://github.com/kubernetes/minikube/issues/16371 this test is skipped for cri-o")
+	}
+
+	nginx := e2e.Nginx{Minikube: m}
+	err := nginx.Deploy("nginx-network-delay")
+	require.NoError(t, err, "failed to create pod")
+	defer func() { _ = nginx.Delete() }()
+
+	pod, err := m.GetPod(nginx.Pod)
+	require.NoError(t, err)
+
+	tests := []struct {
+		name                string
+		ip                  []string
+		hostname            []string
+		port                []string
+		interfaces          []string
+		restrictedEndpoints []action_kit_api.RestrictedEndpoint
+		tcpPshOnly          bool
+		wantedDelay         bool
+	}{
+		{
+			name:                "should delay all traffic",
+			restrictedEndpoints: generateRestrictedEndpoints(1500),
+			tcpPshOnly:          true,
+			wantedDelay:         true,
+		},
+		{
+			name:                "should delay only port 5000 traffic",
+			port:                []string{"5000"},
+			restrictedEndpoints: generateRestrictedEndpoints(1500),
+			tcpPshOnly:          true,
+			wantedDelay:         false,
+		},
+		{
+			name:                "should delay only port 80 traffic",
+			port:                []string{"80"},
+			restrictedEndpoints: generateRestrictedEndpoints(1500),
+			tcpPshOnly:          true,
+			wantedDelay:         true,
+		},
+		{
+			name:                "should delay only traffic for nginx",
+			ip:                  []string{pod.Status.PodIP},
+			restrictedEndpoints: generateRestrictedEndpoints(1500),
+			tcpPshOnly:          true,
+			wantedDelay:         true,
+		},
+		{
+			name:                "should delay only traffic for nginx using cidr",
+			ip:                  []string{fmt.Sprintf("%s/32", pod.Status.PodIP)},
+			restrictedEndpoints: generateRestrictedEndpoints(1500),
+			tcpPshOnly:          true,
+			wantedDelay:         true,
+		},
+	}
+
+	nginx.AssertIsReachable(t, true)
+
+	unaffectedLatency, err := nginx.MeasureHttpLatency()
+	require.NoError(t, err)
+
+	for _, tt := range tests {
+		config := struct {
+			Duration     int      `json:"duration"`
+			Delay        int      `json:"networkDelay"`
+			Jitter       bool     `json:"networkDelayJitter"`
+			Ip           []string `json:"ip"`
+			Hostname     []string `json:"hostname"`
+			Port         []string `json:"port"`
+			NetInterface []string `json:"networkInterface"`
+			TcpPshOnly   bool     `json:"tcpDataPacketsOnly"`
+		}{
+			Duration:     400000,
+			Delay:        500,
+			Jitter:       false,
+			Ip:           tt.ip,
+			Hostname:     tt.hostname,
+			Port:         tt.port,
+			NetInterface: tt.interfaces,
+			TcpPshOnly:   tt.tcpPshOnly,
+		}
+
+		t.Run(tt.name, func(t *testing.T) {
+			restrictedEndpoints := append(*defaultExecutionContext.RestrictedEndpoints, tt.restrictedEndpoints...)
+			executionContext := &action_kit_api.ExecutionContext{RestrictedEndpoints: &restrictedEndpoints}
+
+			action, err := e.RunAction(fmt.Sprintf("%s.network_delay", exthost.BaseActionID), getTarget(m), config, executionContext)
+			defer func() { _ = action.Cancel() }()
+			require.NoError(t, err)
+
+			if tt.wantedDelay {
+				nginx.AssertHttpLatency(t, unaffectedLatency+time.Duration(config.Delay*2)*time.Millisecond*90/100, unaffectedLatency+time.Duration(config.Delay*2)*time.Millisecond*110/100)
+			} else {
+				nginx.AssertHttpLatency(t, 0, unaffectedLatency+40*time.Millisecond)
+			}
+			require.NoError(t, action.Cancel())
+
+			nginx.AssertHttpLatency(t, 0, unaffectedLatency+40*time.Millisecond)
 		})
 	}
 	requireAllSidecarsCleanedUp(t, m, e)
