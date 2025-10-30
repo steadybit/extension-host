@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
 	"github.com/steadybit/action-kit/go/action_kit_commons/network"
 	"github.com/steadybit/action-kit/go/action_kit_commons/ociruntime"
@@ -56,6 +57,7 @@ func getNetworkLimitBandwidthDescription() action_kit_api.ActionDescription {
 				Description: extutil.Ptr("Target Network Interface which should be affected. All if none specified."),
 				Type:        action_kit_api.ActionParameterTypeStringArray,
 				Required:    extutil.Ptr(false),
+				Advanced:    extutil.Ptr(true),
 				Order:       extutil.Ptr(104),
 			},
 		),
