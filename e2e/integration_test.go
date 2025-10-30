@@ -1280,6 +1280,7 @@ func getMinikubeOptions() e2e.MinikubeOpts {
 		log.Info().Msg("KVM is available, using kvm2 driver")
 		mOpts = mOpts.WithDriver("kvm2").
 			AfterStart(func(m *e2e.Minikube) error {
+				log.Info().Msg("Installing xt_connmark module")
 				return m.SshExec("sudo", "modprobe", "xt_connmark").Run()
 			})
 	}
