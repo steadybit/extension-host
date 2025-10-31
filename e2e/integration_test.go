@@ -280,24 +280,29 @@ func testTimeTravel(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 		DisableNtp: true,
 	}
 
+	containerTime := getContainerTime(t, m, e)
 	offsetContainer := time.Until(getContainerTime(t, m, e))
+	fmt.Printf("before containerTime %s offsetContainer %s\n", containerTime, offsetContainer)
 
 	action, err := e.RunAction(exthost.BaseActionID+".timetravel", getTarget(m), config, nil)
 	defer func() { _ = action.Cancel() }()
 	require.NoError(t, err)
 
 	assert.EventuallyWithT(t, func(c *assert.CollectT) {
-		adjustedContainerTime := getContainerTime(t, m, e).Add(offsetContainer)
-		diff := time.Until(adjustedContainerTime)
-		assert.InDelta(t, config.Offset, diff.Milliseconds(), 2000)
+		containerTime := getContainerTime(t, m, e)
+		diff := time.Until(containerTime)
+		adjustedDiff := diff + offsetContainer
+		assert.InDelta(t, config.Offset, adjustedDiff.Milliseconds(), 2000)
+		fmt.Printf("during containerTime %s offsetContainer %s diff %s adjustedDiff %s\n", containerTime, offsetContainer, diff, adjustedDiff)
 	}, 10*time.Second, 1*time.Second, "time travel failed to apply offset")
 
 	// rollback
 	require.NoError(t, action.Cancel())
 	assert.EventuallyWithT(t, func(c *assert.CollectT) {
-		adjustedContainerTime := getContainerTime(t, m, e).Add(offsetContainer)
-		diff := time.Until(adjustedContainerTime)
-		assert.InDelta(t, 0, diff.Milliseconds(), 2000)
+		containerTime := getContainerTime(t, m, e)
+		diff := time.Until(containerTime)
+		adjustedDiff := diff + offsetContainer
+		assert.InDelta(t, 0, adjustedDiff.Milliseconds(), 2000)
 	}, 10*time.Second, 1*time.Second, "time travel failed to rollback offset")
 }
 
@@ -952,7 +957,7 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	require.NoError(t, err)
 
 	twoGbExtraAsLeft := (diskSpace.Available - (2 * 1024 * 1024)) / 1024
-	twoGbExtraAsPercent := (((2 * 1024 * 1024) + diskSpace.Used) * 100 / diskSpace.Capacity)
+	oneGbExtraAsPercent := (((1 * 1024 * 1024) + diskSpace.Used) * 100 / diskSpace.Capacity)
 
 	type testCase struct {
 		name           string
@@ -968,11 +973,11 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 		{
 			name:           "fill disk with percentage (fallocate)",
 			mode:           diskfill.Percentage,
-			size:           int(twoGbExtraAsPercent),
+			size:           int(oneGbExtraAsPercent),
 			blockSize:      0,
 			method:         diskfill.AtOnce,
-			wantedFileSize: 2 * 1024,
-			allowedDelta:   512,
+			wantedFileSize: 1 * 1024,
+			allowedDelta:   256,
 		},
 		{
 			name:           "fill disk with megabytes to fill (fallocate)",
@@ -995,18 +1000,17 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 		{
 			name:           "fill disk with percentage (dd)",
 			mode:           diskfill.Percentage,
-			size:           int(twoGbExtraAsPercent),
-			blockSize:      5,
+			size:           int(oneGbExtraAsPercent),
+			blockSize:      0,
 			method:         diskfill.OverTime,
-			wantedFileSize: 2 * 1024,
-
-			allowedDelta: 512,
+			wantedFileSize: 1 * 1024,
+			allowedDelta:   256,
 		},
 		{
 			name:           "fill disk with megabytes to fill (dd)",
 			mode:           diskfill.MBToFill,
 			size:           4 * 1024, // 4GB
-			blockSize:      1,
+			blockSize:      4,
 			method:         diskfill.OverTime,
 			wantedFileSize: 4 * 1024,
 			allowedDelta:   0,
@@ -1015,7 +1019,7 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			name:           "fill disk with megabytes left (dd)",
 			mode:           diskfill.MBLeft,
 			size:           int(twoGbExtraAsLeft),
-			blockSize:      5,
+			blockSize:      16,
 			method:         diskfill.OverTime,
 			wantedFileSize: 2 * 1024,
 			allowedDelta:   512,
@@ -1024,7 +1028,7 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			name:           "fill disk with bigger blocksize (dd)",
 			mode:           diskfill.MBToFill,
 			size:           4 * 1024, // 4GB
-			blockSize:      6 * 1024, // 2GB
+			blockSize:      6 * 1024,
 			method:         diskfill.OverTime,
 			wantedFileSize: 4 * 1024,
 			allowedDelta:   512,
