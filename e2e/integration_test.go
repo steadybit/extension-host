@@ -11,7 +11,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"math"
 	"net"
 	"os/exec"
 	"strconv"
@@ -965,8 +964,8 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 		size           int
 		blockSize      int
 		method         diskfill.Method
-		wantedFileSize func(m *e2e.Minikube) int
-		wantedDelta    int
+		wantedFileSize func(m *e2e.Minikube) int64
+		allowedDelta   int64
 		wantedLog      *string
 	}
 	testCases := []testCase{
@@ -976,11 +975,11 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			size:      90,
 			blockSize: 0,
 			method:    diskfill.AtOnce,
-			wantedFileSize: func(m *e2e.Minikube) int {
+			wantedFileSize: func(m *e2e.Minikube) int64 {
 				diskSpace := getDiskSpace(m)
-				return int(((diskSpace.Capacity * 90 / 100) - diskSpace.Used) / 1024)
+				return ((diskSpace.Capacity * 90 / 100) - diskSpace.Used) / 1024
 			},
-			wantedDelta: 512,
+			allowedDelta: 512,
 		},
 		{
 			name:      "fill disk with megabytes to fill (fallocate)",
@@ -988,10 +987,10 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			size:      4 * 1024, // 4GB
 			blockSize: 0,
 			method:    diskfill.AtOnce,
-			wantedFileSize: func(_ *e2e.Minikube) int {
+			wantedFileSize: func(_ *e2e.Minikube) int64 {
 				return 4 * 1024
 			},
-			wantedDelta: 0,
+			allowedDelta: 0,
 		},
 		{
 			name:      "fill disk with megabytes left (fallocate)",
@@ -999,11 +998,11 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			size:      4 * 1024, // 4GB
 			blockSize: 0,
 			method:    diskfill.AtOnce,
-			wantedFileSize: func(m *e2e.Minikube) int {
+			wantedFileSize: func(m *e2e.Minikube) int64 {
 				diskSpace := getDiskSpace(m)
-				return int(diskSpace.Available-(int64(4*1024*1024))) / 1024
+				return int64(diskSpace.Available-(int64(4*1024*1024))) / 1024
 			},
-			wantedDelta: 512,
+			allowedDelta: 512,
 		},
 		{
 			name:      "fill disk with percentage (dd)",
@@ -1011,11 +1010,11 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			size:      90,
 			blockSize: 5,
 			method:    diskfill.OverTime,
-			wantedFileSize: func(m *e2e.Minikube) int {
+			wantedFileSize: func(m *e2e.Minikube) int64 {
 				diskSpace := getDiskSpace(m)
-				return int(((diskSpace.Capacity * 90 / 100) - diskSpace.Used) / 1024)
+				return ((diskSpace.Capacity * 90 / 100) - diskSpace.Used) / 1024
 			},
-			wantedDelta: 512,
+			allowedDelta: 512,
 		},
 		{
 			name:      "fill disk with megabytes to fill (dd)",
@@ -1023,10 +1022,10 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			size:      4 * 1024, // 4GB
 			blockSize: 1,
 			method:    diskfill.OverTime,
-			wantedFileSize: func(_ *e2e.Minikube) int {
+			wantedFileSize: func(_ *e2e.Minikube) int64 {
 				return 4 * 1024
 			},
-			wantedDelta: 0,
+			allowedDelta: 0,
 		},
 		{
 			name:      "fill disk with megabytes left (dd)",
@@ -1034,11 +1033,11 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			size:      1 * 1024,
 			blockSize: 5,
 			method:    diskfill.OverTime,
-			wantedFileSize: func(m *e2e.Minikube) int {
+			wantedFileSize: func(m *e2e.Minikube) int64 {
 				diskSpace := getDiskSpace(m)
-				return int(diskSpace.Available-(int64(1*1024*1024))) / 1024
+				return int64(diskSpace.Available-(int64(1*1024*1024))) / 1024
 			},
-			wantedDelta: 512,
+			allowedDelta: 512,
 		},
 		{
 			name:      "fill disk with bigger blocksize (dd)",
@@ -1046,10 +1045,10 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			size:      4 * 1024, // 4GB
 			blockSize: 6 * 1024, // 2GB
 			method:    diskfill.OverTime,
-			wantedFileSize: func(_ *e2e.Minikube) int {
+			wantedFileSize: func(_ *e2e.Minikube) int64 {
 				return 4 * 1024 // 4GB
 			},
-			wantedDelta: 512,
+			allowedDelta: 512,
 		},
 		{
 			name:      "fill disk with noop because disk is already full (fallocate)",
@@ -1057,16 +1056,16 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			size:      5,
 			blockSize: 5,
 			method:    diskfill.AtOnce,
-			wantedFileSize: func(_ *e2e.Minikube) int {
+			wantedFileSize: func(_ *e2e.Minikube) int64 {
 				return 4 * 1024 // 4GB
 			},
-			wantedDelta: -1,
-			wantedLog:   extutil.Ptr("disk is already filled up to"),
+			allowedDelta: -1,
+			wantedLog:    extutil.Ptr("disk is already filled up to"),
 		},
 	}
 
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
 			config := struct {
 				Duration  int    `json:"duration"`
 				Path      string `json:"path"`
@@ -1074,27 +1073,27 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 				Mode      string `json:"mode"`
 				BlockSize int    `json:"blocksize"`
 				Method    string `json:"method"`
-			}{Duration: 60_000, Size: testCase.size, Mode: string(testCase.mode), Method: string(testCase.method), BlockSize: testCase.blockSize, Path: pathToFill}
-			wantedFileSize := testCase.wantedFileSize(m)
+			}{Duration: 60_000, Size: tt.size, Mode: string(tt.mode), Method: string(tt.method), BlockSize: tt.blockSize, Path: pathToFill}
+			wantedFileSize := tt.wantedFileSize(m)
 			action, err := e.RunAction(fmt.Sprintf("%s.fill_disk", exthost.BaseActionID), getTarget(m), config, defaultExecutionContext)
 			defer func() { _ = action.Cancel() }()
 			require.NoError(t, err)
 
-			if testCase.method == diskfill.OverTime {
+			if tt.method == diskfill.OverTime {
 				e2e.AssertProcessRunningInContainer(t, m, e.Pod, "extension", "dd", true)
 			}
 
-			if testCase.wantedDelta != -1 {
-				assertFileHasSize(t, m, "/filldisk/disk-fill", wantedFileSize, testCase.wantedDelta)
+			if tt.allowedDelta != -1 {
+				assertFileHasSize(t, m, "/filldisk/disk-fill", wantedFileSize, tt.allowedDelta)
 			}
 
-			if testCase.wantedLog != nil {
-				e2e.AssertLogContains(t, m, e.Pod, *testCase.wantedLog)
+			if tt.wantedLog != nil {
+				e2e.AssertLogContains(t, m, e.Pod, *tt.wantedLog)
 			}
 
 			require.NoError(t, action.Cancel())
 
-			if testCase.method == diskfill.OverTime {
+			if tt.method == diskfill.OverTime {
 				e2e.AssertProcessNOTRunningInContainer(t, m, e.Pod, "extension", "dd")
 			} else {
 				e2e.AssertProcessNOTRunningInContainer(t, m, e.Pod, "extension", "fallocate")
@@ -1136,9 +1135,10 @@ func testStressCombined(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	requireAllSidecarsCleanedUp(t, m, e)
 }
 
-func assertFileHasSize(t *testing.T, m *e2e.Minikube, filepath string, wantedSizeInMb int, wantedDeltaInMb int) {
+func assertFileHasSize(t *testing.T, m *e2e.Minikube, filepath string, wantedSizeInMb int64, allowedDeltaInMb int64) {
+	t.Helper()
 	sizeInBytes := wantedSizeInMb * 1024 * 1024
-	deltaInBytes := wantedDeltaInMb * 1024 * 1024
+	allowedDeltaInBytes := allowedDeltaInMb * 1024 * 1024
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	message := ""
@@ -1154,18 +1154,42 @@ func assertFileHasSize(t *testing.T, m *e2e.Minikube, filepath string, wantedSiz
 				message = fmt.Sprintf("%s: %s", err.Error(), out)
 				continue
 			}
-			if fileSize, err := strconv.Atoi(strings.TrimSpace(string(out))); err == nil {
-				actualDelta := int(math.Abs(float64(fileSize - sizeInBytes)))
-				if actualDelta <= deltaInBytes {
+			if fileSize, err := strconv.ParseInt(strings.TrimSpace(string(out)), 10, 64); err == nil {
+				var actualDelta int64
+				if fileSize < sizeInBytes {
+					actualDelta = sizeInBytes - fileSize
+				} else {
+					actualDelta = fileSize - sizeInBytes
+				}
+				if actualDelta <= allowedDeltaInBytes {
 					return
 				} else {
-					message = fmt.Sprintf("file size is %d, wanted %d, delta of %d exceeds allowed delta of %d", fileSize, sizeInBytes, actualDelta, deltaInBytes)
+					message = fmt.Sprintf("file size is %s, wanted %s, delta of %s exceeds allowed delta of %s", prettyBytes(fileSize), prettyBytes(sizeInBytes), prettyBytes(actualDelta), prettyBytes(allowedDeltaInBytes))
 				}
 			} else {
 				message = fmt.Sprintf("cannot parse file size: %s", err.Error())
 			}
 		}
 	}
+}
+
+func prettyBytes(b int64) string {
+	const unit = 1024
+	sign := ""
+	if b < 0 {
+		b = -b
+		sign = "-"
+	}
+
+	if b < unit {
+		return fmt.Sprintf("%d B", b)
+	}
+	div, exp := int64(unit), 0
+	for n := b / unit; n >= unit; n /= unit {
+		div *= unit
+		exp++
+	}
+	return fmt.Sprintf("%s%.1f %ciB", sign, float64(b)/float64(div), "KMGTPE"[exp])
 }
 
 func testNetworkDelayAndBandwidthOnSameContainer(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
