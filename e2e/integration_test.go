@@ -1,9 +1,9 @@
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2025 Steadybit GmbH
+
 /*
  * Copyright 2024 steadybit GmbH. All rights reserved.
  */
-
-// SPDX-License-Identifier: MIT
-// SPDX-FileCopyrightText: 2023 Steadybit GmbH
 
 package e2e
 
@@ -1278,7 +1278,19 @@ func getMinikubeOptions() e2e.MinikubeOpts {
 		mOpts = mOpts.WithDriver("docker")
 	} else {
 		log.Info().Msg("KVM is available, using kvm2 driver")
-		mOpts = mOpts.WithDriver("kvm2")
+		mOpts = mOpts.WithDriver("kvm2").
+			AfterStart(func(m *e2e.Minikube) error {
+
+				log.Info().Msg("Info:  find /usr -name '*mark*.ko' 2>/dev/null -V")
+				c := m.SshExec("sudo", "find /usr -name '*mark*.ko'")
+				c.Stderr = nil
+				_ = c.Run()
+
+				log.Info().Msg("Installing xt_connmark module")
+				_ = m.SshExec("sudo", "modprobe xt_connmark").Run()
+				_ = m.SshExec("sudo", "modprobe xt_mark").Run()
+				return nil
+			})
 	}
 	return mOpts
 }
