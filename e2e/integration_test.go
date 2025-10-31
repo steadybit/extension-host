@@ -1,9 +1,9 @@
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2025 Steadybit GmbH
+
 /*
  * Copyright 2024 steadybit GmbH. All rights reserved.
  */
-
-// SPDX-License-Identifier: MIT
-// SPDX-FileCopyrightText: 2023 Steadybit GmbH
 
 package e2e
 
@@ -637,7 +637,7 @@ func testNetworkDelayTcpPsh(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			require.NoError(t, err)
 
 			if tt.wantedDelay {
-				nginx.AssertHttpLatency(t, unaffectedLatency+time.Duration(config.Delay*2)*time.Millisecond*90/100, unaffectedLatency+time.Duration(config.Delay*2)*time.Millisecond*110/100)
+				nginx.AssertHttpLatency(t, unaffectedLatency+time.Duration(config.Delay*2)*time.Millisecond*90/100, unaffectedLatency+time.Duration(config.Delay)*time.Millisecond*200/100)
 			} else {
 				nginx.AssertHttpLatency(t, 0, unaffectedLatency+40*time.Millisecond)
 			}
