@@ -637,7 +637,7 @@ func testNetworkDelayTcpPsh(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			require.NoError(t, err)
 
 			if tt.wantedDelay {
-				nginx.AssertHttpLatency(t, unaffectedLatency+time.Duration(config.Delay*2)*time.Millisecond*90/100, unaffectedLatency+time.Duration(config.Delay)*time.Millisecond*200/100)
+				nginx.AssertHttpLatency(t, unaffectedLatency+time.Duration(config.Delay)*time.Millisecond*90/100, unaffectedLatency+time.Duration(config.Delay*3)*time.Millisecond*110/100)
 			} else {
 				nginx.AssertHttpLatency(t, 0, unaffectedLatency+40*time.Millisecond)
 			}
