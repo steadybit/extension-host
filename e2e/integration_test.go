@@ -19,6 +19,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/beevik/ntp"
 	"github.com/rs/zerolog/log"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
 	"github.com/steadybit/action-kit/go/action_kit_commons/diskfill"
@@ -29,6 +30,7 @@ import (
 	"github.com/steadybit/extension-kit/extutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/sync/errgroup"
 )
 
 var (
@@ -280,42 +282,62 @@ func testTimeTravel(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 		DisableNtp: true,
 	}
 
-	containerTime := getContainerTime(t, m, e)
-	offsetContainer := time.Until(getContainerTime(t, m, e))
-	fmt.Printf("before containerTime %s offsetContainer %s\n", containerTime, offsetContainer)
+	normalOffset, err := getExtensionPodTimeOffset(m, e)
+	require.NoError(t, err)
 
 	action, err := e.RunAction(exthost.BaseActionID+".timetravel", getTarget(m), config, nil)
 	defer func() { _ = action.Cancel() }()
 	require.NoError(t, err)
 
 	assert.EventuallyWithT(t, func(c *assert.CollectT) {
-		containerTime := getContainerTime(t, m, e)
-		diff := time.Until(containerTime)
-		adjustedDiff := diff + offsetContainer
-		assert.InDelta(t, config.Offset, adjustedDiff.Milliseconds(), 2000)
-		fmt.Printf("during containerTime %s offsetContainer %s diff %s adjustedDiff %s\n", containerTime, offsetContainer, diff, adjustedDiff)
+		adjustedOffset, err := getExtensionPodTimeOffset(m, e)
+		require.NoError(t, err)
+		assert.InDelta(t, config.Offset, (normalOffset + adjustedOffset).Milliseconds(), 2000)
 	}, 10*time.Second, 1*time.Second, "time travel failed to apply offset")
 
 	// rollback
 	require.NoError(t, action.Cancel())
 	assert.EventuallyWithT(t, func(c *assert.CollectT) {
-		containerTime := getContainerTime(t, m, e)
-		diff := time.Until(containerTime)
-		adjustedDiff := diff + offsetContainer
-		assert.InDelta(t, 0, adjustedDiff.Milliseconds(), 2000)
+		adjustedOffset, err := getExtensionPodTimeOffset(m, e)
+		require.NoError(t, err)
+		assert.InDelta(t, 0, (normalOffset + adjustedOffset).Milliseconds(), 2000)
 	}, 10*time.Second, 1*time.Second, "time travel failed to rollback offset")
 }
 
-func getContainerTime(t *testing.T, m *e2e.Minikube, e *e2e.Extension) time.Time {
-	out, err := m.PodExec(e.Pod, "extension", "date", "+%s")
-	if err != nil {
-		t.Fatal(err)
+func getExtensionPodTimeOffset(m *e2e.Minikube, e *e2e.Extension) (time.Duration, error) {
+	var g errgroup.Group
+	chPodTime := make(chan time.Time, 1)
+	chNtpTime := make(chan time.Time, 1)
+
+	g.Go(func() error {
+		out, err := m.PodExec(e.Pod, "extension", "date", "+%s")
+		if err != nil {
+			return err
+		}
+
+		epoch := extutil.ToInt64(strings.TrimSpace(out))
+		if epoch == 0 {
+			return fmt.Errorf("failed to get container time")
+		}
+
+		chPodTime <- time.Unix(epoch, 0)
+		return nil
+	})
+
+	g.Go(func() error {
+		ntpTime, err := ntp.Time("pool.ntp.org")
+		if err != nil {
+			return err
+		}
+		chNtpTime <- ntpTime
+		return nil
+	})
+
+	if err := g.Wait(); err != nil {
+		return 0, err
 	}
-	containerSecondsSinceEpoch := extutil.ToInt64(strings.TrimSpace(out))
-	if containerSecondsSinceEpoch == 0 {
-		t.Fatal("could not parse container time")
-	}
-	return time.Unix(containerSecondsSinceEpoch, 0)
+
+	return (<-chPodTime).Sub(<-chNtpTime), nil
 }
 
 func validateDiscovery(t *testing.T, _ *e2e.Minikube, e *e2e.Extension) {
