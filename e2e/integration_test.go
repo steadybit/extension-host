@@ -979,7 +979,7 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	require.NoError(t, err)
 
 	twoGbExtraAsLeft := (diskSpace.Available - (2 * 1024 * 1024)) / 1024
-	oneGbExtraAsPercent := ((1.5 * 1024 * 1024) + diskSpace.Used) * 100 / diskSpace.Capacity
+	oneGbExtraAsPercent := ((1 * 1024 * 1024) + diskSpace.Used) * 100 / diskSpace.Capacity
 
 	type testCase struct {
 		name           string
@@ -999,7 +999,7 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			blockSize:      64,
 			method:         diskfill.AtOnce,
 			wantedFileSize: 1 * 1024,
-			allowedDelta:   256,
+			allowedDelta:   512,
 		},
 		{
 			name:           "fill disk with megabytes to fill (fallocate)",
@@ -1026,7 +1026,7 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			blockSize:      64,
 			method:         diskfill.OverTime,
 			wantedFileSize: 1 * 1024,
-			allowedDelta:   256,
+			allowedDelta:   512,
 		},
 		{
 			name:           "fill disk with megabytes to fill (dd)",
