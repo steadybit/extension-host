@@ -978,6 +978,13 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	diskSpace, err := getDiskSpace(m, pathToFill)
 	require.NoError(t, err)
 
+	log.Info().Int64("capacity_mb", diskSpace.Capacity/1024).
+		Int64("used_mb", diskSpace.Used/1024).
+		Int64("available_mb", diskSpace.Available/1024).
+		Int64("used_percent", diskSpace.Used*100/diskSpace.Capacity).
+		Int64("available_percent", diskSpace.Available*100/diskSpace.Capacity).
+		Msg("Disk space before fill-disk tests")
+
 	twoGbExtraAsLeft := (diskSpace.Available - (2 * 1024 * 1024)) / 1024
 	oneGbExtraAsPercent := ((1 * 1024 * 1024) + diskSpace.Used) * 100 / diskSpace.Capacity
 
