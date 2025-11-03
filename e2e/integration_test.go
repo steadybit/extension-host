@@ -986,7 +986,7 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 		Msg("Disk space before fill-disk tests")
 
 	twoGbExtraAsLeft := (diskSpace.Available - (2 * 1024 * 1024)) / 1024
-	oneGbExtraAsPercent := ((1 * 1024 * 1024) + diskSpace.Used) * 100 / diskSpace.Capacity
+	twoGbExtraAsPercent := ((2 * 1024 * 1024) + diskSpace.Used) * 100 / diskSpace.Capacity
 
 	type testCase struct {
 		name           string
@@ -1002,10 +1002,10 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 		{
 			name:           "fill disk with percentage (fallocate)",
 			mode:           diskfill.Percentage,
-			size:           int(oneGbExtraAsPercent),
+			size:           int(twoGbExtraAsPercent),
 			blockSize:      64,
 			method:         diskfill.AtOnce,
-			wantedFileSize: 1 * 1024,
+			wantedFileSize: 2 * 1024,
 			allowedDelta:   512,
 		},
 		{
@@ -1029,10 +1029,10 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 		{
 			name:           "fill disk with percentage (dd)",
 			mode:           diskfill.Percentage,
-			size:           int(oneGbExtraAsPercent),
+			size:           int(twoGbExtraAsPercent),
 			blockSize:      64,
 			method:         diskfill.OverTime,
-			wantedFileSize: 1 * 1024,
+			wantedFileSize: 2 * 1024,
 			allowedDelta:   512,
 		},
 		{
