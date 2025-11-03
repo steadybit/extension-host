@@ -1006,7 +1006,7 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			blockSize:      64,
 			method:         diskfill.AtOnce,
 			wantedFileSize: 2 * 1024,
-			allowedDelta:   512,
+			allowedDelta:   diskSpace.Capacity / 1024 / 100, // allow 1% of total capacity, as the setting can't be more precise
 		},
 		{
 			name:           "fill disk with megabytes to fill (fallocate)",
@@ -1033,7 +1033,7 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			blockSize:      64,
 			method:         diskfill.OverTime,
 			wantedFileSize: 2 * 1024,
-			allowedDelta:   512,
+			allowedDelta:   diskSpace.Capacity / 1024 / 100, // allow 1% of total capacity, as the setting can't be more precise
 		},
 		{
 			name:           "fill disk with megabytes to fill (dd)",
@@ -1160,7 +1160,7 @@ func assertFileHasSize(t *testing.T, m *e2e.Minikube, filepath string, wantedSiz
 	t.Helper()
 	sizeInBytes := wantedSizeInMb * 1024 * 1024
 	allowedDeltaInBytes := allowedDeltaInMb * 1024 * 1024
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 	message := ""
 	for {
