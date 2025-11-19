@@ -18,7 +18,7 @@ jobs:
   extension-ci:
     uses: steadybit/extension-kit/.github/workflows/reusable-extension-ci.yml@main # NOSONAR githubactions:S7637 - our own action
     with:
-      go_version: '1.24'
+      go_version: '^1.25.4'
       runs_on: steadybit_runner_ubuntu_latest_4cores_16GB
       run_make_prepare_audit: true
       build_linux_packages: true
