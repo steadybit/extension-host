@@ -1,28 +1,28 @@
 # Changelog
 
-# v1.4.6
+## v1.4.6
 
 - Update dependencies
 
-# v1.4.5
+## v1.4.5
 
 - Update dependencies
 
-# v1.4.4
+## v1.4.4
 
 - feat: Network Delay - add option "TCP Data Packets Only" (PSH heuristic). Uses iptables marks + tc fwmark to delay only TCP data packets; UDP is not delayed. Honors ports/hosts/CIDRs via iptables filtering.
 - Update dependencies
 
-# v1.4.3
+## v1.4.3
 
 - Add new CPU Frequency attack
 - Update dependencies
 
-# v1.4.2
+## v1.4.2
 
  - Update dependencies
 
-# v1.4.1
+## v1.4.1
 
  - Add STEADYBIT_EXTENSTION_DIG_TIMEOUT
  - Treat dns answers case insensitive
