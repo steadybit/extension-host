@@ -24,7 +24,7 @@ require (
 	github.com/stretchr/testify v1.11.1
 	go.uber.org/automaxprocs v1.6.0
 	golang.org/x/exp v0.0.0-20251113190631-e25ba8c21ef6
-	golang.org/x/sync v0.18.0
+	golang.org/x/sync v0.19.0
 )
 
 require (
