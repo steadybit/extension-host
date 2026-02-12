@@ -7,3 +7,5 @@
 /licenses
 /snyk.sarif
 extension-host
+
+.env
