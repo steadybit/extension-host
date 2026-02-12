@@ -201,6 +201,17 @@ func (a *fillDiskAction) Prepare(ctx context.Context, state *FillDiskActionState
 	}
 	state.FillDiskOpts = opts
 	state.ExecutionId = request.ExecutionId
+
+	if config.Config.DisableRunc {
+		if err := diskfill.CheckPathWritableProcess(ctx, opts.TempPath); err != nil {
+			return nil, extension_kit.ToError("Failed to verify target path.", err)
+		}
+	} else {
+		if err := diskfill.CheckPathWritableRunc(ctx, a.ociRuntime, state.Sidecar, opts.TempPath); err != nil {
+			return nil, extension_kit.ToError("Failed to verify target path.", err)
+		}
+	}
+
 	return nil, nil
 }
 
