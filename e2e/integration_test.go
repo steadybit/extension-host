@@ -161,6 +161,10 @@ func TestWithMinikube(t *testing.T) {
 			Test: testFillDisk,
 		},
 		{
+			Name: "fill disk invalid path",
+			Test: testFillDiskInvalidPath,
+		},
+		{
 			Name: "shutdown host",
 			Test: testShutdownHost, // if you run this test locally, you will need to restart your docker machine
 		}, {
@@ -1115,6 +1119,48 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			assert.Contains(t, string(out), "No such file or directory")
 		})
 	}
+	requireAllSidecarsCleanedUp(t, m, e)
+}
+
+func testFillDiskInvalidPath(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
+	t.Run("non-existent path", func(t *testing.T) {
+		config := struct {
+			Duration  int    `json:"duration"`
+			Path      string `json:"path"`
+			Size      int    `json:"size"`
+			Mode      string `json:"mode"`
+			BlockSize int    `json:"blocksize"`
+			Method    string `json:"method"`
+		}{Duration: 30000, Size: 100, Mode: string(diskfill.MBToFill), Method: string(diskfill.AtOnce), BlockSize: 5, Path: "/non-existent-path-host"}
+
+		_, err := e.RunAction(fmt.Sprintf("%s.fill_disk", exthost.BaseActionID), getTarget(m), config, defaultExecutionContext)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "Failed to verify target path")
+	})
+
+	t.Run("read-only filesystem", func(t *testing.T) {
+		mountPath := "/readonly-test-mount"
+		require.NoError(t, m.SshExec("sudo", "mkdir", "-p", mountPath).Run())
+		require.NoError(t, m.SshExec("sudo", "mount", "-t", "tmpfs", "-o", "ro", "tmpfs", mountPath).Run())
+		defer func() {
+			_ = m.SshExec("sudo", "umount", mountPath).Run()
+			_ = m.SshExec("sudo", "rmdir", mountPath).Run()
+		}()
+
+		config := struct {
+			Duration  int    `json:"duration"`
+			Path      string `json:"path"`
+			Size      int    `json:"size"`
+			Mode      string `json:"mode"`
+			BlockSize int    `json:"blocksize"`
+			Method    string `json:"method"`
+		}{Duration: 30000, Size: 100, Mode: string(diskfill.MBToFill), Method: string(diskfill.AtOnce), BlockSize: 5, Path: mountPath}
+
+		_, err := e.RunAction(fmt.Sprintf("%s.fill_disk", exthost.BaseActionID), getTarget(m), config, defaultExecutionContext)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "Failed to verify target path")
+	})
+
 	requireAllSidecarsCleanedUp(t, m, e)
 }
 
