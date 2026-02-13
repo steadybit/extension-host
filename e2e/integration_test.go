@@ -175,11 +175,11 @@ func TestWithMinikube(t *testing.T) {
 }
 
 func testStressCpu(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
-	config := struct {
-		Duration int `json:"duration"`
-		CpuLoad  int `json:"cpuLoad"`
-		Workers  int `json:"workers"`
-	}{Duration: 50000, Workers: 0, CpuLoad: 50}
+	config := map[string]interface{}{
+		"duration": 50000,
+		"workers":  0,
+		"cpuLoad":  50,
+	}
 	action, err := e.RunAction(exthost.BaseActionID+".stress-cpu", getTarget(m), config, nil)
 	require.NoError(t, err)
 
@@ -215,11 +215,11 @@ func testStressMemory(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			config := struct {
-				Duration      int  `json:"duration"`
-				Percentage    int  `json:"percentage"`
-				FailOnOomKill bool `json:"failOnOomKill"`
-			}{Duration: 100000, Percentage: 1, FailOnOomKill: tt.failOnOomKill}
+			config := map[string]interface{}{
+				"duration":      100000,
+				"percentage":    1,
+				"failOnOomKill": tt.failOnOomKill,
+			}
 
 			action, err := e.RunAction(fmt.Sprintf("%s.stress-mem", exthost.BaseActionID), getTarget(m), config, defaultExecutionContext)
 			defer func() { _ = action.Cancel() }()
@@ -250,13 +250,13 @@ func testStressIo(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 
 	for _, mode := range []string{"read_write_and_flush", "read_write", "flush"} {
 		t.Run(mode, func(t *testing.T) {
-			config := struct {
-				Duration        int    `json:"duration"`
-				Path            string `json:"path"`
-				MbytesPerWorker int    `json:"mbytes_per_worker"`
-				Workers         int    `json:"workers"`
-				Mode            string `json:"mode"`
-			}{Duration: 20000, Workers: 1, MbytesPerWorker: 50, Path: "/stressng", Mode: mode}
+			config := map[string]interface{}{
+				"duration":         20000,
+				"workers":          1,
+				"mbytes_per_worker": 50,
+				"path":             "/stressng",
+				"mode":             mode,
+			}
 
 			action, err := e.RunAction(exthost.BaseActionID+".stress-io", getTarget(m), config, defaultExecutionContext)
 			defer func() { _ = action.Cancel() }()
@@ -276,14 +276,11 @@ func testStressIo(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 
 func testTimeTravel(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	log.Info().Msg("Starting testTimeTravel")
-	config := struct {
-		Duration   int  `json:"duration"`
-		Offset     int  `json:"offset"`
-		DisableNtp bool `json:"disableNtp"`
-	}{
-		Duration:   30000,
-		Offset:     int((360 * time.Second).Milliseconds()),
-		DisableNtp: true,
+	offset := int((360 * time.Second).Milliseconds())
+	config := map[string]interface{}{
+		"duration":   30000,
+		"offset":     offset,
+		"disableNtp": true,
 	}
 
 	normalOffset, err := getExtensionPodTimeOffset(m, e)
@@ -296,7 +293,7 @@ func testTimeTravel(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	assert.EventuallyWithT(t, func(c *assert.CollectT) {
 		adjustedOffset, err := getExtensionPodTimeOffset(m, e)
 		require.NoError(t, err)
-		assert.InDelta(t, config.Offset, (normalOffset + adjustedOffset).Milliseconds(), 2000)
+		assert.InDelta(t, offset, (normalOffset + adjustedOffset).Milliseconds(), 2000)
 	}, 10*time.Second, 1*time.Second, "time travel failed to apply offset")
 
 	// rollback
@@ -365,12 +362,12 @@ func testDiscovery(t *testing.T, _ *e2e.Minikube, e *e2e.Extension) {
 
 func testStopProcess(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	log.Info().Msg("Starting testStopProcess")
-	config := struct {
-		Duration int    `json:"duration"`
-		Graceful bool   `json:"graceful"`
-		Process  string `json:"process"`
-		Delay    int    `json:"delay"`
-	}{Duration: 10000, Graceful: true, Process: "tail", Delay: 1}
+	config := map[string]interface{}{
+		"duration": 10000,
+		"graceful": true,
+		"process":  "tail",
+		"delay":    1,
+	}
 
 	e2e.AssertProcessNOTRunningInContainer(t, m, e.Pod, "extension", "tail")
 	go func() {
@@ -389,9 +386,9 @@ func testShutdownHost(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	t.Skip("Deactivated cause otherwise the shutdown will prevent the coverage collection from the tests above must be the last test, because it will shutdown the minikube host (minikube cannot be restarted")
 
 	log.Info().Msg("Starting testShutdownHost")
-	config := struct {
-		Reboot bool `json:"reboot"`
-	}{Reboot: true}
+	config := map[string]interface{}{
+		"reboot": true,
+	}
 
 	_, err := e.RunAction(exthost.BaseActionID+".shutdown", getTarget(m), config, nil)
 	require.NoError(t, err)
@@ -453,16 +450,11 @@ func testNetworkBlackhole(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	}
 
 	for _, tt := range tests {
-		config := struct {
-			Duration int      `json:"duration"`
-			Ip       []string `json:"ip"`
-			Hostname []string `json:"hostname"`
-			Port     []string `json:"port"`
-		}{
-			Duration: 30000,
-			Ip:       tt.ip,
-			Hostname: tt.hostname,
-			Port:     tt.port,
+		config := map[string]interface{}{
+			"duration": 30000,
+			"ip":       tt.ip,
+			"hostname": tt.hostname,
+			"port":     tt.port,
 		}
 
 		t.Run(tt.name, func(t *testing.T) {
@@ -534,22 +526,15 @@ func testNetworkDelay(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	require.NoError(t, err)
 
 	for _, tt := range tests {
-		config := struct {
-			Duration     int      `json:"duration"`
-			Delay        int      `json:"networkDelay"`
-			Jitter       bool     `json:"networkDelayJitter"`
-			Ip           []string `json:"ip"`
-			Hostname     []string `json:"hostname"`
-			Port         []string `json:"port"`
-			NetInterface []string `json:"networkInterface"`
-		}{
-			Duration:     10000,
-			Delay:        200,
-			Jitter:       false,
-			Ip:           tt.ip,
-			Hostname:     tt.hostname,
-			Port:         tt.port,
-			NetInterface: tt.interfaces,
+		networkDelay := 200
+		config := map[string]interface{}{
+			"duration":          10000,
+			"networkDelay":      networkDelay,
+			"networkDelayJitter": false,
+			"ip":                tt.ip,
+			"hostname":          tt.hostname,
+			"port":              tt.port,
+			"networkInterface":  tt.interfaces,
 		}
 
 		restrictedEndpoints := append(*defaultExecutionContext.RestrictedEndpoints, tt.restrictedEndpoints...)
@@ -561,7 +546,7 @@ func testNetworkDelay(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			require.NoError(t, err)
 
 			if tt.wantedDelay {
-				netperf.AssertLatency(t, unaffectedLatency+time.Duration(config.Delay)*time.Millisecond*90/100, unaffectedLatency+time.Duration(config.Delay)*time.Millisecond*350/100)
+				netperf.AssertLatency(t, unaffectedLatency+time.Duration(networkDelay)*time.Millisecond*90/100, unaffectedLatency+time.Duration(networkDelay)*time.Millisecond*350/100)
 			} else {
 				netperf.AssertLatency(t, 0, unaffectedLatency*120/100)
 			}
@@ -639,24 +624,16 @@ func testNetworkDelayTcpPsh(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	require.NoError(t, err)
 
 	for _, tt := range tests {
-		config := struct {
-			Duration     int      `json:"duration"`
-			Delay        int      `json:"networkDelay"`
-			Jitter       bool     `json:"networkDelayJitter"`
-			Ip           []string `json:"ip"`
-			Hostname     []string `json:"hostname"`
-			Port         []string `json:"port"`
-			NetInterface []string `json:"networkInterface"`
-			TcpPshOnly   bool     `json:"tcpDataPacketsOnly"`
-		}{
-			Duration:     400000,
-			Delay:        500,
-			Jitter:       false,
-			Ip:           tt.ip,
-			Hostname:     tt.hostname,
-			Port:         tt.port,
-			NetInterface: tt.interfaces,
-			TcpPshOnly:   tt.tcpPshOnly,
+		networkDelay := 500
+		config := map[string]interface{}{
+			"duration":            400000,
+			"networkDelay":        networkDelay,
+			"networkDelayJitter":  false,
+			"ip":                  tt.ip,
+			"hostname":            tt.hostname,
+			"port":                tt.port,
+			"networkInterface":    tt.interfaces,
+			"tcpDataPacketsOnly":  tt.tcpPshOnly,
 		}
 
 		t.Run(tt.name, func(t *testing.T) {
@@ -668,7 +645,7 @@ func testNetworkDelayTcpPsh(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			require.NoError(t, err)
 
 			if tt.wantedDelay {
-				nginx.AssertHttpLatency(t, unaffectedLatency+time.Duration(config.Delay)*time.Millisecond*90/100, unaffectedLatency+time.Duration(config.Delay*3)*time.Millisecond*110/100)
+				nginx.AssertHttpLatency(t, unaffectedLatency+time.Duration(networkDelay)*time.Millisecond*90/100, unaffectedLatency+time.Duration(networkDelay*3)*time.Millisecond*110/100)
 			} else {
 				nginx.AssertHttpLatency(t, 0, unaffectedLatency+40*time.Millisecond)
 			}
@@ -715,20 +692,14 @@ func testNetworkPackageLoss(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	}
 
 	for _, tt := range tests {
-		config := struct {
-			Duration     int      `json:"duration"`
-			Percentage   int      `json:"percentage"`
-			Ip           []string `json:"ip"`
-			Hostname     []string `json:"hostname"`
-			Port         []string `json:"port"`
-			NetInterface []string `json:"networkInterface"`
-		}{
-			Duration:     50000,
-			Percentage:   10,
-			Ip:           tt.ip,
-			Hostname:     tt.hostname,
-			Port:         tt.port,
-			NetInterface: tt.interfaces,
+		percentage := 10
+		config := map[string]interface{}{
+			"duration":         50000,
+			"percentage":       percentage,
+			"ip":               tt.ip,
+			"hostname":         tt.hostname,
+			"port":             tt.port,
+			"networkInterface": tt.interfaces,
 		}
 
 		t.Run(tt.name, func(t *testing.T) {
@@ -737,7 +708,7 @@ func testNetworkPackageLoss(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			require.NoError(t, err)
 
 			if tt.wantedLoss {
-				iperf.AssertPackageLoss(t, float64(config.Percentage)*0.7, float64(config.Percentage)*1.4)
+				iperf.AssertPackageLoss(t, float64(percentage)*0.7, float64(percentage)*1.4)
 			} else {
 				iperf.AssertPackageLoss(t, 0, 5)
 			}
@@ -785,20 +756,14 @@ func testNetworkPackageCorruption(t *testing.T, m *e2e.Minikube, e *e2e.Extensio
 	}
 
 	for _, tt := range tests {
-		config := struct {
-			Duration     int      `json:"duration"`
-			Corruption   int      `json:"networkCorruption"`
-			Ip           []string `json:"ip"`
-			Hostname     []string `json:"hostname"`
-			Port         []string `json:"port"`
-			NetInterface []string `json:"networkInterface"`
-		}{
-			Duration:     20000,
-			Corruption:   10,
-			Ip:           tt.ip,
-			Hostname:     tt.hostname,
-			Port:         tt.port,
-			NetInterface: tt.interfaces,
+		corruption := 10
+		config := map[string]interface{}{
+			"duration":           20000,
+			"networkCorruption":  corruption,
+			"ip":                 tt.ip,
+			"hostname":           tt.hostname,
+			"port":               tt.port,
+			"networkInterface":   tt.interfaces,
 		}
 
 		t.Run(tt.name, func(t *testing.T) {
@@ -810,7 +775,7 @@ func testNetworkPackageCorruption(t *testing.T, m *e2e.Minikube, e *e2e.Extensio
 				}
 
 				if tt.wantedCorruption {
-					packageLossResult := iperf.AssertPackageLossWithRetry(float64(config.Corruption)*0.7, float64(config.Corruption)*1.3, 8)
+					packageLossResult := iperf.AssertPackageLossWithRetry(float64(corruption)*0.7, float64(corruption)*1.3, 8)
 					if !packageLossResult {
 						r.Failed = true
 					}
@@ -874,20 +839,13 @@ func testNetworkLimitBandwidth(t *testing.T, m *e2e.Minikube, e *e2e.Extension) 
 	limited := unlimited / 3
 
 	for _, tt := range tests {
-		config := struct {
-			Duration     int      `json:"duration"`
-			Bandwidth    string   `json:"bandwidth"`
-			Ip           []string `json:"ip"`
-			Hostname     []string `json:"hostname"`
-			Port         []string `json:"port"`
-			NetInterface []string `json:"networkInterface"`
-		}{
-			Duration:     30000,
-			Bandwidth:    fmt.Sprintf("%dmbit", int(limited)),
-			Ip:           tt.ip,
-			Hostname:     tt.hostname,
-			Port:         tt.port,
-			NetInterface: tt.interfaces,
+		config := map[string]interface{}{
+			"duration":         30000,
+			"bandwidth":        fmt.Sprintf("%dmbit", int(limited)),
+			"ip":               tt.ip,
+			"hostname":         tt.hostname,
+			"port":             tt.port,
+			"networkInterface": tt.interfaces,
 		}
 
 		t.Run(tt.name, func(t *testing.T) {
@@ -943,12 +901,9 @@ func testNetworkBlockDns(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	}
 
 	for _, tt := range tests {
-		config := struct {
-			Duration int  `json:"duration"`
-			DnsPort  uint `json:"dnsPort"`
-		}{
-			Duration: 10000,
-			DnsPort:  tt.dnsPort,
+		config := map[string]interface{}{
+			"duration": 10000,
+			"dnsPort":  tt.dnsPort,
 		}
 
 		t.Run(tt.name, func(t *testing.T) {
@@ -1080,14 +1035,14 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			config := struct {
-				Duration  int    `json:"duration"`
-				Path      string `json:"path"`
-				Size      int    `json:"size"`
-				Mode      string `json:"mode"`
-				BlockSize int    `json:"blocksize"`
-				Method    string `json:"method"`
-			}{Duration: 60_000, Size: tt.size, Mode: string(tt.mode), Method: string(tt.method), BlockSize: tt.blockSize, Path: pathToFill}
+			config := map[string]interface{}{
+				"duration":  60_000,
+				"path":      pathToFill,
+				"size":      tt.size,
+				"mode":      string(tt.mode),
+				"blocksize": tt.blockSize,
+				"method":    string(tt.method),
+			}
 			action, err := e.RunAction(fmt.Sprintf("%s.fill_disk", exthost.BaseActionID), getTarget(m), config, defaultExecutionContext)
 			defer func() {
 				_ = action.Cancel()
@@ -1124,14 +1079,14 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 
 func testFillDiskInvalidPath(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	t.Run("non-existent path", func(t *testing.T) {
-		config := struct {
-			Duration  int    `json:"duration"`
-			Path      string `json:"path"`
-			Size      int    `json:"size"`
-			Mode      string `json:"mode"`
-			BlockSize int    `json:"blocksize"`
-			Method    string `json:"method"`
-		}{Duration: 30000, Size: 100, Mode: string(diskfill.MBToFill), Method: string(diskfill.AtOnce), BlockSize: 5, Path: "/non-existent-path-host"}
+		config := map[string]interface{}{
+			"duration":  30000,
+			"path":      "/non-existent-path-host",
+			"size":      100,
+			"mode":      string(diskfill.MBToFill),
+			"blocksize": 5,
+			"method":    string(diskfill.AtOnce),
+		}
 
 		_, err := e.RunAction(fmt.Sprintf("%s.fill_disk", exthost.BaseActionID), getTarget(m), config, defaultExecutionContext)
 		require.Error(t, err)
@@ -1147,14 +1102,14 @@ func testFillDiskInvalidPath(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			_ = m.SshExec("sudo", "rmdir", mountPath).Run()
 		}()
 
-		config := struct {
-			Duration  int    `json:"duration"`
-			Path      string `json:"path"`
-			Size      int    `json:"size"`
-			Mode      string `json:"mode"`
-			BlockSize int    `json:"blocksize"`
-			Method    string `json:"method"`
-		}{Duration: 30000, Size: 100, Mode: string(diskfill.MBToFill), Method: string(diskfill.AtOnce), BlockSize: 5, Path: mountPath}
+		config := map[string]interface{}{
+			"duration":  30000,
+			"path":      mountPath,
+			"size":      100,
+			"mode":      string(diskfill.MBToFill),
+			"blocksize": 5,
+			"method":    string(diskfill.AtOnce),
+		}
 
 		_, err := e.RunAction(fmt.Sprintf("%s.fill_disk", exthost.BaseActionID), getTarget(m), config, defaultExecutionContext)
 		require.Error(t, err)
@@ -1174,20 +1129,20 @@ func getDiskSpace(m *e2e.Minikube, pathToFill string) (diskfill.DiskUsage, error
 }
 
 func testStressCombined(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
-	memConfig := struct {
-		Duration      int  `json:"duration"`
-		Percentage    int  `json:"percentage"`
-		FailOnOomKill bool `json:"failOnOomKill"`
-	}{Duration: 10_000, Percentage: 1}
+	memConfig := map[string]interface{}{
+		"duration":      10_000,
+		"percentage":    1,
+		"failOnOomKill": false,
+	}
 	memAction, err := e.RunAction(fmt.Sprintf("%s.stress-mem", exthost.BaseActionID), getTarget(m), memConfig, defaultExecutionContext)
 	defer func() { _ = memAction.Cancel() }()
 	require.NoError(t, err)
 
-	cpuConfig := struct {
-		Duration int `json:"duration"`
-		CpuLoad  int `json:"cpuLoad"`
-		Workers  int `json:"workers"`
-	}{Duration: 10_000, Workers: 0, CpuLoad: 50}
+	cpuConfig := map[string]interface{}{
+		"duration": 10_000,
+		"workers":  0,
+		"cpuLoad":  50,
+	}
 	cpuAction, err := e.RunAction(fmt.Sprintf("%s.stress-cpu", exthost.BaseActionID), getTarget(m), cpuConfig, defaultExecutionContext)
 	defer func() { _ = cpuAction.Cancel() }()
 	require.NoError(t, err)
@@ -1260,23 +1215,17 @@ func prettyBytes(b int64) string {
 }
 
 func testNetworkDelayAndBandwidthOnSameContainer(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
-	configDelay := struct {
-		Duration int `json:"duration"`
-		Delay    int `json:"networkDelay"`
-	}{
-		Duration: 10000,
-		Delay:    200,
+	configDelay := map[string]interface{}{
+		"duration":     10000,
+		"networkDelay": 200,
 	}
 	actionDelay, err := e.RunAction(fmt.Sprintf("%s.network_delay", exthost.BaseActionID), getTarget(m), configDelay, defaultExecutionContext)
 	defer func() { _ = actionDelay.Cancel() }()
 	require.NoError(t, err)
 
-	configLimit := struct {
-		Duration  int    `json:"duration"`
-		Bandwidth string `json:"bandwidth"`
-	}{
-		Duration:  10000,
-		Bandwidth: "200mbit",
+	configLimit := map[string]interface{}{
+		"duration":  10000,
+		"bandwidth": "200mbit",
 	}
 	actionLimit, err2 := e.RunAction(fmt.Sprintf("%s.network_bandwidth", exthost.BaseActionID), getTarget(m), configLimit, defaultExecutionContext)
 	defer func() { _ = actionLimit.Cancel() }()
@@ -1312,13 +1261,13 @@ func testFillMemory(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			config := struct {
-				Duration      int    `json:"duration"`
-				Size          int    `json:"size"`
-				Unit          string `json:"unit"`
-				Mode          string `json:"mode"`
-				FailOnOomKill bool   `json:"failOnOomKill"`
-			}{Duration: 10000, Size: 80, Unit: "%", Mode: "usage", FailOnOomKill: tt.failOnOomKill}
+			config := map[string]interface{}{
+				"duration":      10000,
+				"size":          80,
+				"unit":          "%",
+				"mode":          "usage",
+				"failOnOomKill": tt.failOnOomKill,
+			}
 
 			action, err := e.RunAction(fmt.Sprintf("%s.fill_mem", exthost.BaseActionID), getTarget(m), config, defaultExecutionContext)
 			defer func() { _ = action.Cancel() }()
