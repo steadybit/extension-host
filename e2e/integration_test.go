@@ -251,11 +251,11 @@ func testStressIo(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	for _, mode := range []string{"read_write_and_flush", "read_write", "flush"} {
 		t.Run(mode, func(t *testing.T) {
 			config := map[string]interface{}{
-				"duration":         20000,
-				"workers":          1,
+				"duration":          20000,
+				"workers":           1,
 				"mbytes_per_worker": 50,
-				"path":             "/stressng",
-				"mode":             mode,
+				"path":              "/stressng",
+				"mode":              mode,
 			}
 
 			action, err := e.RunAction(exthost.BaseActionID+".stress-io", getTarget(m), config, defaultExecutionContext)
@@ -528,13 +528,13 @@ func testNetworkDelay(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	for _, tt := range tests {
 		networkDelay := 200
 		config := map[string]interface{}{
-			"duration":          10000,
-			"networkDelay":      networkDelay,
+			"duration":           10000,
+			"networkDelay":       networkDelay,
 			"networkDelayJitter": false,
-			"ip":                tt.ip,
-			"hostname":          tt.hostname,
-			"port":              tt.port,
-			"networkInterface":  tt.interfaces,
+			"ip":                 tt.ip,
+			"hostname":           tt.hostname,
+			"port":               tt.port,
+			"networkInterface":   tt.interfaces,
 		}
 
 		restrictedEndpoints := append(*defaultExecutionContext.RestrictedEndpoints, tt.restrictedEndpoints...)
@@ -626,14 +626,14 @@ func testNetworkDelayTcpPsh(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	for _, tt := range tests {
 		networkDelay := 500
 		config := map[string]interface{}{
-			"duration":            400000,
-			"networkDelay":        networkDelay,
-			"networkDelayJitter":  false,
-			"ip":                  tt.ip,
-			"hostname":            tt.hostname,
-			"port":                tt.port,
-			"networkInterface":    tt.interfaces,
-			"tcpDataPacketsOnly":  tt.tcpPshOnly,
+			"duration":           400000,
+			"networkDelay":       networkDelay,
+			"networkDelayJitter": false,
+			"ip":                 tt.ip,
+			"hostname":           tt.hostname,
+			"port":               tt.port,
+			"networkInterface":   tt.interfaces,
+			"tcpDataPacketsOnly": tt.tcpPshOnly,
 		}
 
 		t.Run(tt.name, func(t *testing.T) {
@@ -758,12 +758,12 @@ func testNetworkPackageCorruption(t *testing.T, m *e2e.Minikube, e *e2e.Extensio
 	for _, tt := range tests {
 		corruption := 10
 		config := map[string]interface{}{
-			"duration":           20000,
-			"networkCorruption":  corruption,
-			"ip":                 tt.ip,
-			"hostname":           tt.hostname,
-			"port":               tt.port,
-			"networkInterface":   tt.interfaces,
+			"duration":          20000,
+			"networkCorruption": corruption,
+			"ip":                tt.ip,
+			"hostname":          tt.hostname,
+			"port":              tt.port,
+			"networkInterface":  tt.interfaces,
 		}
 
 		t.Run(tt.name, func(t *testing.T) {
@@ -1090,7 +1090,7 @@ func testFillDiskInvalidPath(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 
 		_, err := e.RunAction(fmt.Sprintf("%s.fill_disk", exthost.BaseActionID), getTarget(m), config, defaultExecutionContext)
 		require.Error(t, err)
-		require.ErrorContains(t, err, "Failed to verify target path")
+		require.ErrorContains(t, err, "is not accessible")
 	})
 
 	t.Run("read-only filesystem", func(t *testing.T) {
@@ -1113,7 +1113,7 @@ func testFillDiskInvalidPath(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 
 		_, err := e.RunAction(fmt.Sprintf("%s.fill_disk", exthost.BaseActionID), getTarget(m), config, defaultExecutionContext)
 		require.Error(t, err)
-		require.ErrorContains(t, err, "Failed to verify target path")
+		require.ErrorContains(t, err, "does not exist or is not writable")
 	})
 
 	requireAllSidecarsCleanedUp(t, m, e)
