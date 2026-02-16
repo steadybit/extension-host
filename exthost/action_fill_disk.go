@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
 	"github.com/google/uuid"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
@@ -75,14 +76,14 @@ func (a *fillDiskAction) Describe() action_kit_api.ActionDescription {
 			{
 				Name:         "mode",
 				Label:        "Mode",
-				Description:  extutil.Ptr("Decide how to specify the amount to fill the disk:\n\noverall percentage of filled disk space in percent,\n\nMegabytes to write,\n\nMegabytes to leave free on disk"),
+				Description:  extutil.Ptr("Specify how to calculate the amount of disk space to fill."),
 				Required:     extutil.Ptr(true),
 				Order:        extutil.Ptr(2),
-				DefaultValue: extutil.Ptr("PERCENTAGE"),
+				DefaultValue: extutil.Ptr(string(diskfill.MBToFill)),
 				Type:         action_kit_api.ActionParameterTypeString,
 				Options: extutil.Ptr([]action_kit_api.ParameterOption{
 					action_kit_api.ExplicitParameterOption{
-						Label: "Overall percentage of filled disk space in percent",
+						Label: "Fill up to specified usage (in %)",
 						Value: string(diskfill.Percentage),
 					},
 					action_kit_api.ExplicitParameterOption{
@@ -98,9 +99,9 @@ func (a *fillDiskAction) Describe() action_kit_api.ActionDescription {
 			{
 				Name:         "size",
 				Label:        "Fill Value (depending on Mode)",
-				Description:  extutil.Ptr("Depending on the mode, specify the percentage of filled disk space or the number of Megabytes to be written or left free."),
+				Description:  extutil.Ptr("Depending on the mode, specify the percentage or megabytes to use."),
 				Type:         action_kit_api.ActionParameterTypeInteger,
-				DefaultValue: extutil.Ptr("80"),
+				DefaultValue: extutil.Ptr("500"),
 				Required:     extutil.Ptr(true),
 				Order:        extutil.Ptr(3),
 			},
