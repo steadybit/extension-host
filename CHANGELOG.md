@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.4.10
+
+- Fill Disk: validate permissions of the target directory
+
 ## v1.4.9
 
 - Update dependencies
