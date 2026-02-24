@@ -51,9 +51,10 @@ spec:
       hostNetwork: true
       hostPID: true
       dnsPolicy: ClusterFirstWithHostNet
+      {{- include "extensionlib.imagePullSecrets" . | nindent 6 }}
       containers:
-        - image: {{ .Values.image.name }}:{{ default .Chart.AppVersion .Values.image.tag }}
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
+        - image: {{ include "extensionlib.image" . }}
+          imagePullPolicy: {{ include "extensionlib.imagePullPolicy" . }}
           resources:
             requests:
               memory: {{ .Values.resources.requests.memory }}
