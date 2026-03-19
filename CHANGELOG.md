@@ -1,8 +1,11 @@
 # Changelog
 
-## (next)
+## v1.4.11
 
 - Support if-none-match for the extension list endpoint
+- feat(chart): split image.name into image.registry + image.name
+- Support global.priorityClassName
+- Update dependencies
 
 ## v1.4.10
 
