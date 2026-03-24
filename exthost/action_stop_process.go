@@ -217,7 +217,9 @@ func newProcessStopper(processFilter string, graceful bool, delay, duration time
 					pids := stopprocess.FindProcessIds(processFilter)
 					log.Debug().Msgf("Found %d processes to stop", len(pids))
 					err := stopprocess.StopProcesses(pids, !graceful)
-					log.Error().Err(err).Msg("Failed to stop processes")
+					if err != nil {
+						log.Error().Err(err).Msg("Failed to stop processes")
+					}
 				case <-ctx.Done():
 					return
 				}
