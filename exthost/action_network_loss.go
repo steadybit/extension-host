@@ -8,7 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
-	"github.com/steadybit/action-kit/go/action_kit_commons/network"
+	"github.com/steadybit/action-kit/go/action_kit_commons/network/netfault"
 	"github.com/steadybit/action-kit/go/action_kit_commons/ociruntime"
 	"github.com/steadybit/action-kit/go/action_kit_sdk"
 	"github.com/steadybit/extension-kit/extbuild"
@@ -64,7 +64,7 @@ func getNetworkPackageLossDescription() action_kit_api.ActionDescription {
 }
 
 func packageLoss(r ociruntime.OciRuntime) networkOptsProvider {
-	return func(ctx context.Context, sidecar network.SidecarOpts, request action_kit_api.PrepareActionRequestBody) (network.Opts, action_kit_api.Messages, error) {
+	return func(ctx context.Context, sidecar netfault.SidecarOpts, request action_kit_api.PrepareActionRequestBody) (netfault.Opts, action_kit_api.Messages, error) {
 		_, err := CheckTargetHostname(request.Target.Attributes)
 		if err != nil {
 			return nil, nil, err
@@ -78,7 +78,7 @@ func packageLoss(r ociruntime.OciRuntime) networkOptsProvider {
 
 		interfaces := extutil.ToStringArray(request.Config["networkInterface"])
 		if len(interfaces) == 0 {
-			interfaces, err = network.ListNonLoopbackInterfaceNames(ctx, runner(r, sidecar))
+			interfaces, err = netfault.ListNonLoopbackInterfaceNames(ctx, runner(r, sidecar))
 			if err != nil {
 				return nil, nil, err
 			}
@@ -88,7 +88,7 @@ func packageLoss(r ociruntime.OciRuntime) networkOptsProvider {
 			return nil, nil, fmt.Errorf("no network interfaces specified")
 		}
 
-		return &network.PackageLossOpts{
+		return &netfault.PackageLossOpts{
 			Filter:     filter,
 			Loss:       loss,
 			Interfaces: interfaces,
@@ -96,8 +96,8 @@ func packageLoss(r ociruntime.OciRuntime) networkOptsProvider {
 	}
 }
 
-func packageLossDecode(data json.RawMessage) (network.Opts, error) {
-	var opts network.PackageLossOpts
+func packageLossDecode(data json.RawMessage) (netfault.Opts, error) {
+	var opts netfault.PackageLossOpts
 	err := json.Unmarshal(data, &opts)
 	return &opts, err
 }

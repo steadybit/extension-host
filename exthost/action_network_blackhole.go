@@ -8,7 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
-	"github.com/steadybit/action-kit/go/action_kit_commons/network"
+	"github.com/steadybit/action-kit/go/action_kit_commons/network/netfault"
 	"github.com/steadybit/action-kit/go/action_kit_commons/ociruntime"
 	"github.com/steadybit/action-kit/go/action_kit_sdk"
 	extension_kit "github.com/steadybit/extension-kit"
@@ -45,14 +45,14 @@ func getNetworkBlackholeDescription() action_kit_api.ActionDescription {
 }
 
 func blackhole(r ociruntime.OciRuntime) networkOptsProvider {
-	return func(ctx context.Context, sidecar network.SidecarOpts, request action_kit_api.PrepareActionRequestBody) (network.Opts, action_kit_api.Messages, error) {
+	return func(ctx context.Context, sidecar netfault.SidecarOpts, request action_kit_api.PrepareActionRequestBody) (netfault.Opts, action_kit_api.Messages, error) {
 		_, err := CheckTargetHostname(request.Target.Attributes)
 		if err != nil {
 			return nil, nil, err
 		}
 
 		var messages action_kit_api.Messages
-		if usesCilium, err := network.HasCiliumIpRoutes(ctx, runner(r, sidecar)); err != nil {
+		if usesCilium, err := netfault.HasCiliumIpRoutes(ctx, runner(r, sidecar)); err != nil {
 			messages = append(messages, action_kit_api.Message{
 				Level:   extutil.Ptr(action_kit_api.Warn),
 				Message: fmt.Sprintf("Failed to check for Cilium routes: %v", err),
@@ -70,12 +70,12 @@ func blackhole(r ociruntime.OciRuntime) networkOptsProvider {
 		}
 		messages = append(messages, netMessages...)
 
-		return &network.BlackholeOpts{Filter: filter}, messages, nil
+		return &netfault.BlackholeOpts{Filter: filter}, messages, nil
 	}
 }
 
-func blackholeDecode(data json.RawMessage) (network.Opts, error) {
-	var opts network.BlackholeOpts
+func blackholeDecode(data json.RawMessage) (netfault.Opts, error) {
+	var opts netfault.BlackholeOpts
 	err := json.Unmarshal(data, &opts)
 	return &opts, err
 }

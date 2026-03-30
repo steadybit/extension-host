@@ -92,13 +92,8 @@ func (a *dnsErrorInjectionAction) Prepare(ctx context.Context, state *DNSErrorIn
 		return nil, fmt.Errorf("failed to read init process info: %w", err)
 	}
 
-	sidecar := dnsinject.SidecarOpts{
-		TargetProcess: processInfo,
-		IdSuffix:      "host",
-		ExecutionId:   request.ExecutionId,
-	}
-
-	handle, err := dnsinject.NewProcess(ctx, a.ociRuntime, sidecar, opts)
+	sidecarId := fmt.Sprintf("%s-host", request.ExecutionId.String()[24:])
+	handle, err := dnsinject.NewProcess(ctx, a.ociRuntime, processInfo, sidecarId, opts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create dns-inject process: %w", err)
 	}
