@@ -18,7 +18,7 @@ import (
 	"github.com/steadybit/action-kit/go/action_kit_commons/ociruntime"
 	"github.com/steadybit/action-kit/go/action_kit_sdk"
 	"github.com/steadybit/extension-host/config"
-	"github.com/steadybit/extension-kit"
+	extension_kit "github.com/steadybit/extension-kit"
 	"github.com/steadybit/extension-kit/extutil"
 )
 
@@ -106,6 +106,7 @@ func (a *networkAction) Prepare(ctx context.Context, state *NetworkActionState, 
 		IdSuffix:      "host",
 		ExecutionId:   request.ExecutionId,
 	}
+	state.ExecutionId = request.ExecutionId
 
 	opts, messages, err := a.optsProvider(ctx, state.Sidecar, request)
 	if err != nil {

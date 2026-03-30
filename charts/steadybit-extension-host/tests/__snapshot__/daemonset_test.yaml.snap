@@ -92,6 +92,7 @@ manifest should match snapshot using podAnnotations, podLabels and resources:
                     - SYS_CHROOT
                     - SYS_PTRACE
                     - NET_ADMIN
+                    - BPF
                     - DAC_OVERRIDE
                     - SETUID
                     - SETGID
@@ -229,6 +230,7 @@ manifest should match snapshot with Steadybit-Extension-host env var:
                     - SYS_CHROOT
                     - SYS_PTRACE
                     - NET_ADMIN
+                    - BPF
                     - DAC_OVERRIDE
                     - SETUID
                     - SETGID
@@ -368,6 +370,7 @@ manifest should match snapshot with TLS:
                     - SYS_CHROOT
                     - SYS_PTRACE
                     - NET_ADMIN
+                    - BPF
                     - DAC_OVERRIDE
                     - SETUID
                     - SETGID
@@ -511,6 +514,7 @@ manifest should match snapshot with appArmorProfile for k8s >= 1.30:
                     - SYS_CHROOT
                     - SYS_PTRACE
                     - NET_ADMIN
+                    - BPF
                     - DAC_OVERRIDE
                     - SETUID
                     - SETGID
@@ -646,6 +650,7 @@ manifest should match snapshot with custom image registry:
                     - SYS_CHROOT
                     - SYS_PTRACE
                     - NET_ADMIN
+                    - BPF
                     - DAC_OVERRIDE
                     - SETUID
                     - SETGID
@@ -781,6 +786,7 @@ manifest should match snapshot with different containerPorts:
                     - SYS_CHROOT
                     - SYS_PTRACE
                     - NET_ADMIN
+                    - BPF
                     - DAC_OVERRIDE
                     - SETUID
                     - SETGID
@@ -923,6 +929,7 @@ manifest should match snapshot with extra env vars:
                     - SYS_CHROOT
                     - SYS_PTRACE
                     - NET_ADMIN
+                    - BPF
                     - DAC_OVERRIDE
                     - SETUID
                     - SETGID
@@ -1060,6 +1067,7 @@ manifest should match snapshot with extra labels:
                     - SYS_CHROOT
                     - SYS_PTRACE
                     - NET_ADMIN
+                    - BPF
                     - DAC_OVERRIDE
                     - SETUID
                     - SETGID
@@ -1195,6 +1203,7 @@ manifest should match snapshot with global image pull secrets:
                     - SYS_CHROOT
                     - SYS_PTRACE
                     - NET_ADMIN
+                    - BPF
                     - DAC_OVERRIDE
                     - SETUID
                     - SETGID
@@ -1332,6 +1341,7 @@ manifest should match snapshot with global image registry:
                     - SYS_CHROOT
                     - SYS_PTRACE
                     - NET_ADMIN
+                    - BPF
                     - DAC_OVERRIDE
                     - SETUID
                     - SETGID
@@ -1467,6 +1477,7 @@ manifest should match snapshot with global priority class:
                     - SYS_CHROOT
                     - SYS_PTRACE
                     - NET_ADMIN
+                    - BPF
                     - DAC_OVERRIDE
                     - SETUID
                     - SETGID
@@ -1603,6 +1614,7 @@ manifest should match snapshot with hostnameFromKubernetes enabled:
                     - SYS_CHROOT
                     - SYS_PTRACE
                     - NET_ADMIN
+                    - BPF
                     - DAC_OVERRIDE
                     - SETUID
                     - SETGID
@@ -1738,6 +1750,7 @@ manifest should match snapshot with image pull secrets:
                     - SYS_CHROOT
                     - SYS_PTRACE
                     - NET_ADMIN
+                    - BPF
                     - DAC_OVERRIDE
                     - SETUID
                     - SETGID
@@ -1875,6 +1888,7 @@ manifest should match snapshot with legacy image name containing registry:
                     - SYS_CHROOT
                     - SYS_PTRACE
                     - NET_ADMIN
+                    - BPF
                     - DAC_OVERRIDE
                     - SETUID
                     - SETGID
@@ -2016,6 +2030,7 @@ manifest should match snapshot with mutual TLS:
                     - SYS_CHROOT
                     - SYS_PTRACE
                     - NET_ADMIN
+                    - BPF
                     - DAC_OVERRIDE
                     - SETUID
                     - SETGID
@@ -2171,6 +2186,7 @@ manifest should match snapshot with mutual TLS using containerPaths:
                     - SYS_CHROOT
                     - SYS_PTRACE
                     - NET_ADMIN
+                    - BPF
                     - DAC_OVERRIDE
                     - SETUID
                     - SETGID
@@ -2306,6 +2322,7 @@ manifest should match snapshot with podSecurityContext:
                     - SYS_CHROOT
                     - SYS_PTRACE
                     - NET_ADMIN
+                    - BPF
                     - DAC_OVERRIDE
                     - SETUID
                     - SETGID
@@ -2442,6 +2459,7 @@ manifest should match snapshot with priority class:
                     - SYS_CHROOT
                     - SYS_PTRACE
                     - NET_ADMIN
+                    - BPF
                     - DAC_OVERRIDE
                     - SETUID
                     - SETGID
@@ -2578,6 +2596,7 @@ manifest should match snapshot with update strategy:
                     - SYS_CHROOT
                     - SYS_PTRACE
                     - NET_ADMIN
+                    - BPF
                     - DAC_OVERRIDE
                     - SETUID
                     - SETGID
@@ -2713,6 +2732,7 @@ manifest should match snapshot without TLS:
                     - SYS_CHROOT
                     - SYS_PTRACE
                     - NET_ADMIN
+                    - BPF
                     - DAC_OVERRIDE
                     - SETUID
                     - SETGID
