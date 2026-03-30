@@ -1,6 +1,5 @@
-/*
- * Copyright 2023 steadybit GmbH. All rights reserved.
- */
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2026 Steadybit GmbH
 
 package exthost
 
@@ -8,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/google/uuid"
@@ -34,8 +34,9 @@ type StopProcessActionState struct {
 
 // Make sure action implements all required interfaces
 var (
-	_ action_kit_sdk.Action[StopProcessActionState]         = (*stopProcessAction)(nil)
-	_ action_kit_sdk.ActionWithStop[StopProcessActionState] = (*stopProcessAction)(nil) // Optional, needed when the action needs a stop method
+	_ action_kit_sdk.Action[StopProcessActionState]           = (*stopProcessAction)(nil)
+	_ action_kit_sdk.ActionWithStatus[StopProcessActionState] = (*stopProcessAction)(nil)
+	_ action_kit_sdk.ActionWithStop[StopProcessActionState]   = (*stopProcessAction)(nil)
 )
 
 func NewStopProcessAction() action_kit_sdk.Action[StopProcessActionState] {
@@ -46,7 +47,6 @@ func (a *stopProcessAction) NewEmptyState() StopProcessActionState {
 	return StopProcessActionState{}
 }
 
-// Describe returns the action description for the platform with all required information.
 func (a *stopProcessAction) Describe() action_kit_api.ActionDescription {
 	return action_kit_api.ActionDescription{
 		Id:          stopProcessActionID,
@@ -55,30 +55,13 @@ func (a *stopProcessAction) Describe() action_kit_api.ActionDescription {
 		Version:     extbuild.GetSemverVersionStringOrUnknown(),
 		Icon:        extutil.Ptr(stopProcessIcon),
 		TargetSelection: extutil.Ptr(action_kit_api.TargetSelection{
-			// The target type this action is for
-			TargetType: targetID,
-			// You can provide a list of target templates to help the user select targets.
-			// A template can be used to pre-fill a selection
+			TargetType:         targetID,
 			SelectionTemplates: extutil.Ptr(targetSelectionTemplates),
 		}),
-		Technology: extutil.Ptr("Linux Host"),
-		// Category for the targets to appear in
-		Category: extutil.Ptr("State"),
-
-		// To clarify the purpose of the action, you can set a kind.
-		//   Attack: Will cause harm to targets
-		//   Check: Will perform checks on the targets
-		//   LoadTest: Will perform load tests on the targets
-		//   Other
-		Kind: action_kit_api.Attack,
-
-		// How the action is controlled over time.
-		//   External: The agent takes care and calls stop then the time has passed. Requires a duration parameter. Use this when the duration is known in advance.
-		//   Internal: The action has to implement the status endpoint to signal when the action is done. Use this when the duration is not known in advance.
-		//   Instantaneous: The action is done immediately. Use this for actions that happen immediately, e.g. a reboot.
+		Technology:  extutil.Ptr("Linux Host"),
+		Category:    extutil.Ptr("State"),
+		Kind:        action_kit_api.Attack,
 		TimeControl: action_kit_api.TimeControlExternal,
-
-		// The parameters for the action
 		Parameters: []action_kit_api.ActionParameter{
 			{
 				Name:        "process",
@@ -120,11 +103,6 @@ func (a *stopProcessAction) Describe() action_kit_api.ActionDescription {
 	}
 }
 
-// Prepare is called before the action is started.
-// It can be used to validate the parameters and prepare the action.
-// It must not cause any harmful effects.
-// The passed in state is included in the subsequent calls to start/status/stop.
-// So the state should contain all information needed to execute the action and even more important: to be able to stop it.
 func (a *stopProcessAction) Prepare(_ context.Context, state *StopProcessActionState, request action_kit_api.PrepareActionRequestBody) (*action_kit_api.PrepareResult, error) {
 	_, err := CheckTargetHostname(request.Target.Attributes)
 	if err != nil {
@@ -167,9 +145,6 @@ func (a *stopProcessAction) Prepare(_ context.Context, state *StopProcessActionS
 	return nil, nil
 }
 
-// Start is called to start the action
-// You can mutate the state here.
-// You can use the result to return messages/errors/metrics or artifacts
 func (a *stopProcessAction) Start(_ context.Context, state *StopProcessActionState) (*action_kit_api.StartResult, error) {
 	stopper := newProcessStopper(state.ProcessFilter, state.Graceful, state.Delay, state.Duration)
 
@@ -186,14 +161,31 @@ func (a *stopProcessAction) Start(_ context.Context, state *StopProcessActionSta
 	}, nil
 }
 
-// Stop is called to stop the action
-// It will be called even if the start method did not complete successfully.
-// It should be implemented in a immutable way, as the agent might to retries if the stop method timeouts.
-// You can use the result to return messages/errors/metrics or artifacts
+func (a *stopProcessAction) Status(_ context.Context, state *StopProcessActionState) (*action_kit_api.StatusResult, error) {
+	stopper, ok := a.processStoppers.Load(state.ExecutionID)
+	if !ok {
+		return &action_kit_api.StatusResult{Completed: true}, nil
+	}
+
+	s := stopper.(*processStopper)
+
+	if errPtr := s.err.Load(); errPtr != nil {
+		return &action_kit_api.StatusResult{
+			Completed: true,
+			Error: &action_kit_api.ActionKitError{
+				Title:  (*errPtr).Error(),
+				Status: extutil.Ptr(action_kit_api.Failed),
+			},
+		}, nil
+	}
+
+	return &action_kit_api.StatusResult{Completed: false}, nil
+}
+
 func (a *stopProcessAction) Stop(_ context.Context, state *StopProcessActionState) (*action_kit_api.StopResult, error) {
 	stopper, ok := a.processStoppers.Load(state.ExecutionID)
 	if ok {
-		stopper.(*processStopper).stop()
+		stopper.(*processStopper).cancel()
 		a.processStoppers.Delete(state.ExecutionID)
 	} else {
 		log.Debug().Msg("Execution run data not found, stop was already called")
@@ -202,15 +194,20 @@ func (a *stopProcessAction) Stop(_ context.Context, state *StopProcessActionStat
 }
 
 type processStopper struct {
-	stop  func()
-	start func()
+	cancel func()
+	start  func()
+	err    atomic.Pointer[error]
 }
 
 func newProcessStopper(processFilter string, graceful bool, delay, duration time.Duration) *processStopper {
 	ctx, cancel := context.WithTimeout(context.Background(), duration)
+	s := &processStopper{
+		cancel: cancel,
+	}
 
-	start := func() {
+	s.start = func() {
 		go func() {
+			defer cancel()
 			for {
 				select {
 				case <-time.After(delay):
@@ -219,6 +216,8 @@ func newProcessStopper(processFilter string, graceful bool, delay, duration time
 					err := stopprocess.StopProcesses(pids, !graceful)
 					if err != nil {
 						log.Error().Err(err).Msg("Failed to stop processes")
+						s.err.Store(&err)
+						return
 					}
 				case <-ctx.Done():
 					return
@@ -227,8 +226,5 @@ func newProcessStopper(processFilter string, graceful bool, delay, duration time
 		}()
 	}
 
-	return &processStopper{
-		stop:  cancel,
-		start: start,
-	}
+	return s
 }
