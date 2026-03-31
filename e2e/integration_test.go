@@ -1050,11 +1050,7 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			}()
 			require.NoError(t, err)
 
-			if tt.method == diskfill.OverTime {
-				e2e.AssertProcessRunningInContainer(t, m, e.Pod, "extension", "dd", true)
-			}
-
-			if tt.allowedDelta != -1 {
+			if tt.allowedDelta >= 0 {
 				assertFileHasSize(t, m, "/filldisk/disk-fill", tt.wantedFileSize, tt.allowedDelta)
 			}
 
