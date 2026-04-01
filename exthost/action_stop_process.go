@@ -175,7 +175,7 @@ func (a *stopProcessAction) Status(_ context.Context, state *StopProcessActionSt
 			Completed: true,
 			Error: &action_kit_api.ActionKitError{
 				Title:  (*errPtr).Error(),
-				Status: extutil.Ptr(action_kit_api.Failed),
+				Status: extutil.Ptr(action_kit_api.Errored),
 			},
 		}, nil
 	}
@@ -185,11 +185,22 @@ func (a *stopProcessAction) Status(_ context.Context, state *StopProcessActionSt
 
 func (a *stopProcessAction) Stop(_ context.Context, state *StopProcessActionState) (*action_kit_api.StopResult, error) {
 	stopper, ok := a.processStoppers.Load(state.ExecutionId)
-	if ok {
-		stopper.(*processStopper).cancel()
-		a.processStoppers.Delete(state.ExecutionId)
-	} else {
+	if !ok {
 		log.Debug().Msg("Execution run data not found, stop was already called")
+		return nil, nil
+	}
+
+	s := stopper.(*processStopper)
+	s.cancel()
+	a.processStoppers.Delete(state.ExecutionId)
+
+	if errPtr := s.err.Load(); errPtr != nil {
+		return &action_kit_api.StopResult{
+			Error: &action_kit_api.ActionKitError{
+				Title:  (*errPtr).Error(),
+				Status: extutil.Ptr(action_kit_api.Errored),
+			},
+		}, nil
 	}
 	return nil, nil
 }
