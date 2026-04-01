@@ -8,7 +8,7 @@ import (
 	"context"
 	"github.com/rs/zerolog/log"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
-	"github.com/steadybit/action-kit/go/action_kit_commons/network"
+	"github.com/steadybit/action-kit/go/action_kit_commons/network/netfault"
 	"github.com/steadybit/action-kit/go/action_kit_commons/ociruntime"
 	"github.com/steadybit/action-kit/go/action_kit_sdk"
 	"github.com/steadybit/extension-host/config"
@@ -196,9 +196,9 @@ func (a *timeTravelAction) Stop(ctx context.Context, state *TimeTravelActionStat
 	return nil, nil
 }
 
-func (a *timeTravelAction) runner(ctx context.Context) (network.CommandRunner, error) {
+func (a *timeTravelAction) runner(ctx context.Context) (netfault.CommandRunner, error) {
 	if config.Config.DisableRunc {
-		return network.NewProcessRunner(), nil
+		return netfault.NewProcessRunner(), nil
 	}
 
 	initProcess, err := ociruntime.ReadLinuxProcessInfo(ctx, 1)
@@ -206,10 +206,10 @@ func (a *timeTravelAction) runner(ctx context.Context) (network.CommandRunner, e
 		return nil, err
 	}
 
-	sidecar := network.SidecarOpts{
+	sidecar := netfault.SidecarOpts{
 		TargetProcess: initProcess,
-		IdSuffix:      "host",
+		Id:            "host",
 	}
 
-	return network.NewRuncRunner(a.runc, sidecar), nil
+	return netfault.NewRuncRunner(a.runc, sidecar), nil
 }

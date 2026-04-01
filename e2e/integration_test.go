@@ -141,6 +141,10 @@ func TestWithMinikube(t *testing.T) {
 			Test: testNetworkBlockDns,
 		},
 		{
+			Name: "network dns error injection",
+			Test: testNetworkDNSErrorInjection,
+		},
+		{
 			Name: "network limit bandwidth",
 			Test: testNetworkLimitBandwidth,
 		},
@@ -924,6 +928,76 @@ func testNetworkBlockDns(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			require.NoError(t, action.Cancel())
 			nginx.AssertIsReachable(t, true)
 			nginx.AssertCanReach(t, "https://steadybit.com", true)
+		})
+	}
+	requireAllSidecarsCleanedUp(t, m, e)
+}
+
+func testNetworkDNSErrorInjection(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
+	nginx := e2e.Nginx{Minikube: m}
+	err := nginx.Deploy("nginx-dns-inject")
+	require.NoError(t, err, "failed to create pod")
+	defer func() { _ = nginx.Delete() }()
+
+	tests := []struct {
+		name           string
+		dnsErrorType   []string
+		port           string
+		wantResolution bool
+	}{
+		{
+			name:           "should inject NXDOMAIN",
+			dnsErrorType:   []string{"NXDOMAIN"},
+			wantResolution: false,
+		},
+		{
+			name:           "should inject SERVFAIL",
+			dnsErrorType:   []string{"SERVFAIL"},
+			wantResolution: false,
+		},
+		{
+			name:           "should inject TIMEOUT",
+			dnsErrorType:   []string{"TIMEOUT"},
+			wantResolution: false,
+		},
+		{
+			name:           "should not affect non-matching port range",
+			dnsErrorType:   []string{"NXDOMAIN"},
+			port:           "8888-9999",
+			wantResolution: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			config := map[string]interface{}{
+				"duration":     10000,
+				"dnsErrorType": tt.dnsErrorType,
+			}
+			if tt.port != "" {
+				config["port"] = tt.port
+			}
+
+			action, err := e.RunAction(exthost.BaseActionID+".network_dns_error_injection", getTarget(m), config, defaultExecutionContext)
+			defer func() { _ = action.Cancel() }()
+			require.NoError(t, err)
+
+			e2e.Retry(t, 8, 500*time.Millisecond, func(r *e2e.R) {
+				out, err := m.PodExec(nginx.Pod, "nginx", "nslookup", "steadybit.com")
+				combined := out
+				if err != nil {
+					combined = fmt.Sprintf("%s %v", out, err)
+				}
+				if tt.wantResolution && err != nil {
+					r.Failed = true
+					_, _ = fmt.Fprintf(r.Log, "expected nslookup to succeed, but got: %s", combined)
+				} else if !tt.wantResolution && err == nil {
+					r.Failed = true
+					_, _ = fmt.Fprintf(r.Log, "expected nslookup to fail, but succeeded: %s", combined)
+				}
+			})
+
+			require.NoError(t, action.Cancel())
 		})
 	}
 	requireAllSidecarsCleanedUp(t, m, e)

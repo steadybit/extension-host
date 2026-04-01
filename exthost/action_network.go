@@ -15,16 +15,18 @@ import (
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
 	"github.com/steadybit/action-kit/go/action_kit_commons/network"
+	"github.com/steadybit/action-kit/go/action_kit_commons/network/dnsresolve"
+	"github.com/steadybit/action-kit/go/action_kit_commons/network/netfault"
 	"github.com/steadybit/action-kit/go/action_kit_commons/ociruntime"
 	"github.com/steadybit/action-kit/go/action_kit_sdk"
 	"github.com/steadybit/extension-host/config"
-	"github.com/steadybit/extension-kit"
+	extension_kit "github.com/steadybit/extension-kit"
 	"github.com/steadybit/extension-kit/extutil"
 )
 
-type networkOptsProvider func(ctx context.Context, sidecar network.SidecarOpts, request action_kit_api.PrepareActionRequestBody) (network.Opts, action_kit_api.Messages, error)
+type networkOptsProvider func(ctx context.Context, sidecar netfault.SidecarOpts, request action_kit_api.PrepareActionRequestBody) (netfault.Opts, action_kit_api.Messages, error)
 
-type networkOptsDecoder func(data json.RawMessage) (network.Opts, error)
+type networkOptsDecoder func(data json.RawMessage) (netfault.Opts, error)
 
 type networkAction struct {
 	ociRuntime   ociruntime.OciRuntime
@@ -36,7 +38,7 @@ type networkAction struct {
 type NetworkActionState struct {
 	ExecutionId uuid.UUID
 	NetworkOpts json.RawMessage
-	Sidecar     network.SidecarOpts
+	Sidecar     netfault.SidecarOpts
 }
 
 // Make sure networkAction implements all required interfaces
@@ -101,11 +103,11 @@ func (a *networkAction) Prepare(ctx context.Context, state *NetworkActionState, 
 		return nil, extension_kit.ToError("Failed to read root process infos.", err)
 	}
 
-	state.Sidecar = network.SidecarOpts{
+	state.Sidecar = netfault.SidecarOpts{
 		TargetProcess: initProcess,
-		IdSuffix:      "host",
-		ExecutionId:   request.ExecutionId,
+		Id:            fmt.Sprintf("%s-host", request.ExecutionId.String()[24:]),
 	}
+	state.ExecutionId = request.ExecutionId
 
 	opts, messages, err := a.optsProvider(ctx, state.Sidecar, request)
 	if err != nil {
@@ -135,9 +137,9 @@ func (a *networkAction) Start(ctx context.Context, state *NetworkActionState) (*
 		},
 	}}
 
-	err = network.Apply(ctx, runner(a.ociRuntime, state.Sidecar), opts)
+	err = netfault.Apply(ctx, runner(a.ociRuntime, state.Sidecar), opts)
 	if err != nil {
-		var toomany *network.ErrTooManyTcCommands
+		var toomany *netfault.ErrTooManyTcCommands
 		if errors.As(err, &toomany) {
 			result.Messages = extutil.Ptr(append(*result.Messages, action_kit_api.Message{
 				Level:   extutil.Ptr(action_kit_api.Error),
@@ -157,18 +159,18 @@ func (a *networkAction) Stop(ctx context.Context, state *NetworkActionState) (*a
 		return nil, extension_kit.ToError("Failed to deserialize network settings.", err)
 	}
 
-	if err := network.Revert(ctx, runner(a.ociRuntime, state.Sidecar), opts); err != nil {
+	if err := netfault.Revert(ctx, runner(a.ociRuntime, state.Sidecar), opts); err != nil {
 		return nil, extension_kit.ToError("Failed to revert network settings.", err)
 	}
 
 	return nil, nil
 }
 
-func runner(r ociruntime.OciRuntime, sidecar network.SidecarOpts) network.CommandRunner {
+func runner(r ociruntime.OciRuntime, sidecar netfault.SidecarOpts) netfault.CommandRunner {
 	if config.Config.DisableRunc {
-		return network.NewProcessRunner()
+		return netfault.NewProcessRunner()
 	}
-	return network.NewRuncRunner(r, sidecar)
+	return netfault.NewRuncRunner(r, sidecar)
 }
 
 func parsePortRanges(raw []string) ([]network.PortRange, error) {
@@ -192,22 +194,22 @@ func parsePortRanges(raw []string) ([]network.PortRange, error) {
 	return ranges, nil
 }
 
-func hostnameResolver(r ociruntime.OciRuntime, sidecar network.SidecarOpts) *network.HostnameResolver {
+func dnsResolver(r ociruntime.OciRuntime, sidecar netfault.SidecarOpts) dnsresolve.Resolver {
 	if config.Config.DisableRunc {
-		return &network.HostnameResolver{Dig: &network.CommandDigRunner{}}
+		return dnsresolve.NewDig()
 	}
-	return &network.HostnameResolver{Dig: &network.RuncDigRunner{Runc: r, Sidecar: sidecar}}
+	return dnsresolve.NewDigRunc(r, sidecar.TargetProcess)
 }
 
-func mapToNetworkFilter(ctx context.Context, r ociruntime.OciRuntime, sidecar network.SidecarOpts, actionConfig map[string]interface{}, restrictedEndpoints []action_kit_api.RestrictedEndpoint) (network.Filter, action_kit_api.Messages, error) {
+func mapToNetworkFilter(ctx context.Context, r ociruntime.OciRuntime, sidecar netfault.SidecarOpts, actionConfig map[string]interface{}, restrictedEndpoints []action_kit_api.RestrictedEndpoint) (netfault.Filter, action_kit_api.Messages, error) {
 	includeCidrs, unresolved := network.ParseCIDRs(append(
 		extutil.ToStringArray(actionConfig["ip"]),
 		extutil.ToStringArray(actionConfig["hostname"])...,
 	))
 
-	resolved, err := hostnameResolver(r, sidecar).Resolve(ctx, unresolved...)
+	resolved, err := dnsResolver(r, sidecar).Resolve(ctx, unresolved...)
 	if err != nil {
-		return network.Filter{}, nil, err
+		return netfault.Filter{}, nil, err
 	}
 	includeCidrs = append(includeCidrs, network.IpsToNets(resolved)...)
 
@@ -218,7 +220,7 @@ func mapToNetworkFilter(ctx context.Context, r ociruntime.OciRuntime, sidecar ne
 
 	portRanges, err := parsePortRanges(extutil.ToStringArray(actionConfig["port"]))
 	if err != nil {
-		return network.Filter{}, nil, err
+		return netfault.Filter{}, nil, err
 	}
 	if len(portRanges) == 0 {
 		//if no hostname/ip specified we affect all ports
@@ -234,7 +236,7 @@ func mapToNetworkFilter(ctx context.Context, r ociruntime.OciRuntime, sidecar ne
 
 	excludes, err := toExcludes(restrictedEndpoints)
 	if err != nil {
-		return network.Filter{}, nil, err
+		return netfault.Filter{}, nil, err
 	}
 
 	excludes = append(excludes, network.ComputeExcludesForOwnIpAndPorts(config.Config.Port, config.Config.HealthPort)...)
@@ -252,12 +254,12 @@ func mapToNetworkFilter(ctx context.Context, r ociruntime.OciRuntime, sidecar ne
 		})
 	}
 
-	return network.Filter{Include: includes, Exclude: excludes}, messages, nil
+	return netfault.Filter{Include: includes, Exclude: excludes}, messages, nil
 }
 
 func condenseExcludes(excludes []network.NetWithPortRange) ([]network.NetWithPortRange, bool) {
 	l := len(excludes)
-	excludes = network.CondenseNetWithPortRange(excludes, 500)
+	excludes = netfault.CondenseNetWithPortRange(excludes, 500)
 	return excludes, l != len(excludes)
 }
 
