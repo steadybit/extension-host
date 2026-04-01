@@ -118,11 +118,12 @@ func delay(r ociruntime.OciRuntime) networkOptsProvider {
 		}
 
 		return &netfault.DelayOpts{
-			Filter:     filter,
-			Delay:      delay,
-			Jitter:     jitter,
-			Interfaces: interfaces,
-			TcpPshOnly: extutil.ToBool(request.Config["tcpDataPacketsOnly"]),
+			Filter:           filter,
+			ExecutionContext: mapToExecutionContext(request),
+			Delay:            delay,
+			Jitter:           jitter,
+			Interfaces:       interfaces,
+			TcpPshOnly:       extutil.ToBool(request.Config["tcpDataPacketsOnly"]),
 		}, messages, nil
 	}
 }

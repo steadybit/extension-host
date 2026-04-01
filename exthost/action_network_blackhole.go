@@ -70,7 +70,7 @@ func blackhole(r ociruntime.OciRuntime) networkOptsProvider {
 		}
 		messages = append(messages, netMessages...)
 
-		return &netfault.BlackholeOpts{Filter: filter}, messages, nil
+		return &netfault.BlackholeOpts{Filter: filter, ExecutionContext: mapToExecutionContext(request)}, messages, nil
 	}
 }
 

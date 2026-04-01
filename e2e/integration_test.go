@@ -65,6 +65,20 @@ var (
 				PortMin: 8443,
 				PortMax: 8443,
 			},
+			{
+				Name:    "kubelet",
+				Url:     "",
+				Cidr:    "0.0.0.0/0",
+				PortMin: 10250,
+				PortMax: 10250,
+			},
+			{
+				Name:    "kubelet",
+				Url:     "",
+				Cidr:    "::/0",
+				PortMin: 10250,
+				PortMax: 10250,
+			},
 		}),
 	}
 	steadybitCIDRs = getCIDRsFor("steadybit.com", 16)
@@ -135,6 +149,10 @@ func TestWithMinikube(t *testing.T) {
 		{
 			Name: "network blackhole",
 			Test: testNetworkBlackhole,
+		},
+		{
+			Name: "network tcp reset",
+			Test: testNetworkTcpReset,
 		},
 		{
 			Name: "network block dns",
@@ -310,39 +328,45 @@ func testTimeTravel(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 }
 
 func getExtensionPodTimeOffset(m *e2e.Minikube, e *e2e.Extension) (time.Duration, error) {
-	var g errgroup.Group
-	chPodTime := make(chan time.Time, 1)
-	chNtpTime := make(chan time.Time, 1)
+	var lastErr error
+	for attempt := 0; attempt < 3; attempt++ {
+		var g errgroup.Group
+		chPodTime := make(chan time.Time, 1)
+		chNtpTime := make(chan time.Time, 1)
 
-	g.Go(func() error {
-		out, err := m.PodExec(e.Pod, "extension", "date", "+%s")
-		if err != nil {
-			return err
+		g.Go(func() error {
+			out, err := m.PodExec(e.Pod, "extension", "date", "+%s")
+			if err != nil {
+				return err
+			}
+
+			epoch := extutil.ToInt64(strings.TrimSpace(out))
+			if epoch == 0 {
+				return fmt.Errorf("failed to get container time")
+			}
+
+			chPodTime <- time.Unix(epoch, 0)
+			return nil
+		})
+
+		g.Go(func() error {
+			ntpTime, err := ntp.Time("pool.ntp.org")
+			if err != nil {
+				return err
+			}
+			chNtpTime <- ntpTime
+			return nil
+		})
+
+		if err := g.Wait(); err != nil {
+			lastErr = err
+			log.Warn().Err(err).Int("attempt", attempt+1).Msg("failed to get time offset, retrying")
+			continue
 		}
 
-		epoch := extutil.ToInt64(strings.TrimSpace(out))
-		if epoch == 0 {
-			return fmt.Errorf("failed to get container time")
-		}
-
-		chPodTime <- time.Unix(epoch, 0)
-		return nil
-	})
-
-	g.Go(func() error {
-		ntpTime, err := ntp.Time("pool.ntp.org")
-		if err != nil {
-			return err
-		}
-		chNtpTime <- ntpTime
-		return nil
-	})
-
-	if err := g.Wait(); err != nil {
-		return 0, err
+		return (<-chPodTime).Sub(<-chNtpTime), nil
 	}
-
-	return (<-chPodTime).Sub(<-chNtpTime), nil
+	return 0, lastErr
 }
 
 func validateDiscovery(t *testing.T, _ *e2e.Minikube, e *e2e.Extension) {
@@ -466,6 +490,93 @@ func testNetworkBlackhole(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			nginx.AssertCanReach(t, "https://steadybit.com", true)
 
 			action, err := e.RunAction(exthost.BaseActionID+".network_blackhole", getTarget(m), config, defaultExecutionContext)
+			defer func() { _ = action.Cancel() }()
+			require.NoError(t, err)
+
+			nginx.AssertIsReachable(t, tt.wantedReachable)
+			nginx.AssertCanReach(t, "https://steadybit.com", tt.wantedReachesUrl)
+
+			require.NoError(t, action.Cancel())
+			nginx.AssertIsReachable(t, true)
+			nginx.AssertCanReach(t, "https://steadybit.com", true)
+		})
+	}
+	requireAllSidecarsCleanedUp(t, m, e)
+}
+
+func testNetworkTcpReset(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
+	nginx := e2e.Nginx{Minikube: m}
+	err := nginx.Deploy("nginx-network-tcp-reset")
+	require.NoError(t, err, "failed to create pod")
+	defer func() { _ = nginx.Delete() }()
+
+	tests := []struct {
+		name             string
+		ip               []string
+		hostname         []string
+		port             []string
+		interfaces       []string
+		wantedReachable  bool
+		wantedReachesUrl bool
+	}{
+		{
+			name:             "should reset all traffic",
+			wantedReachable:  false,
+			wantedReachesUrl: false,
+		},
+		{
+			name:             "should reset only port 8080 traffic",
+			port:             []string{"8080"},
+			wantedReachable:  true,
+			wantedReachesUrl: true,
+		},
+		{
+			name:             "should reset only port 80, 443 traffic",
+			port:             []string{"80", "443"},
+			wantedReachable:  false,
+			wantedReachesUrl: false,
+		},
+		{
+			name:             "should reset only traffic for steadybit.com",
+			hostname:         []string{"steadybit.com"},
+			wantedReachable:  true,
+			wantedReachesUrl: false,
+		},
+		{
+			name:             "should reset only traffic for steadybit.com using CIDRs",
+			ip:               steadybitCIDRs,
+			wantedReachable:  true,
+			wantedReachesUrl: false,
+		},
+		{
+			name:             "should not reset traffic for non-matching ip",
+			ip:               []string{"8.8.0.0/16"},
+			wantedReachable:  true,
+			wantedReachesUrl: true,
+		},
+		{
+			name:             "should reset only port 80, 443 traffic on eth0",
+			port:             []string{"80", "443"},
+			interfaces:       []string{"eth0"},
+			wantedReachable:  false,
+			wantedReachesUrl: false,
+		},
+	}
+
+	for _, tt := range tests {
+		config := map[string]interface{}{
+			"duration":         30000,
+			"ip":               tt.ip,
+			"hostname":         tt.hostname,
+			"port":             tt.port,
+			"networkInterface": tt.interfaces,
+		}
+
+		t.Run(tt.name, func(t *testing.T) {
+			nginx.AssertIsReachable(t, true)
+			nginx.AssertCanReach(t, "https://steadybit.com", true)
+
+			action, err := e.RunAction(exthost.BaseActionID+".network_tcp_reset", getTarget(m), config, defaultExecutionContext)
 			defer func() { _ = action.Cancel() }()
 			require.NoError(t, err)
 
