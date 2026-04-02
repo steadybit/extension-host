@@ -69,6 +69,7 @@ func main() {
 	action_kit_sdk.RegisterAction(exthost.NewStopProcessAction())
 	action_kit_sdk.RegisterAction(exthost.NewShutdownAction())
 	action_kit_sdk.RegisterAction(exthost.NewNetworkBlackholeContainerAction(r))
+	action_kit_sdk.RegisterAction(exthost.NewNetworkTcpResetAction(r))
 	action_kit_sdk.RegisterAction(exthost.NewNetworkLimitBandwidthContainerAction(r))
 	action_kit_sdk.RegisterAction(exthost.NewNetworkCorruptPackagesContainerAction(r))
 	action_kit_sdk.RegisterAction(exthost.NewNetworkDelayContainerAction(r))

@@ -289,3 +289,15 @@ func toExcludes(restrictedEndpoints []action_kit_api.RestrictedEndpoint) ([]netw
 	}
 	return excludes, nil
 }
+
+func mapToExecutionContext(request action_kit_api.PrepareActionRequestBody) netfault.ExecutionContext {
+	eCtx := netfault.ExecutionContext{}
+	if request.ExecutionContext.ExperimentKey != nil {
+		eCtx.ExperimentKey = *request.ExecutionContext.ExperimentKey
+	}
+	if request.ExecutionContext.ExecutionId != nil {
+		eCtx.ExperimentExecutionId = *request.ExecutionContext.ExecutionId
+	}
+	eCtx.TargetExecutionId = request.ExecutionId.String()
+	return eCtx
+}

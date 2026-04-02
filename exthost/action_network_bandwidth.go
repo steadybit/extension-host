@@ -90,9 +90,10 @@ func limitBandwidth(r ociruntime.OciRuntime) networkOptsProvider {
 		}
 
 		return &netfault.LimitBandwidthOpts{
-			Filter:     filter,
-			Bandwidth:  bandwidth,
-			Interfaces: interfaces,
+			Filter:           filter,
+			ExecutionContext: mapToExecutionContext(request),
+			Bandwidth:        bandwidth,
+			Interfaces:       interfaces,
 		}, messages, nil
 	}
 }

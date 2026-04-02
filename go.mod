@@ -13,7 +13,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/rs/zerolog v1.35.0
 	github.com/steadybit/action-kit/go/action_kit_api/v2 v2.10.5
-	github.com/steadybit/action-kit/go/action_kit_commons v1.5.16-0.20260330193757-b77567804c15
+	github.com/steadybit/action-kit/go/action_kit_commons v1.6.0
 	github.com/steadybit/action-kit/go/action_kit_sdk v1.3.1
 	github.com/steadybit/action-kit/go/action_kit_test v1.4.7
 	github.com/steadybit/discovery-kit/go/discovery_kit_api v1.7.1
