@@ -39,6 +39,7 @@ forced rendering on kubernetes:
       - SYS_ADMIN
       - SYS_CHROOT
       - SYS_PTRACE
+      - NET_RAW
       - NET_ADMIN
       - BPF
       - DAC_OVERRIDE
@@ -103,6 +104,7 @@ rendering by default on openshift:
       - SYS_ADMIN
       - SYS_CHROOT
       - SYS_PTRACE
+      - NET_RAW
       - NET_ADMIN
       - BPF
       - DAC_OVERRIDE

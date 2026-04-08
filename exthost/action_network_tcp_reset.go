@@ -83,7 +83,7 @@ func tcpReset(r ociruntime.OciRuntime) networkOptsProvider {
 			Filter:           filter,
 			ExecutionContext: mapToExecutionContext(request),
 			Interfaces:       interfaces,
-			InsertAtTop:      true,
+			Prepend:          true,
 		}, messages, nil
 	}
 }

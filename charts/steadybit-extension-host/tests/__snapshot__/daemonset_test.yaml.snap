@@ -91,6 +91,7 @@ manifest should match snapshot using podAnnotations, podLabels and resources:
                     - SYS_ADMIN
                     - SYS_CHROOT
                     - SYS_PTRACE
+                    - NET_RAW
                     - NET_ADMIN
                     - BPF
                     - DAC_OVERRIDE
@@ -229,6 +230,7 @@ manifest should match snapshot with Steadybit-Extension-host env var:
                     - SYS_ADMIN
                     - SYS_CHROOT
                     - SYS_PTRACE
+                    - NET_RAW
                     - NET_ADMIN
                     - BPF
                     - DAC_OVERRIDE
@@ -369,6 +371,7 @@ manifest should match snapshot with TLS:
                     - SYS_ADMIN
                     - SYS_CHROOT
                     - SYS_PTRACE
+                    - NET_RAW
                     - NET_ADMIN
                     - BPF
                     - DAC_OVERRIDE
@@ -513,6 +516,7 @@ manifest should match snapshot with appArmorProfile for k8s >= 1.30:
                     - SYS_ADMIN
                     - SYS_CHROOT
                     - SYS_PTRACE
+                    - NET_RAW
                     - NET_ADMIN
                     - BPF
                     - DAC_OVERRIDE
@@ -649,6 +653,7 @@ manifest should match snapshot with custom image registry:
                     - SYS_ADMIN
                     - SYS_CHROOT
                     - SYS_PTRACE
+                    - NET_RAW
                     - NET_ADMIN
                     - BPF
                     - DAC_OVERRIDE
@@ -785,6 +790,7 @@ manifest should match snapshot with different containerPorts:
                     - SYS_ADMIN
                     - SYS_CHROOT
                     - SYS_PTRACE
+                    - NET_RAW
                     - NET_ADMIN
                     - BPF
                     - DAC_OVERRIDE
@@ -928,6 +934,7 @@ manifest should match snapshot with extra env vars:
                     - SYS_ADMIN
                     - SYS_CHROOT
                     - SYS_PTRACE
+                    - NET_RAW
                     - NET_ADMIN
                     - BPF
                     - DAC_OVERRIDE
@@ -1066,6 +1073,7 @@ manifest should match snapshot with extra labels:
                     - SYS_ADMIN
                     - SYS_CHROOT
                     - SYS_PTRACE
+                    - NET_RAW
                     - NET_ADMIN
                     - BPF
                     - DAC_OVERRIDE
@@ -1202,6 +1210,7 @@ manifest should match snapshot with global image pull secrets:
                     - SYS_ADMIN
                     - SYS_CHROOT
                     - SYS_PTRACE
+                    - NET_RAW
                     - NET_ADMIN
                     - BPF
                     - DAC_OVERRIDE
@@ -1340,6 +1349,7 @@ manifest should match snapshot with global image registry:
                     - SYS_ADMIN
                     - SYS_CHROOT
                     - SYS_PTRACE
+                    - NET_RAW
                     - NET_ADMIN
                     - BPF
                     - DAC_OVERRIDE
@@ -1476,6 +1486,7 @@ manifest should match snapshot with global priority class:
                     - SYS_ADMIN
                     - SYS_CHROOT
                     - SYS_PTRACE
+                    - NET_RAW
                     - NET_ADMIN
                     - BPF
                     - DAC_OVERRIDE
@@ -1613,6 +1624,7 @@ manifest should match snapshot with hostnameFromKubernetes enabled:
                     - SYS_ADMIN
                     - SYS_CHROOT
                     - SYS_PTRACE
+                    - NET_RAW
                     - NET_ADMIN
                     - BPF
                     - DAC_OVERRIDE
@@ -1749,6 +1761,7 @@ manifest should match snapshot with image pull secrets:
                     - SYS_ADMIN
                     - SYS_CHROOT
                     - SYS_PTRACE
+                    - NET_RAW
                     - NET_ADMIN
                     - BPF
                     - DAC_OVERRIDE
@@ -1887,6 +1900,7 @@ manifest should match snapshot with legacy image name containing registry:
                     - SYS_ADMIN
                     - SYS_CHROOT
                     - SYS_PTRACE
+                    - NET_RAW
                     - NET_ADMIN
                     - BPF
                     - DAC_OVERRIDE
@@ -2029,6 +2043,7 @@ manifest should match snapshot with mutual TLS:
                     - SYS_ADMIN
                     - SYS_CHROOT
                     - SYS_PTRACE
+                    - NET_RAW
                     - NET_ADMIN
                     - BPF
                     - DAC_OVERRIDE
@@ -2185,6 +2200,7 @@ manifest should match snapshot with mutual TLS using containerPaths:
                     - SYS_ADMIN
                     - SYS_CHROOT
                     - SYS_PTRACE
+                    - NET_RAW
                     - NET_ADMIN
                     - BPF
                     - DAC_OVERRIDE
@@ -2321,6 +2337,7 @@ manifest should match snapshot with podSecurityContext:
                     - SYS_ADMIN
                     - SYS_CHROOT
                     - SYS_PTRACE
+                    - NET_RAW
                     - NET_ADMIN
                     - BPF
                     - DAC_OVERRIDE
@@ -2458,6 +2475,7 @@ manifest should match snapshot with priority class:
                     - SYS_ADMIN
                     - SYS_CHROOT
                     - SYS_PTRACE
+                    - NET_RAW
                     - NET_ADMIN
                     - BPF
                     - DAC_OVERRIDE
@@ -2595,6 +2613,7 @@ manifest should match snapshot with update strategy:
                     - SYS_ADMIN
                     - SYS_CHROOT
                     - SYS_PTRACE
+                    - NET_RAW
                     - NET_ADMIN
                     - BPF
                     - DAC_OVERRIDE
@@ -2731,6 +2750,7 @@ manifest should match snapshot without TLS:
                     - SYS_ADMIN
                     - SYS_CHROOT
                     - SYS_PTRACE
+                    - NET_RAW
                     - NET_ADMIN
                     - BPF
                     - DAC_OVERRIDE
