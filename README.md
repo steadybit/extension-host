@@ -25,10 +25,10 @@ The capabilities needed by this extension are: (which are provided by the helm c
 - `SYS_ADMIN`
 - `SYS_RESOURCE`
 - `SYS_BOOT`
-- `NET_RAW`
 - `SYS_TIME`
 - `SYS_PTRACE`
 - `KILL`
+- `NET_RAW`
 - `NET_ADMIN`
 - `DAC_OVERRIDE`
 - `SETUID`
@@ -109,7 +109,7 @@ All needed binaries are included in the extension container image.
 
 ### Network Attacks
 
-The network attacks are starting processes in the target containers network namespaces using [runc (APL2.0)](https://github.com/opencontainers/runc) for this the following capabilities are needed: `CAP_NET_ADMIN`, `CAP_BPF`, `CAP_SYS_CHROOT`, `CAP_SYS_ADMIN`, `CAP_SYS_PTRACE`, `CAP_NET_BIND_SERVICE`, `CAP_DAC_OVERRIDE`, `CAP_SETUID`, `CAP_SETGID`, `CAP_AUDIT_WRITE`, `CAP_KILL`.
+The network attacks are starting processes in the target containers network namespaces using [runc (APL2.0)](https://github.com/opencontainers/runc) for this the following capabilities are needed: `CAP_NET_ADMIN`, `CAP_NET_RAW`, `CAP_BPF`, `CAP_SYS_CHROOT`, `CAP_SYS_ADMIN`, `CAP_SYS_PTRACE`, `CAP_NET_BIND_SERVICE`, `CAP_DAC_OVERRIDE`, `CAP_SETUID`, `CAP_SETGID`, `CAP_AUDIT_WRITE`, `CAP_KILL`.
 These processes are executed with the root user, but are short-lived and terminated after the attack is finished.
 
 Under the hood start `ip` or `tc` is used to reconfigure the network stack and `dig` is used in case the hostnames need to be resolved.
