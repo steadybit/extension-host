@@ -23,17 +23,25 @@ When installed as linux package this configuration is in`/etc/steadybit/extensio
 The capabilities needed by this extension are: (which are provided by the helm chart)
 
 - `SYS_ADMIN`
-- `SYS_RESOURCE`
+- `SYS_CHROOT`
 - `SYS_BOOT`
 - `SYS_TIME`
 - `SYS_PTRACE`
 - `KILL`
 - `NET_RAW`
 - `NET_ADMIN`
+- `NET_BIND_SERVICE`
+- `BPF`
 - `DAC_OVERRIDE`
 - `SETUID`
 - `SETGID`
 - `AUDIT_WRITE`
+- `SETPCAP`
+- `MKNOD`
+
+Optional:
+
+- `SYS_RESOURCE`
 
 ## Installation
 

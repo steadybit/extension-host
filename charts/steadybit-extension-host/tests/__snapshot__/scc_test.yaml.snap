@@ -47,7 +47,6 @@ forced rendering on kubernetes:
       - SETGID
       - AUDIT_WRITE
       - SYS_BOOT
-      - NET_RAW
       - SYS_TIME
       - SETPCAP
       - MKNOD
@@ -112,7 +111,6 @@ rendering by default on openshift:
       - SETGID
       - AUDIT_WRITE
       - SYS_BOOT
-      - NET_RAW
       - SYS_TIME
       - SETPCAP
       - MKNOD

@@ -146,7 +146,6 @@ containerSecurityContext:
       - SETGID
       - AUDIT_WRITE
       - SYS_BOOT
-      - NET_RAW
       - SYS_TIME
       # SETPCAP, MKNOD is needed to support the crun OCI runtime. Better performance / needed on openshift clusters >= 4.18
       - SETPCAP

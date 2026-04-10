@@ -99,7 +99,6 @@ manifest should match snapshot using podAnnotations, podLabels and resources:
                     - SETGID
                     - AUDIT_WRITE
                     - SYS_BOOT
-                    - NET_RAW
                     - SYS_TIME
                     - SETPCAP
                     - MKNOD
@@ -238,7 +237,6 @@ manifest should match snapshot with Steadybit-Extension-host env var:
                     - SETGID
                     - AUDIT_WRITE
                     - SYS_BOOT
-                    - NET_RAW
                     - SYS_TIME
                     - SETPCAP
                     - MKNOD
@@ -379,7 +377,6 @@ manifest should match snapshot with TLS:
                     - SETGID
                     - AUDIT_WRITE
                     - SYS_BOOT
-                    - NET_RAW
                     - SYS_TIME
                     - SETPCAP
                     - MKNOD
@@ -524,7 +521,6 @@ manifest should match snapshot with appArmorProfile for k8s >= 1.30:
                     - SETGID
                     - AUDIT_WRITE
                     - SYS_BOOT
-                    - NET_RAW
                     - SYS_TIME
                     - SETPCAP
                     - MKNOD
@@ -661,7 +657,6 @@ manifest should match snapshot with custom image registry:
                     - SETGID
                     - AUDIT_WRITE
                     - SYS_BOOT
-                    - NET_RAW
                     - SYS_TIME
                     - SETPCAP
                     - MKNOD
@@ -798,7 +793,6 @@ manifest should match snapshot with different containerPorts:
                     - SETGID
                     - AUDIT_WRITE
                     - SYS_BOOT
-                    - NET_RAW
                     - SYS_TIME
                     - SETPCAP
                     - MKNOD
@@ -942,7 +936,6 @@ manifest should match snapshot with extra env vars:
                     - SETGID
                     - AUDIT_WRITE
                     - SYS_BOOT
-                    - NET_RAW
                     - SYS_TIME
                     - SETPCAP
                     - MKNOD
@@ -1081,7 +1074,6 @@ manifest should match snapshot with extra labels:
                     - SETGID
                     - AUDIT_WRITE
                     - SYS_BOOT
-                    - NET_RAW
                     - SYS_TIME
                     - SETPCAP
                     - MKNOD
@@ -1218,7 +1210,6 @@ manifest should match snapshot with global image pull secrets:
                     - SETGID
                     - AUDIT_WRITE
                     - SYS_BOOT
-                    - NET_RAW
                     - SYS_TIME
                     - SETPCAP
                     - MKNOD
@@ -1357,7 +1348,6 @@ manifest should match snapshot with global image registry:
                     - SETGID
                     - AUDIT_WRITE
                     - SYS_BOOT
-                    - NET_RAW
                     - SYS_TIME
                     - SETPCAP
                     - MKNOD
@@ -1494,7 +1484,6 @@ manifest should match snapshot with global priority class:
                     - SETGID
                     - AUDIT_WRITE
                     - SYS_BOOT
-                    - NET_RAW
                     - SYS_TIME
                     - SETPCAP
                     - MKNOD
@@ -1632,7 +1621,6 @@ manifest should match snapshot with hostnameFromKubernetes enabled:
                     - SETGID
                     - AUDIT_WRITE
                     - SYS_BOOT
-                    - NET_RAW
                     - SYS_TIME
                     - SETPCAP
                     - MKNOD
@@ -1769,7 +1757,6 @@ manifest should match snapshot with image pull secrets:
                     - SETGID
                     - AUDIT_WRITE
                     - SYS_BOOT
-                    - NET_RAW
                     - SYS_TIME
                     - SETPCAP
                     - MKNOD
@@ -1908,7 +1895,6 @@ manifest should match snapshot with legacy image name containing registry:
                     - SETGID
                     - AUDIT_WRITE
                     - SYS_BOOT
-                    - NET_RAW
                     - SYS_TIME
                     - SETPCAP
                     - MKNOD
@@ -2051,7 +2037,6 @@ manifest should match snapshot with mutual TLS:
                     - SETGID
                     - AUDIT_WRITE
                     - SYS_BOOT
-                    - NET_RAW
                     - SYS_TIME
                     - SETPCAP
                     - MKNOD
@@ -2208,7 +2193,6 @@ manifest should match snapshot with mutual TLS using containerPaths:
                     - SETGID
                     - AUDIT_WRITE
                     - SYS_BOOT
-                    - NET_RAW
                     - SYS_TIME
                     - SETPCAP
                     - MKNOD
@@ -2345,7 +2329,6 @@ manifest should match snapshot with podSecurityContext:
                     - SETGID
                     - AUDIT_WRITE
                     - SYS_BOOT
-                    - NET_RAW
                     - SYS_TIME
                     - SETPCAP
                     - MKNOD
@@ -2483,7 +2466,6 @@ manifest should match snapshot with priority class:
                     - SETGID
                     - AUDIT_WRITE
                     - SYS_BOOT
-                    - NET_RAW
                     - SYS_TIME
                     - SETPCAP
                     - MKNOD
@@ -2621,7 +2603,6 @@ manifest should match snapshot with update strategy:
                     - SETGID
                     - AUDIT_WRITE
                     - SYS_BOOT
-                    - NET_RAW
                     - SYS_TIME
                     - SETPCAP
                     - MKNOD
@@ -2758,7 +2739,6 @@ manifest should match snapshot without TLS:
                     - SETGID
                     - AUDIT_WRITE
                     - SYS_BOOT
-                    - NET_RAW
                     - SYS_TIME
                     - SETPCAP
                     - MKNOD
