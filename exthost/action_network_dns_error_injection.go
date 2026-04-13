@@ -52,7 +52,7 @@ func (a *dnsErrorInjectionAction) Describe() action_kit_api.ActionDescription {
 		Label:       "DNS Error Injection",
 		Description: "Inject DNS errors (NXDOMAIN/SERVFAIL/TIMEOUT) into DNS queries using eBPF.",
 		Version:     extbuild.GetSemverVersionStringOrUnknown(),
-		Icon:        extutil.Ptr(dnsIcon),
+		Icon:        extutil.Ptr(dnsErrorInjectIcon),
 		TargetSelection: &action_kit_api.TargetSelection{
 			TargetType:         targetID,
 			SelectionTemplates: &targetSelectionTemplates,
