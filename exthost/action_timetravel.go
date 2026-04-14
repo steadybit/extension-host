@@ -49,17 +49,17 @@ func (a *timeTravelAction) Describe() action_kit_api.ActionDescription {
 		Label:       "Time Travel",
 		Description: "Change the system time by the given offset.",
 		Version:     extbuild.GetSemverVersionStringOrUnknown(),
-		Icon:        extutil.Ptr(timeTravelIcon),
-		TargetSelection: extutil.Ptr(action_kit_api.TargetSelection{
+		Icon:        new(timeTravelIcon),
+		TargetSelection: new(action_kit_api.TargetSelection{
 			// The target type this action is for
 			TargetType: targetID,
 			// You can provide a list of target templates to help the user select targets.
 			// A template can be used to pre-fill a selection
 			SelectionTemplates: &targetSelectionTemplates,
 		}),
-		Technology: extutil.Ptr("Linux Host"),
+		Technology: new("Linux Host"),
 		// Category for the targets to appear in
-		Category: extutil.Ptr("State"),
+		Category: new("State"),
 
 		// To clarify the purpose of the action, you can set a kind.
 		//   Attack: Will cause harm to targets
@@ -79,34 +79,34 @@ func (a *timeTravelAction) Describe() action_kit_api.ActionDescription {
 			{
 				Name:          "offset",
 				Label:         "Offset",
-				Description:   extutil.Ptr("The offset to the current time."),
+				Description:   new("The offset to the current time."),
 				Type:          action_kit_api.ActionParameterTypeDuration,
-				DurationUnits: extutil.Ptr([]action_kit_api.DurationUnit{action_kit_api.DurationUnitMilliseconds, action_kit_api.DurationUnitSeconds, action_kit_api.DurationUnitMinutes, action_kit_api.DurationUnitHours, action_kit_api.DurationUnitDays}),
-				DefaultValue:  extutil.Ptr("60m"),
-				Required:      extutil.Ptr(true),
-				Order:         extutil.Ptr(1),
+				DurationUnits: new([]action_kit_api.DurationUnit{action_kit_api.DurationUnitMilliseconds, action_kit_api.DurationUnitSeconds, action_kit_api.DurationUnitMinutes, action_kit_api.DurationUnitHours, action_kit_api.DurationUnitDays}),
+				DefaultValue:  new("60m"),
+				Required:      new(true),
+				Order:         new(1),
 			},
 			{
 				Name:         "duration",
 				Label:        "Duration",
-				Description:  extutil.Ptr("How long should time travel take?"),
+				Description:  new("How long should time travel take?"),
 				Type:         action_kit_api.ActionParameterTypeDuration,
-				DefaultValue: extutil.Ptr("30s"),
-				Required:     extutil.Ptr(true),
-				Order:        extutil.Ptr(2),
+				DefaultValue: new("30s"),
+				Required:     new(true),
+				Order:        new(2),
 			}, {
 				Name:         "disableNtp",
 				Label:        "Disable NTP",
-				Description:  extutil.Ptr("Prevent NTP from correcting time during attack."),
+				Description:  new("Prevent NTP from correcting time during attack."),
 				Type:         action_kit_api.ActionParameterTypeBoolean,
-				DefaultValue: extutil.Ptr("true"),
-				Required:     extutil.Ptr(false),
-				Advanced:     extutil.Ptr(true),
-				Order:        extutil.Ptr(1),
+				DefaultValue: new("true"),
+				Required:     new(false),
+				Advanced:     new(true),
+				Order:        new(1),
 			},
 		},
-		Stop:            extutil.Ptr(action_kit_api.MutatingEndpointReference{}),
-		AdditionalFlags: extutil.Ptr([]action_kit_api.ActionDescriptionAdditionalFlags{action_kit_api.DISABLEHEARTBEAT}),
+		Stop:            new(action_kit_api.MutatingEndpointReference{}),
+		AdditionalFlags: new([]action_kit_api.ActionDescriptionAdditionalFlags{action_kit_api.DISABLEHEARTBEAT}),
 	}
 }
 
@@ -124,7 +124,7 @@ func (a *timeTravelAction) Prepare(_ context.Context, state *TimeTravelActionSta
 	state.Offset = time.Duration(extutil.ToUInt64(request.Config["offset"])) * time.Millisecond
 	if state.Offset < 1*time.Second {
 		return &action_kit_api.PrepareResult{
-			Error: extutil.Ptr(action_kit_api.ActionKitError{
+			Error: new(action_kit_api.ActionKitError{
 				Title:  "Duration must be greater / equal than 1s",
 				Status: extutil.Ptr(action_kit_api.Errored),
 			}),

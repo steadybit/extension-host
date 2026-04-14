@@ -140,5 +140,5 @@ func readFrequencyFile(path string) (uint64, error) {
 
 // writeFrequencyFile writes a frequency value in kHz to a sysfs file
 func writeFrequencyFile(path string, value uint64) error {
-	return os.WriteFile(path, []byte(fmt.Sprintf("%d", value)), 0644)
+	return os.WriteFile(path, fmt.Appendf(nil, "%d", value), 0644)
 }
