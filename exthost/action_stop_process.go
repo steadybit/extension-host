@@ -53,53 +53,53 @@ func (a *stopProcessAction) Describe() action_kit_api.ActionDescription {
 		Label:       "Stop Processes",
 		Description: "Stops targeted processes in the given duration.",
 		Version:     extbuild.GetSemverVersionStringOrUnknown(),
-		Icon:        extutil.Ptr(stopProcessIcon),
-		TargetSelection: extutil.Ptr(action_kit_api.TargetSelection{
+		Icon:        new(stopProcessIcon),
+		TargetSelection: new(action_kit_api.TargetSelection{
 			TargetType:         targetID,
-			SelectionTemplates: extutil.Ptr(targetSelectionTemplates),
+			SelectionTemplates: new(targetSelectionTemplates),
 		}),
-		Technology:  extutil.Ptr("Linux Host"),
-		Category:    extutil.Ptr("State"),
+		Technology:  new("Linux Host"),
+		Category:    new("State"),
 		Kind:        action_kit_api.Attack,
 		TimeControl: action_kit_api.TimeControlExternal,
 		Parameters: []action_kit_api.ActionParameter{
 			{
 				Name:        "process",
 				Label:       "Process",
-				Description: extutil.Ptr("PID or string to match the process name or command."),
+				Description: new("PID or string to match the process name or command."),
 				Type:        action_kit_api.ActionParameterTypeString,
-				Required:    extutil.Ptr(true),
-				Order:       extutil.Ptr(1),
+				Required:    new(true),
+				Order:       new(1),
 			},
 			{
 				Name:         "graceful",
 				Label:        "Graceful",
-				Description:  extutil.Ptr("If true a TERM signal is sent before the KILL signal."),
+				Description:  new("If true a TERM signal is sent before the KILL signal."),
 				Type:         action_kit_api.ActionParameterTypeBoolean,
-				DefaultValue: extutil.Ptr("true"),
-				Required:     extutil.Ptr(true),
-				Order:        extutil.Ptr(2),
+				DefaultValue: new("true"),
+				Required:     new(true),
+				Order:        new(2),
 			},
 			{
 				Name:         "duration",
 				Label:        "Duration",
-				Description:  extutil.Ptr("Over this period the matching processes are killed."),
+				Description:  new("Over this period the matching processes are killed."),
 				Type:         action_kit_api.ActionParameterTypeDuration,
-				DefaultValue: extutil.Ptr("30s"),
-				Required:     extutil.Ptr(true),
-				Order:        extutil.Ptr(3),
+				DefaultValue: new("30s"),
+				Required:     new(true),
+				Order:        new(3),
 			}, {
 				Name:         "delay",
 				Label:        "Delay",
-				Description:  extutil.Ptr("The delay before the kill signal is sent."),
+				Description:  new("The delay before the kill signal is sent."),
 				Type:         action_kit_api.ActionParameterTypeDuration,
-				DefaultValue: extutil.Ptr("5s"),
-				Required:     extutil.Ptr(true),
-				Advanced:     extutil.Ptr(true),
-				Order:        extutil.Ptr(1),
+				DefaultValue: new("5s"),
+				Required:     new(true),
+				Advanced:     new(true),
+				Order:        new(1),
 			},
 		},
-		Stop: extutil.Ptr(action_kit_api.MutatingEndpointReference{}),
+		Stop: new(action_kit_api.MutatingEndpointReference{}),
 	}
 }
 
@@ -111,7 +111,7 @@ func (a *stopProcessAction) Prepare(_ context.Context, state *StopProcessActionS
 	processOrPid := extutil.ToString(request.Config["process"])
 	if processOrPid == "" {
 		return &action_kit_api.PrepareResult{
-			Error: extutil.Ptr(action_kit_api.ActionKitError{
+			Error: new(action_kit_api.ActionKitError{
 				Title:  "Process is required",
 				Status: extutil.Ptr(action_kit_api.Errored),
 			}),
@@ -122,7 +122,7 @@ func (a *stopProcessAction) Prepare(_ context.Context, state *StopProcessActionS
 	parsedDuration := extutil.ToUInt64(request.Config["duration"])
 	if parsedDuration == 0 {
 		return &action_kit_api.PrepareResult{
-			Error: extutil.Ptr(action_kit_api.ActionKitError{
+			Error: new(action_kit_api.ActionKitError{
 				Title:  "Duration is required",
 				Status: extutil.Ptr(action_kit_api.Errored),
 			}),
@@ -153,7 +153,7 @@ func (a *stopProcessAction) Start(_ context.Context, state *StopProcessActionSta
 
 	stopper.start()
 	return &action_kit_api.StartResult{
-		Messages: extutil.Ptr([]action_kit_api.Message{
+		Messages: new([]action_kit_api.Message{
 			{
 				Level:   extutil.Ptr(action_kit_api.Info),
 				Message: fmt.Sprintf("Starting stop processes %s", state.ProcessFilter),

@@ -21,6 +21,7 @@ import (
 	"golang.org/x/sync/syncmap"
 	"os"
 	"os/exec"
+	"slices"
 	"strings"
 	"time"
 )
@@ -82,7 +83,7 @@ func (a *stressAction) Prepare(ctx context.Context, state *StressActionState, re
 
 	if !isStressNgInstalled() {
 		return &action_kit_api.PrepareResult{
-			Error: extutil.Ptr(action_kit_api.ActionKitError{
+			Error: new(action_kit_api.ActionKitError{
 				Title:  "Stress-ng is not installed!",
 				Status: extutil.Ptr(action_kit_api.Errored),
 			}),
@@ -120,7 +121,7 @@ func adaptCpuHosts(s *stress.Opts) {
 
 	//stress-ng will use all configured processors, we deem this to be wrong and expect all online cpus to be used.
 	if c, err := utils.ReadCpusAllowedCount("/proc/1/status"); err == nil {
-		s.CpuWorkers = extutil.Ptr(c)
+		s.CpuWorkers = new(c)
 	} else {
 		log.Debug().Err(err).Msg("failed to read cpus allowed for pid 1")
 	}
@@ -147,7 +148,7 @@ func (a *stressAction) Start(ctx context.Context, state *StressActionState) (*ac
 	}
 
 	return &action_kit_api.StartResult{
-		Messages: extutil.Ptr([]action_kit_api.Message{
+		Messages: new([]action_kit_api.Message{
 			{
 				Level:   extutil.Ptr(action_kit_api.Info),
 				Message: fmt.Sprintf("Starting stress host with args %s", strings.Join(state.StressOpts.Args(), " ")),
@@ -183,18 +184,16 @@ func (a *stressAction) Status(_ context.Context, state *StressActionState) (*act
 			errMessage = fmt.Sprintf("%s\n%s", exitErr.Error(), string(exitErr.Stderr))
 		}
 
-		for _, ignore := range state.IgnoreExitCodes {
-			if exitCode == ignore {
-				return &action_kit_api.StatusResult{
-					Completed: true,
-					Messages: &[]action_kit_api.Message{
-						{
-							Level:   extutil.Ptr(action_kit_api.Warn),
-							Message: fmt.Sprintf("stress-ng exited unexpectedly: %s", errMessage),
-						},
+		if slices.Contains(state.IgnoreExitCodes, exitCode) {
+			return &action_kit_api.StatusResult{
+				Completed: true,
+				Messages: &[]action_kit_api.Message{
+					{
+						Level:   extutil.Ptr(action_kit_api.Warn),
+						Message: fmt.Sprintf("stress-ng exited unexpectedly: %s", errMessage),
 					},
-				}, nil
-			}
+				},
+			}, nil
 		}
 	}
 

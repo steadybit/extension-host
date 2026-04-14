@@ -3,7 +3,6 @@ package exthost
 import (
 	"github.com/google/uuid"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
-	"github.com/steadybit/extension-kit/extutil"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -22,13 +21,13 @@ func TestActionMemory_Prepare(t *testing.T) {
 		{
 			name: "Should return config",
 			requestBody: action_kit_api.PrepareActionRequestBody{
-				Config: map[string]interface{}{
+				Config: map[string]any{
 					"action":     "prepare",
 					"duration":   1000,
 					"percentage": 50,
 				},
 				ExecutionId: uuid.New(),
-				Target: extutil.Ptr(action_kit_api.Target{
+				Target: new(action_kit_api.Target{
 					Attributes: map[string][]string{
 						"host.hostname": {"myhostname"},
 					},
@@ -39,13 +38,13 @@ func TestActionMemory_Prepare(t *testing.T) {
 		}, {
 			name: "Should return error too low duration",
 			requestBody: action_kit_api.PrepareActionRequestBody{
-				Config: map[string]interface{}{
+				Config: map[string]any{
 					"action":     "prepare",
 					"duration":   500,
 					"percentage": 50,
 				},
 				ExecutionId: uuid.New(),
-				Target: extutil.Ptr(action_kit_api.Target{
+				Target: new(action_kit_api.Target{
 					Attributes: map[string][]string{
 						"host.hostname": {"myhostname"},
 					},

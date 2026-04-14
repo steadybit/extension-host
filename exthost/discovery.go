@@ -17,7 +17,6 @@ import (
 	"github.com/steadybit/extension-host/config"
 	"github.com/steadybit/extension-host/exthost/cpufreq"
 	"github.com/steadybit/extension-kit/extbuild"
-	"github.com/steadybit/extension-kit/extutil"
 )
 
 type hostDiscovery struct {
@@ -40,7 +39,7 @@ func (d *hostDiscovery) Describe() discovery_kit_api.DiscoveryDescription {
 	return discovery_kit_api.DiscoveryDescription{
 		Id: targetID,
 		Discover: discovery_kit_api.DescribingEndpointReferenceWithCallInterval{
-			CallInterval: extutil.Ptr("30s"),
+			CallInterval: new("30s"),
 		},
 	}
 }
@@ -49,13 +48,13 @@ func (d *hostDiscovery) DescribeTarget() discovery_kit_api.TargetDescription {
 	return discovery_kit_api.TargetDescription{
 		Id:      targetID,
 		Version: extbuild.GetSemverVersionStringOrUnknown(),
-		Icon:    extutil.Ptr(targetIcon),
+		Icon:    new(targetIcon),
 
 		// Labels used in the UI
 		Label: discovery_kit_api.PluralLabel{One: "Linux Host", Other: "Linux Hosts"},
 
 		// Category for the targets to appear in
-		Category: extutil.Ptr("basic"),
+		Category: new("basic"),
 
 		// Specify attributes shown in table columns and to be used for sorting
 		Table: discovery_kit_api.Table{

@@ -10,7 +10,6 @@ import (
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
 	"github.com/steadybit/extension-host/config"
 	"github.com/steadybit/extension-kit"
-	"github.com/steadybit/extension-kit/extutil"
 )
 
 const (
@@ -47,7 +46,7 @@ var (
 	targetSelectionTemplates = []action_kit_api.TargetSelectionTemplate{
 		{
 			Label:       "host name",
-			Description: extutil.Ptr("Find host by host name."),
+			Description: new("Find host by host name."),
 			Query:       "host.hostname=\"\"",
 		},
 	}
@@ -74,7 +73,7 @@ func CheckTargetHostname(attributes map[string][]string) (*string, error) {
 	if hostname[0] != osHostname {
 		return nil, extension_kit.ToError(fmt.Sprintf("Target (%s) is not the current host (%s).", hostname[0], osHostname), nil)
 	}
-	return extutil.Ptr(osHostname), nil
+	return new(osHostname), nil
 }
 
 func getRestrictedEndpoints(request action_kit_api.PrepareActionRequestBody) []action_kit_api.RestrictedEndpoint {

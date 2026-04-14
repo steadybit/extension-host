@@ -44,17 +44,17 @@ func (l *shutdownAction) Describe() action_kit_api.ActionDescription {
 		Label:       "Trigger Shutdown Host",
 		Description: "Triggers a reboot or shutdown of the host.",
 		Version:     extbuild.GetSemverVersionStringOrUnknown(),
-		Icon:        extutil.Ptr(shutdownIcon),
-		TargetSelection: extutil.Ptr(action_kit_api.TargetSelection{
+		Icon:        new(shutdownIcon),
+		TargetSelection: new(action_kit_api.TargetSelection{
 			// The target type this action is for
 			TargetType: targetID,
 			// You can provide a list of target templates to help the user select targets.
 			// A template can be used to pre-fill a selection
 			SelectionTemplates: &targetSelectionTemplates,
 		}),
-		Technology: extutil.Ptr("Linux Host"),
+		Technology: new("Linux Host"),
 		// Category for the targets to appear in
-		Category: extutil.Ptr("State"),
+		Category: new("State"),
 
 		// To clarify the purpose of the action, you can set a kind.
 		//   Attack: Will cause harm to targets
@@ -74,11 +74,11 @@ func (l *shutdownAction) Describe() action_kit_api.ActionDescription {
 			{
 				Name:         "reboot",
 				Label:        "Reboot",
-				Description:  extutil.Ptr("Should the host reboot after shutting down?"),
+				Description:  new("Should the host reboot after shutting down?"),
 				Type:         action_kit_api.ActionParameterTypeBoolean,
-				DefaultValue: extutil.Ptr("true"),
-				Required:     extutil.Ptr(true),
-				Order:        extutil.Ptr(2),
+				DefaultValue: new("true"),
+				Required:     new(true),
+				Order:        new(2),
 			},
 		},
 	}
@@ -122,7 +122,7 @@ func (l *shutdownAction) Start(_ context.Context, state *ActionState) (*action_k
 			Error: &action_kit_api.ActionKitError{
 				Title:  fmt.Sprintf("%s failed", action),
 				Status: extutil.Ptr(action_kit_api.Failed),
-				Detail: extutil.Ptr(err.Error()),
+				Detail: new(err.Error()),
 			},
 		}, nil
 	}

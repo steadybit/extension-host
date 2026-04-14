@@ -31,13 +31,13 @@ func getNetworkBlackholeDescription() action_kit_api.ActionDescription {
 		Label:       "Block Traffic",
 		Description: "Blocks network traffic (incoming and outgoing).",
 		Version:     extbuild.GetSemverVersionStringOrUnknown(),
-		Icon:        extutil.Ptr(blackHoleIcon),
+		Icon:        new(blackHoleIcon),
 		TargetSelection: &action_kit_api.TargetSelection{
 			TargetType:         targetID,
 			SelectionTemplates: &targetSelectionTemplates,
 		},
-		Technology:  extutil.Ptr("Linux Host"),
-		Category:    extutil.Ptr("Network"),
+		Technology:  new("Linux Host"),
+		Category:    new("Network"),
 		Kind:        action_kit_api.Attack,
 		TimeControl: action_kit_api.TimeControlExternal,
 		Parameters:  commonNetworkParameters,
@@ -60,7 +60,7 @@ func blackhole(r ociruntime.OciRuntime) networkOptsProvider {
 		} else if usesCilium {
 			return nil, nil, &extension_kit.ExtensionError{
 				Title:  "'Block Traffic' on hosts with cilium installed is not supported.",
-				Detail: extutil.Ptr("Try replacing this attack with 'Drop Outgoing Traffic' with a loss of 100%. That affects only outgoing traffic, but should yield similar results."),
+				Detail: new("Try replacing this attack with 'Drop Outgoing Traffic' with a loss of 100%. That affects only outgoing traffic, but should yield similar results."),
 			}
 		}
 

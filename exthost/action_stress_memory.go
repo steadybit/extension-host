@@ -28,17 +28,17 @@ func getStressMemoryDescription() action_kit_api.ActionDescription {
 		Label:       "Stress Memory",
 		Description: "Allocate a specific amount of memory. Note that this can cause systems to trip the kernel OOM killer on Linux if not enough physical memory and swap is available.",
 		Version:     extbuild.GetSemverVersionStringOrUnknown(),
-		Icon:        extutil.Ptr(stressMemoryIcon),
-		TargetSelection: extutil.Ptr(action_kit_api.TargetSelection{
+		Icon:        new(stressMemoryIcon),
+		TargetSelection: new(action_kit_api.TargetSelection{
 			// The target type this action is for
 			TargetType: targetID,
 			// You can provide a list of target templates to help the user select targets.
 			// A template can be used to pre-fill a selection
 			SelectionTemplates: &targetSelectionTemplates,
 		}),
-		Technology: extutil.Ptr("Linux Host"),
+		Technology: new("Linux Host"),
 		// Category for the targets to appear in
-		Category: extutil.Ptr("Resource"),
+		Category: new("Resource"),
 
 		// To clarify the purpose of the action, you can set a kind.
 		//   Attack: Will cause harm to targets
@@ -58,34 +58,34 @@ func getStressMemoryDescription() action_kit_api.ActionDescription {
 			{
 				Name:         "percentage",
 				Label:        "Load on Host Memory",
-				Description:  extutil.Ptr("How much of the total memory should be allocated?"),
+				Description:  new("How much of the total memory should be allocated?"),
 				Type:         action_kit_api.ActionParameterTypePercentage,
-				DefaultValue: extutil.Ptr("80"),
-				Required:     extutil.Ptr(true),
-				Order:        extutil.Ptr(1),
-				MinValue:     extutil.Ptr(1),
-				MaxValue:     extutil.Ptr(100),
+				DefaultValue: new("80"),
+				Required:     new(true),
+				Order:        new(1),
+				MinValue:     new(1),
+				MaxValue:     new(100),
 			},
 			{
 				Name:         "duration",
 				Label:        "Duration",
-				Description:  extutil.Ptr("How long should memory be wasted?"),
+				Description:  new("How long should memory be wasted?"),
 				Type:         action_kit_api.ActionParameterTypeDuration,
-				DefaultValue: extutil.Ptr("30s"),
-				Required:     extutil.Ptr(true),
-				Order:        extutil.Ptr(2),
+				DefaultValue: new("30s"),
+				Required:     new(true),
+				Order:        new(2),
 			},
 			{
 				Name:         "failOnOomKill",
 				Label:        "Fail on OOM Kill",
-				Description:  extutil.Ptr("Should an OOM kill be considered a failure?"),
+				Description:  new("Should an OOM kill be considered a failure?"),
 				Type:         action_kit_api.ActionParameterTypeBoolean,
-				DefaultValue: extutil.Ptr("false"),
-				Required:     extutil.Ptr(true),
-				Order:        extutil.Ptr(3),
+				DefaultValue: new("false"),
+				Required:     new(true),
+				Order:        new(3),
 			},
 		},
-		Stop: extutil.Ptr(action_kit_api.MutatingEndpointReference{}),
+		Stop: new(action_kit_api.MutatingEndpointReference{}),
 	}
 }
 
@@ -101,7 +101,7 @@ func stressMemory(request action_kit_api.PrepareActionRequestBody) (stress.Opts,
 	}
 
 	return stress.Opts{
-		VmWorkers: extutil.Ptr(1),
+		VmWorkers: new(1),
 		VmBytes:   memory,
 		VmHang:    0,
 		Timeout:   duration,

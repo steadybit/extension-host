@@ -4,7 +4,6 @@ import (
 	"context"
 	"github.com/google/uuid"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
-	"github.com/steadybit/extension-kit/extutil"
 	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
@@ -25,7 +24,7 @@ func TestActionStopProcess_Prepare(t *testing.T) {
 		{
 			name: "Should return config",
 			requestBody: action_kit_api.PrepareActionRequestBody{
-				Config: map[string]interface{}{
+				Config: map[string]any{
 					"action":   "prepare",
 					"duration": "10000",
 					"delay":    "1000",
@@ -33,7 +32,7 @@ func TestActionStopProcess_Prepare(t *testing.T) {
 					"process":  "tail",
 				},
 				ExecutionId: uuid.New(),
-				Target: extutil.Ptr(action_kit_api.Target{
+				Target: new(action_kit_api.Target{
 					Attributes: map[string][]string{
 						"host.hostname": {"myhostname"},
 					},
@@ -49,7 +48,7 @@ func TestActionStopProcess_Prepare(t *testing.T) {
 		}, {
 			name: "Should return error too low duration",
 			requestBody: action_kit_api.PrepareActionRequestBody{
-				Config: map[string]interface{}{
+				Config: map[string]any{
 					"action":   "prepare",
 					"duration": "0",
 					"delay":    "1000",
@@ -57,7 +56,7 @@ func TestActionStopProcess_Prepare(t *testing.T) {
 					"process":  "tail",
 				},
 				ExecutionId: uuid.New(),
-				Target: extutil.Ptr(action_kit_api.Target{
+				Target: new(action_kit_api.Target{
 					Attributes: map[string][]string{
 						"host.hostname": {"myhostname"},
 					},
