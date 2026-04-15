@@ -1,8 +1,10 @@
 # Changelog
 
-## (next)
+## v1.5.0
 
 - Bump Go to 1.26.2
+- add tcp reset attack
+- add dns error inject attack
 
 ## v1.4.11
 
