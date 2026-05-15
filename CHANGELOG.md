@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.5.2
+
+- Bump dns-inject to v0.1.4
+
 ## v1.5.1
 
 - Bump Go to 1.26.3
