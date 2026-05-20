@@ -3,6 +3,7 @@
 ## v1.5.3
 
 - Fix Linux package: binary paths for `nsmount`, `memfill` and `dns-inject` were unset or pointed at the wrong directory, causing memfill and DNS error injection attacks to fail on `.deb`/`.rpm` installations
+- Update dependencies
 
 ## v1.5.2
 
