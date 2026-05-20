@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.5.4
+
+- Bump bundled `nsmount` to v1.1.1 — lowers the GLIBC requirement from 2.30 to 2.28, restoring `.deb`/`.rpm` installation on RHEL 8 / Debian 10
+- Bump bundled `memfill` to v1.3.1
+
 ## v1.5.3
 
 - Fix Linux package: binary paths for `nsmount`, `memfill` and `dns-inject` were unset or pointed at the wrong directory, causing memfill and DNS error injection attacks to fail on `.deb`/`.rpm` installations
