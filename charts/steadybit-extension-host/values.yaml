@@ -173,6 +173,8 @@ ociRuntime:
   debug: false
 
 discovery:
+  # discovery.group -- Optional group identifier. When set, the extension adds steadybit.group=<value> to every discovered target. Used as an additional matcher in enrichment rules.
+  group: ""
   # discovery.hostnameFromKubernetes -- If true, the extension will use the spec.nodeName (k8s downward api) as the hostname for the discovery, if set to false, the extension will use the hostname from os.hostname.
   hostnameFromKubernetes: true
   attributes:
