@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.5.5
+
+- Support discovery group attribute via `STEADYBIT_EXTENSION_DISCOVERY_GROUP` env var (or `discovery.group` Helm value) — when set, the extension adds `steadybit.group=<value>` to every discovered target
+- Update dependencies
+
 ## v1.5.4
 
 - Bump bundled `nsmount` to v1.1.1 — lowers the GLIBC requirement from 2.30 to 2.28, restoring `.deb`/`.rpm` installation on RHEL 8 / Debian 10
