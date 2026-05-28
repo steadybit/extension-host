@@ -1051,10 +1051,12 @@ func testNetworkDNSErrorInjection(t *testing.T, m *e2e.Minikube, e *e2e.Extensio
 	defer func() { _ = nginx.Delete() }()
 
 	tests := []struct {
-		name           string
-		dnsErrorType   []string
-		port           string
-		wantResolution bool
+		name              string
+		dnsErrorType      []string
+		port              string
+		hostname          []string
+		wantResolution    bool
+		unmatchedHostname string
 	}{
 		{
 			name:           "should inject NXDOMAIN",
@@ -1077,6 +1079,13 @@ func testNetworkDNSErrorInjection(t *testing.T, m *e2e.Minikube, e *e2e.Extensio
 			port:           "8888-9999",
 			wantResolution: true,
 		},
+		{
+			name:              "should only inject for matching hostname",
+			dnsErrorType:      []string{"NXDOMAIN"},
+			hostname:          []string{"steadybit.com"},
+			wantResolution:    false,
+			unmatchedHostname: "kubernetes.io",
+		},
 	}
 
 	for _, tt := range tests {
@@ -1087,6 +1096,9 @@ func testNetworkDNSErrorInjection(t *testing.T, m *e2e.Minikube, e *e2e.Extensio
 			}
 			if tt.port != "" {
 				config["port"] = tt.port
+			}
+			if tt.hostname != nil {
+				config["hostname"] = tt.hostname
 			}
 
 			action, err := e.RunAction(exthost.BaseActionID+".network_dns_error_injection", getTarget(m), config, defaultExecutionContext)
@@ -1107,6 +1119,16 @@ func testNetworkDNSErrorInjection(t *testing.T, m *e2e.Minikube, e *e2e.Extensio
 					_, _ = fmt.Fprintf(r.Log, "expected nslookup to fail, but succeeded: %s", combined)
 				}
 			})
+
+			if tt.unmatchedHostname != "" {
+				e2e.Retry(t, 8, 500*time.Millisecond, func(r *e2e.R) {
+					out, err := m.PodExec(nginx.Pod, "nginx", "nslookup", tt.unmatchedHostname)
+					if err != nil {
+						r.Failed = true
+						_, _ = fmt.Fprintf(r.Log, "expected nslookup of unmatched host %q to succeed, but got: %s %v", tt.unmatchedHostname, out, err)
+					}
+				})
+			}
 
 			require.NoError(t, action.Cancel())
 		})
