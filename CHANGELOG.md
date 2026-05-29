@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Network attacks (delay, loss, corruption, bandwidth) now work on hosts where the kernel has already attached a root qdisc to the target interface (e.g. `mq` on GKE COS / EKS / AKS / RHCOS). Previously the attack failed to start with `NLM_F_REPLACE needed to override`.
+- The kernel's default root qdisc (`mq`, `noqueue`, `fq_codel`, `pfifo_fast`, `fq`) is restored automatically after the attack ends. If the interface has a user-installed root qdisc (e.g. `htb`, `cake`), a warning is surfaced and the kernel default is restored on revert instead.
+
 ## v1.5.6
 
 - DNS Error Injection: new `hostname` parameter to restrict injection to DNS queries with matching query names (exact, case-insensitive, IDN-aware); also exposes the new `hostname_filtered` metric in the live statistics widget

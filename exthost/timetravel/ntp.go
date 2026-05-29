@@ -20,6 +20,8 @@ func AdjustNtpTrafficRules(ctx context.Context, runner netfault.CommandRunner, a
 	if allowNtpTraffic {
 		return netfault.Revert(ctx, runner, opts)
 	} else {
-		return netfault.Apply(ctx, runner, opts)
+		// Blackhole does not install a root qdisc, so no preflight warnings are produced.
+		_, err := netfault.Apply(ctx, runner, opts)
+		return err
 	}
 }

@@ -192,6 +192,9 @@ func TestWithMinikube(t *testing.T) {
 		}, {
 			Name: "fill memory",
 			Test: testFillMemory,
+		}, {
+			Name: "network delay preserves pre-existing root qdisc",
+			Test: testNetworkRootQdiscPreserved,
 		},
 	})
 }
@@ -672,6 +675,126 @@ func testNetworkDelay(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 		})
 	}
 	requireAllSidecarsCleanedUp(t, m, e)
+}
+
+// testNetworkRootQdiscPreserved exercises the two preflight branches: an
+// interface whose root qdisc is in the kernel-auto-restored allowlist (no
+// warning expected) and one whose root is user-installed (warning expected).
+// The apply path (`tc qdisc replace`) is kind-agnostic so a single safe-list
+// case is enough; parser coverage across kinds lives in
+// netfault/preflight_test.go fixtures.
+//
+// What we do *not* assert: the specific kind the kernel attaches as the new
+// root after `qdisc del`. That's a kernel property dependent on device flags
+// (`IFF_NO_QUEUE`) and `net.core.default_qdisc`, not this extension's
+// behavior.
+func testNetworkRootQdiscPreserved(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
+	tests := []struct {
+		name          string
+		ifc           string
+		setupCmds     [][]string
+		expectWarning bool
+	}{
+		{
+			name: "kernel-default qdisc (veth, noqueue) — no warning",
+			ifc:  "sb-test-veth0",
+			setupCmds: [][]string{
+				{"sudo", "ip", "link", "add", "sb-test-veth0", "type", "veth", "peer", "name", "sb-test-veth1"},
+				{"sudo", "ip", "link", "set", "sb-test-veth0", "up"},
+			},
+		},
+		{
+			name: "user-installed qdisc (htb) — warning",
+			ifc:  "sb-test-htb",
+			setupCmds: [][]string{
+				{"sudo", "ip", "link", "add", "sb-test-htb", "type", "dummy"},
+				{"sudo", "ip", "link", "set", "sb-test-htb", "up"},
+				{"sudo", "tc", "qdisc", "replace", "dev", "sb-test-htb", "root", "handle", "1:", "htb", "default", "30"},
+			},
+			expectWarning: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			for _, c := range tt.setupCmds {
+				out, err := runInMinikube(m, c...)
+				require.NoError(t, err, "setup command failed: %v: %s", c, string(out))
+			}
+			defer func() {
+				_, _ = runInMinikube(m, "sudo", "ip", "link", "del", tt.ifc)
+			}()
+
+			config := map[string]any{
+				"duration":           20000,
+				"networkDelay":       100,
+				"networkDelayJitter": false,
+				"networkInterface":   []string{tt.ifc},
+			}
+
+			action, err := e.RunAction(exthost.BaseActionID+".network_delay", getTarget(m), config, defaultExecutionContext)
+			defer func() { _ = action.Cancel() }()
+			require.NoError(t, err)
+
+			require.EventuallyWithT(t, func(t *assert.CollectT) {
+				assert.Equal(t, "prio", rootQdiscKind(t, m, tt.ifc))
+			}, 5*time.Second, 100*time.Millisecond, "attack did not install prio root qdisc")
+
+			gotWarning := hasWarningMatching(action.Messages(), "Pre-existing qdisc")
+			assert.Equal(t, tt.expectWarning, gotWarning, "preflight warning expectation: got messages %+v", action.Messages())
+
+			require.NoError(t, action.Cancel())
+
+			require.EventuallyWithT(t, func(t *assert.CollectT) {
+				assert.NotEqual(t, "prio", rootQdiscKind(t, m, tt.ifc), "attack qdisc still present after Cancel")
+			}, 5*time.Second, 100*time.Millisecond)
+		})
+	}
+	requireAllSidecarsCleanedUp(t, m, e)
+}
+
+// rootQdiscKind returns the root qdisc kind of ifc on the minikube node, or
+// "" on parse/SSH failure. Takes assert.TestingT (not require.TestingT) so it
+// is safe to call from inside EventuallyWithT.
+//
+// Uses `tc qdisc show` (no -dev arg) and filters by interface so the parser
+// stays in lockstep with the production parser in netfault/preflight.go.
+// `tc qdisc show dev <ifc>` omits the `dev <ifc>` field from its output,
+// which would require a separate parser.
+func rootQdiscKind(t assert.TestingT, m *e2e.Minikube, ifc string) string {
+	out, err := runInMinikube(m, "sudo", "tc", "qdisc", "show")
+	if !assert.NoError(t, err, "tc qdisc show failed: %s", string(out)) {
+		return ""
+	}
+	for _, line := range strings.Split(string(out), "\n") {
+		fields := strings.Fields(strings.TrimSpace(line))
+		if len(fields) < 6 || fields[0] != "qdisc" || fields[3] != "dev" || fields[4] != ifc || fields[5] != "root" {
+			continue
+		}
+		return fields[1]
+	}
+	return ""
+}
+
+// hasWarningMatching returns true if any Warn-level message contains ALL of
+// the given substrings.
+func hasWarningMatching(messages []action_kit_api.Message, substrs ...string) bool {
+	for _, msg := range messages {
+		if msg.Level == nil || *msg.Level != action_kit_api.Warn {
+			continue
+		}
+		matched := true
+		for _, s := range substrs {
+			if !strings.Contains(msg.Message, s) {
+				matched = false
+				break
+			}
+		}
+		if matched {
+			return true
+		}
+	}
+	return false
 }
 
 func testNetworkDelayTcpPsh(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
