@@ -91,3 +91,8 @@ vulnerabilities:
   - id: CVE-2026-9538
     statement: Waiting for debian upstream fix
     expired_at: 2026-09-01
+  - id: CVE-2026-42504
+    statement: waiting for runc release
+    expired_at: 2026-09-01
+    paths:
+      - usr/sbin/runc
