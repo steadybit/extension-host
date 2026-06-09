@@ -2,8 +2,8 @@
 
 ## Unreleased
 
-- Network attacks (delay, loss, corruption, bandwidth) now work on hosts where the kernel has already attached a root qdisc to the target interface (e.g. `mq` on GKE COS / EKS / AKS / RHCOS). Previously the attack failed to start with `NLM_F_REPLACE needed to override`.
-- The kernel's default root qdisc (`mq`, `noqueue`, `fq_codel`, `pfifo_fast`, `fq`) is restored automatically after the attack ends. If the interface has a user-installed root qdisc (e.g. `htb`, `cake`), a warning is surfaced and the kernel default is restored on revert instead.
+- Network attacks (delay, loss, corruption, bandwidth) now work on hosts where the kernel has already attached a default root qdisc to the target interface (e.g. `mq` on GKE COS / EKS / AKS / RHCOS). Previously the attack failed to start with `NLM_F_REPLACE needed to override`. The kernel default (`mq`, `noqueue`, `fq_codel`, `pfifo_fast`, `fq`) is restored automatically after the attack ends.
+- If the target interface carries a user- or CNI-installed root qdisc (e.g. `htb`, `cake`) that cannot be restored afterwards, the attack now fails fast in the prepare step with a clear error instead of silently replacing it.
 
 ## v1.5.6
 

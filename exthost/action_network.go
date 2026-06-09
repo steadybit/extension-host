@@ -114,6 +114,10 @@ func (a *networkAction) Prepare(ctx context.Context, state *NetworkActionState, 
 		return nil, extension_kit.WrapError(err)
 	}
 
+	if err := netfault.PreflightCheck(ctx, runner(a.ociRuntime, state.Sidecar), opts); err != nil {
+		return nil, extension_kit.ToError("Cannot start network attack.", err)
+	}
+
 	rawOpts, err := json.Marshal(opts)
 	if err != nil {
 		return nil, extension_kit.ToError("Failed to serialize network settings.", err)
@@ -137,13 +141,7 @@ func (a *networkAction) Start(ctx context.Context, state *NetworkActionState) (*
 		},
 	}}
 
-	warnings, err := netfault.Apply(ctx, runner(a.ociRuntime, state.Sidecar), opts)
-	for _, w := range warnings {
-		result.Messages = new(append(*result.Messages, action_kit_api.Message{
-			Level:   extutil.Ptr(action_kit_api.Warn),
-			Message: w,
-		}))
-	}
+	err = netfault.Apply(ctx, runner(a.ociRuntime, state.Sidecar), opts)
 	if err != nil {
 		var toomany *netfault.ErrTooManyTcCommands
 		if errors.As(err, &toomany) {

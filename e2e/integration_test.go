@@ -677,12 +677,11 @@ func testNetworkDelay(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	requireAllSidecarsCleanedUp(t, m, e)
 }
 
-// testNetworkRootQdiscPreserved exercises the two preflight branches: an
-// interface whose root qdisc is in the kernel-auto-restored allowlist (no
-// warning expected) and one whose root is user-installed (warning expected).
-// The apply path (`tc qdisc replace`) is kind-agnostic so a single safe-list
-// case is enough; parser coverage across kinds lives in
-// netfault/preflight_test.go fixtures.
+// testNetworkRootQdiscPreserved exercises the Prepare-time preflight: an
+// interface whose root qdisc is a kernel default (mq/noqueue/fq_codel/…) is
+// accepted — `tc qdisc replace` grafts over it and the kernel restores it on
+// revert — while an interface carrying a user-installed root qdisc (htb) is
+// refused at Prepare so the attack never touches it.
 //
 // What we do *not* assert: the specific kind the kernel attaches as the new
 // root after `qdisc del`. That's a kernel property dependent on device flags
@@ -690,13 +689,13 @@ func testNetworkDelay(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 // behavior.
 func testNetworkRootQdiscPreserved(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	tests := []struct {
-		name          string
-		ifc           string
-		setupCmds     [][]string
-		expectWarning bool
+		name             string
+		ifc              string
+		setupCmds        [][]string
+		expectPrepareErr bool
 	}{
 		{
-			name: "kernel-default qdisc (veth, noqueue) — no warning",
+			name: "kernel-default qdisc (veth, noqueue) — attack runs",
 			ifc:  "sb-test-veth0",
 			setupCmds: [][]string{
 				{"sudo", "ip", "link", "add", "sb-test-veth0", "type", "veth", "peer", "name", "sb-test-veth1"},
@@ -704,14 +703,14 @@ func testNetworkRootQdiscPreserved(t *testing.T, m *e2e.Minikube, e *e2e.Extensi
 			},
 		},
 		{
-			name: "user-installed qdisc (htb) — warning",
+			name: "user-installed qdisc (htb) — refused at prepare",
 			ifc:  "sb-test-htb",
 			setupCmds: [][]string{
 				{"sudo", "ip", "link", "add", "sb-test-htb", "type", "dummy"},
 				{"sudo", "ip", "link", "set", "sb-test-htb", "up"},
 				{"sudo", "tc", "qdisc", "replace", "dev", "sb-test-htb", "root", "handle", "1:", "htb", "default", "30"},
 			},
-			expectWarning: true,
+			expectPrepareErr: true,
 		},
 	}
 
@@ -734,14 +733,20 @@ func testNetworkRootQdiscPreserved(t *testing.T, m *e2e.Minikube, e *e2e.Extensi
 
 			action, err := e.RunAction(exthost.BaseActionID+".network_delay", getTarget(m), config, defaultExecutionContext)
 			defer func() { _ = action.Cancel() }()
-			require.NoError(t, err)
 
+			if tt.expectPrepareErr {
+				require.Error(t, err, "expected Prepare to refuse the user-installed root qdisc")
+				assert.Contains(t, err.Error(), "non-default root qdisc")
+				// The attack must not have touched the interface.
+				assert.NotEqual(t, "prio", rootQdiscKind(t, m, tt.ifc), "attack qdisc installed despite preflight failure")
+				assert.Equal(t, "htb", rootQdiscKind(t, m, tt.ifc), "pre-existing htb root qdisc was modified")
+				return
+			}
+
+			require.NoError(t, err)
 			require.EventuallyWithT(t, func(t *assert.CollectT) {
 				assert.Equal(t, "prio", rootQdiscKind(t, m, tt.ifc))
 			}, 5*time.Second, 100*time.Millisecond, "attack did not install prio root qdisc")
-
-			gotWarning := hasWarningMatching(action.Messages(), "Pre-existing qdisc")
-			assert.Equal(t, tt.expectWarning, gotWarning, "preflight warning expectation: got messages %+v", action.Messages())
 
 			require.NoError(t, action.Cancel())
 
@@ -774,27 +779,6 @@ func rootQdiscKind(t assert.TestingT, m *e2e.Minikube, ifc string) string {
 		return fields[1]
 	}
 	return ""
-}
-
-// hasWarningMatching returns true if any Warn-level message contains ALL of
-// the given substrings.
-func hasWarningMatching(messages []action_kit_api.Message, substrs ...string) bool {
-	for _, msg := range messages {
-		if msg.Level == nil || *msg.Level != action_kit_api.Warn {
-			continue
-		}
-		matched := true
-		for _, s := range substrs {
-			if !strings.Contains(msg.Message, s) {
-				matched = false
-				break
-			}
-		}
-		if matched {
-			return true
-		}
-	}
-	return false
 }
 
 func testNetworkDelayTcpPsh(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
