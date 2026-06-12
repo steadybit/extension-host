@@ -736,7 +736,7 @@ func testNetworkRootQdiscPreserved(t *testing.T, m *e2e.Minikube, e *e2e.Extensi
 
 			if tt.expectPrepareErr {
 				require.Error(t, err, "expected Prepare to refuse the user-installed root qdisc")
-				assert.Contains(t, err.Error(), "non-default root qdisc")
+				assert.Contains(t, err.Error(), "will not replace")
 				// The attack must not have touched the interface.
 				assert.NotEqual(t, "prio", rootQdiscKind(t, m, tt.ifc), "attack qdisc installed despite preflight failure")
 				assert.Equal(t, "htb", rootQdiscKind(t, m, tt.ifc), "pre-existing htb root qdisc was modified")
