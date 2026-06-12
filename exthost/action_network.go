@@ -114,6 +114,10 @@ func (a *networkAction) Prepare(ctx context.Context, state *NetworkActionState, 
 		return nil, extension_kit.WrapError(err)
 	}
 
+	if err := netfault.PreflightCheck(ctx, runner(a.ociRuntime, state.Sidecar), opts); err != nil {
+		return nil, extension_kit.ToError("Cannot start network attack.", err)
+	}
+
 	rawOpts, err := json.Marshal(opts)
 	if err != nil {
 		return nil, extension_kit.ToError("Failed to serialize network settings.", err)
