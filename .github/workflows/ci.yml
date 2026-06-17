@@ -23,6 +23,7 @@ jobs:
       runs_on: steadybit_runner_ubuntu_latest_4cores_16GB
       run_make_prepare_audit: true
       build_linux_packages: true
+      force_push_docker_image: true
       VERSION_BUMPER_APPID: ${{ vars.GH_APP_STEADYBIT_APP_ID }}
     secrets:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
