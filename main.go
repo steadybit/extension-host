@@ -16,7 +16,6 @@ import (
 	"github.com/steadybit/discovery-kit/go/discovery_kit_sdk"
 	"github.com/steadybit/extension-host/config"
 	"github.com/steadybit/extension-host/exthost"
-	"github.com/steadybit/extension-host/exthost/resources"
 	"github.com/steadybit/extension-kit/extbuild"
 	"github.com/steadybit/extension-kit/exthealth"
 	"github.com/steadybit/extension-kit/exthttp"
@@ -37,7 +36,7 @@ func main() {
 	//  - to set the log level to debug, set the environment variable STEADYBIT_LOG_LEVEL="debug"
 	extlogging.InitZeroLog()
 
-	resources.AdjustOOMScoreAdj()
+	extruntime.AdjustOOMScoreAdj()
 
 	// Build information is set at compile-time. This line writes the build information to the log.
 	// The information is mostly handy for debugging purposes.
