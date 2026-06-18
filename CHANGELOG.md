@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- chore: lower `oom_score_adj` via extension-kit's `extruntime.AdjustOOMScoreAdj()` instead of the bundled root-subprocess writer. The extension now sets it directly using the `cap_sys_resource` file capability (no root subprocess); the default changes from `-997` to `-998` (configurable via `STEADYBIT_EXTENSION_OOM_SCORE_ADJ`).
+
 ## v1.5.8
 
 - Network attacks (delay, loss, corruption, bandwidth) now work on hosts where the kernel has already attached a default root qdisc to the target interface (e.g. `mq` on GKE COS / EKS / AKS / RHCOS). Previously the attack failed to start with `NLM_F_REPLACE needed to override`. The kernel default (`mq`, `noqueue`, `fq_codel`, `pfifo_fast`, `fq`) is restored automatically after the attack ends.
