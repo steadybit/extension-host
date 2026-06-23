@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.5.9
+
+- build: rename workflow_dispatch input labels for the GH UI
+- chore(deps): runc 1.4.3 and dns-inject to v0.2.2
+- feat: set oom_score_adj directly via extension-kit (drop root subprocess) (#216)
+- fix: switch back to use strict root qdisc checks
+
 ## Unreleased
 
 - chore: lower `oom_score_adj` via extension-kit's `extruntime.AdjustOOMScoreAdj()` instead of the bundled root-subprocess writer. The extension now sets it directly using the `cap_sys_resource` file capability (no root subprocess); the default changes from `-997` to `-998` (configurable via `STEADYBIT_EXTENSION_OOM_SCORE_ADJ`).
