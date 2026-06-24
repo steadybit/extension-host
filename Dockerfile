@@ -12,7 +12,7 @@ ARG BUILD_SNAPSHOT=true
 ARG SKIP_LICENSES_REPORT=false
 ARG VERSION=unknown
 ARG REVISION=unknown
-ARG RUNC_VERSION=v1.4.2
+ARG RUNC_VERSION=v1.4.3
 ARG CRUN_VERSION=1.28
 
 WORKDIR /app
@@ -25,7 +25,7 @@ COPY . .
 
 #Ambient set of capabilities are not really working, therefore we set the capabilities on the binary directly. More on this: https://github.com/kubernetes/kubernetes/issues/56374
 RUN GOOS=$TARGETOS GOARCH=$TARGETARCH goreleaser build --snapshot="${BUILD_SNAPSHOT}" --single-target -o extension \
-    && setcap "cap_sys_boot,cap_sys_time,cap_setuid,cap_sys_chroot,cap_setgid,cap_net_admin,cap_sys_admin,cap_dac_override,cap_sys_ptrace+eip" ./extension
+    && setcap "cap_sys_boot,cap_sys_time,cap_setuid,cap_sys_chroot,cap_setgid,cap_net_admin,cap_sys_admin,cap_dac_override,cap_sys_ptrace,cap_sys_resource+eip" ./extension
 
 # As of today the runc binary from debian is built using golang 1.19.8 and will be flagged by CVE scanners as vulnerable to several CVEs.
 # We are dowonloading the runc binary from the official github release page and will use it instead of the one from the debian package.

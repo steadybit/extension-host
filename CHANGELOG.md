@@ -1,12 +1,19 @@
 # Changelog
 
-## Unreleased
+## v1.5.9
+
+- chore(deps): runc 1.4.3 and dns-inject to v0.2.2
+- feat: set oom_score_adj directly via extension-kit (drop root subprocess) (#216)
+- fix: switch back to use strict root qdisc checks
+
+## v1.5.8
 
 - feat: opt-in qdisc snapshot/restore for network attacks. Set `STEADYBIT_EXTENSION_NETWORK_SNAPSHOT_RESTORE=true` (e.g. via `extraEnv`) to make Apply capture the root qdisc tree (qdiscs + filters) of the target interface and Revert replay it after the attack's `tc del`. Preserves cloud-tuned root qdiscs (e.g. GKE's `mq + fq` with `buckets=32768 horizon=2s`) that would otherwise revert to kernel defaults after `tc qdisc del root` and leave the host network degraded until reboot. Off by default; Linux only.
 - Network attacks (delay, loss, corruption, bandwidth) now work on hosts where the kernel has already attached a default root qdisc to the target interface (e.g. `mq` on GKE COS / EKS / AKS / RHCOS). Previously the attack failed to start with `NLM_F_REPLACE needed to override`. The kernel default (`mq`, `noqueue`, `fq_codel`, `pfifo_fast`, `fq`) is restored automatically after the attack ends.
 - If the target interface carries a user- or CNI-installed root qdisc (e.g. `htb`, `cake`) that cannot be restored afterwards, the attack now fails fast in the prepare step with a clear error instead of silently replacing it.
 - **Changed default**: `STEADYBIT_EXTENSION_NETWORK_STRICT_ROOT_QDISC` is now `true` by default. Network attacks refuse interfaces whose root qdisc is not `noqueue` (including the kernel default `mq`) and rely on the new snapshot/restore path (above) to preserve cloud-tuned roots. To get the previous tc-replace-the-root behaviour, set the env var to `false`.
 - New `privileged` chart value (default `false`): runs the extension in privileged mode and switches the managed `SecurityContextConstraint` to allow it. Needed on hardened nodes (e.g. CIS/STIG) where the container root filesystem is mounted `nosuid`, which voids the binary's file capabilities and breaks fault injection (`nsenter: operation not permitted`).
+- Stress CPU with "All cores" now uses every online CPU on hosts with more than 32 cores (previously capped at 32 due to a `Cpus_allowed` mask parsing bug).
 
 ## v1.5.7
 
