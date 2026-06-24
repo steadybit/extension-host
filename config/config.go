@@ -20,10 +20,11 @@ type Specification struct {
 	DisableRunc                     bool     `json:"disableRunc" split_words:"true" required:"false"`
 	// NetworkStrictRootQdisc, when true, makes network attacks refuse (in the
 	// prepare step) any target interface whose root qdisc is not `noqueue` —
-	// including the kernel default `mq` on managed-cloud nodes. Opt-in fallback
-	// for customers who don't want attacks to replace a pre-existing root qdisc.
-	// STEADYBIT_EXTENSION_NETWORK_STRICT_ROOT_QDISC
-	NetworkStrictRootQdisc bool `json:"networkStrictRootQdisc" split_words:"true" required:"false"`
+	// including the kernel default `mq` on managed-cloud nodes. On by default
+	// now that the behaviour has had a release cycle of customer use; set
+	// STEADYBIT_EXTENSION_NETWORK_STRICT_ROOT_QDISC=false to fall back to the
+	// previous tc-replace-the-root path.
+	NetworkStrictRootQdisc bool `json:"networkStrictRootQdisc" split_words:"true" required:"false" default:"true"`
 	// NetworkSnapshotRestore, when true, makes network attacks snapshot the
 	// root qdisc tree of every target interface before installing the attack,
 	// and replay it after revert. This preserves cloud-tuned root qdiscs
