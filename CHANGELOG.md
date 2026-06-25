@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- One env var instead of two for network-attack root-qdisc handling. `STEADYBIT_EXTENSION_NETWORK_SNAPSHOT_RESTORE` is gone; the snapshot/restore path now auto-activates whenever `STEADYBIT_EXTENSION_NETWORK_STRICT_ROOT_QDISC=false`. Operators wanting the customer-friendly behaviour on managed-cloud nodes (run the attack and preserve the tuned root) set strict to false and get snapshot for free.
+
 ## v1.5.9
 
 - chore(deps): runc 1.4.3 and dns-inject to v0.2.2
