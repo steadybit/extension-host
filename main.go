@@ -52,7 +52,6 @@ func main() {
 	// non-noqueue roots; lifting it activates the snapshot/restore path so
 	// cloud-tuned roots survive the attack.
 	netfault.SetStrictRootQdisc(config.Config.NetworkStrictRootQdisc)
-	netfault.SetSnapshotRestore(!config.Config.NetworkStrictRootQdisc)
 
 	//This will start /health/liveness and /health/readiness endpoints on port 8081 for use with kubernetes
 	//The port can be configured using the STEADYBIT_EXTENSION_HEALTH_PORT environment variable
