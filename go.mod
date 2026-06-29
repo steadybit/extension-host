@@ -5,7 +5,7 @@ go 1.26.4
 require (
 	github.com/KimMachineGun/automemlimit v0.7.5
 	github.com/beevik/ntp v1.5.0
-	github.com/elastic/go-sysinfo v1.15.4
+	github.com/elastic/go-sysinfo v1.15.5
 	github.com/google/uuid v1.6.0
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/mitchellh/go-ps v1.0.0
