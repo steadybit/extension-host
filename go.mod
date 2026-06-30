@@ -5,7 +5,7 @@ go 1.26.4
 require (
 	github.com/KimMachineGun/automemlimit v0.7.5
 	github.com/beevik/ntp v1.5.0
-	github.com/elastic/go-sysinfo v1.15.5
+	github.com/elastic/go-sysinfo v1.15.4
 	github.com/google/uuid v1.6.0
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/mitchellh/go-ps v1.0.0
@@ -13,7 +13,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/rs/zerolog v1.35.1
 	github.com/steadybit/action-kit/go/action_kit_api/v2 v2.10.5
-	github.com/steadybit/action-kit/go/action_kit_commons v1.9.0
+	github.com/steadybit/action-kit/go/action_kit_commons v1.10.0
 	github.com/steadybit/action-kit/go/action_kit_sdk v1.3.1
 	github.com/steadybit/action-kit/go/action_kit_test v1.4.7
 	github.com/steadybit/discovery-kit/go/discovery_kit_api v1.7.1
