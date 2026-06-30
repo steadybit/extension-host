@@ -39,6 +39,12 @@ type NetworkActionState struct {
 	ExecutionId uuid.UUID
 	NetworkOpts json.RawMessage
 	Sidecar     netfault.SidecarOpts
+	// QdiscSnapshot holds the pre-attack qdisc tree captured by netfault.Apply.
+	// It travels through the action_kit_sdk per-execution state so Stop can
+	// hand it back to netfault.Revert and restore the original (cloud-tuned)
+	// root after the attack tree is torn down. Empty when strict-mode is on,
+	// the attack doesn't touch a tc root, or the capture itself errored.
+	QdiscSnapshot netfault.QdiscSnapshot
 }
 
 // Make sure networkAction implements all required interfaces
@@ -141,7 +147,8 @@ func (a *networkAction) Start(ctx context.Context, state *NetworkActionState) (*
 		},
 	}}
 
-	err = netfault.Apply(ctx, runner(a.ociRuntime, state.Sidecar), opts)
+	snap, err := netfault.Apply(ctx, runner(a.ociRuntime, state.Sidecar), opts)
+	state.QdiscSnapshot = snap
 	if err != nil {
 		var toomany *netfault.ErrTooManyTcCommands
 		if errors.As(err, &toomany) {
@@ -163,7 +170,7 @@ func (a *networkAction) Stop(ctx context.Context, state *NetworkActionState) (*a
 		return nil, extension_kit.ToError("Failed to deserialize network settings.", err)
 	}
 
-	if err := netfault.Revert(ctx, runner(a.ociRuntime, state.Sidecar), opts); err != nil {
+	if err := netfault.Revert(ctx, runner(a.ociRuntime, state.Sidecar), opts, state.QdiscSnapshot); err != nil {
 		return nil, extension_kit.ToError("Failed to revert network settings.", err)
 	}
 

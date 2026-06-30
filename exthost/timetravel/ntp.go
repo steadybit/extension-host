@@ -18,8 +18,12 @@ func AdjustNtpTrafficRules(ctx context.Context, runner netfault.CommandRunner, a
 	}
 
 	if allowNtpTraffic {
-		return netfault.Revert(ctx, runner, opts)
+		// NTP blackhole uses iptables-only; netfault.Apply returns an empty
+		// QdiscSnapshot for opts that don't implement tcCommandProvider, so
+		// nothing meaningful is being discarded here.
+		return netfault.Revert(ctx, runner, opts, netfault.QdiscSnapshot{})
 	} else {
-		return netfault.Apply(ctx, runner, opts)
+		_, err := netfault.Apply(ctx, runner, opts)
+		return err
 	}
 }
