@@ -779,7 +779,7 @@ func rootQdiscKind(t assert.TestingT, m *e2e.Minikube, ifc string) string {
 	if !assert.NoError(t, err, "tc qdisc show failed: %s", string(out)) {
 		return ""
 	}
-	for _, line := range strings.Split(string(out), "\n") {
+	for line := range strings.SplitSeq(string(out), "\n") {
 		fields := strings.Fields(strings.TrimSpace(line))
 		if len(fields) < 6 || fields[0] != "qdisc" || fields[3] != "dev" || fields[4] != ifc || fields[5] != "root" {
 			continue
