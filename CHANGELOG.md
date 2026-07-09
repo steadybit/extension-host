@@ -3,6 +3,7 @@
 ## Unreleased
 
 - feat: new `Exclude Hostnames` (`excludeHostname`) and `Exclude IPs/CIDRs` (`excludeIp`) parameters on all network attacks sharing the hostname/IP/port filters (delay, loss, corruption, bandwidth, blackhole, TCP reset) — affect all traffic except the given hosts or IPs/CIDRs. Excludes always take precedence over the include restrictions. The existing filter parameters are relabeled to `Include Hostnames`, `Include IPs/CIDRs` and `Include Ports` to make the distinction explicit.
+- fix: update `action_kit_commons` to v1.10.2 — stopping a network attack no longer fails with `restore qdisc fq_codel on <iface>: netlink receive: no such file or directory` on stock multi-queue NICs (e.g. AWS ENA `ens5`), where the kernel attaches the default `mq 0:` tree anonymously. The qdisc snapshot restore now skips those kernel-default children (handle 0 is unaddressable via RTNETLINK; the kernel re-creates them identically anyway).
 
 ## v1.5.10
 
