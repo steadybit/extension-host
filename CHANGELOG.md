@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- feat: new `Exclude IPs/CIDRs` parameter (`excludeIp`) on the delay attack — delay all traffic except the given IPs/CIDRs. Excludes take precedence over the include restrictions (hostnames, IPs/CIDRs, ports).
+
 ## v1.5.10
 
 - feat: opt-in qdisc snapshot/restore for network attacks. Set `STEADYBIT_EXTENSION_NETWORK_STRICT_ROOT_QDISC=false` to make Apply capture the root qdisc tree (qdiscs + filters) of every target interface and Revert replay it after the attack's `tc del`. Preserves cloud-tuned root qdiscs (e.g. GKE's `mq + fq` with `buckets=32768 horizon=2s`) that would otherwise revert to kernel defaults after `tc qdisc del root` and leave the host network degraded until reboot. Off by default; Linux only.
