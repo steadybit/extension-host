@@ -57,7 +57,7 @@ func getNetworkPackageLossDescription() action_kit_api.ActionDescription {
 				Type:        action_kit_api.ActionParameterTypeStringArray,
 				Required:    new(false),
 				Advanced:    new(true),
-				Order:       new(105),
+				Order:       new(106),
 			},
 		),
 	}

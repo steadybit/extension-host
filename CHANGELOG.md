@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- feat: new `Exclude IPs/CIDRs` parameter (`excludeIp`) on all network attacks sharing the hostname/IP/port filters (delay, loss, corruption, bandwidth, blackhole, TCP reset) — affect all traffic except the given IPs/CIDRs. Excludes always take precedence over the include restrictions. The existing filter parameters are relabeled to `Include Hostnames`, `Include IPs/CIDRs` and `Include Ports` to make the distinction explicit.
+- feat: new `Exclude Hostnames` (`excludeHostname`) and `Exclude IPs/CIDRs` (`excludeIp`) parameters on all network attacks sharing the hostname/IP/port filters (delay, loss, corruption, bandwidth, blackhole, TCP reset) — affect all traffic except the given hosts or IPs/CIDRs. Excludes always take precedence over the include restrictions. The existing filter parameters are relabeled to `Include Hostnames`, `Include IPs/CIDRs` and `Include Ports` to make the distinction explicit.
 
 ## v1.5.10
 
