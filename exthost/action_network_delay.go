@@ -75,7 +75,7 @@ func getNetworkDelayDescription() action_kit_api.ActionDescription {
 			action_kit_api.ActionParameter{
 				Name:        "excludeIp",
 				Label:       "Exclude IPs/CIDRs",
-				Description: new("Exclude traffic to/from these IP addresses or CIDR blocks from being delayed. Takes precedence over the restrictions above, e.g. delay all traffic except 10.0.0.0/8."),
+				Description: new("Exclude traffic to/from these IP addresses or CIDR blocks from being delayed. Excludes always take precedence over the Hostnames, IPs/CIDRs and Ports restrictions, e.g. delay all traffic except 10.0.0.0/8."),
 				Type:        action_kit_api.ActionParameterTypeStringArray,
 				Required:    new(false),
 				Advanced:    new(true),
