@@ -14,13 +14,13 @@ require (
 	github.com/rs/zerolog v1.35.1
 	github.com/steadybit/action-kit/go/action_kit_api/v2 v2.10.5
 	github.com/steadybit/action-kit/go/action_kit_commons v1.10.2
-	github.com/steadybit/action-kit/go/action_kit_sdk v1.3.2
+	github.com/steadybit/action-kit/go/action_kit_sdk v1.4.0
 	github.com/steadybit/action-kit/go/action_kit_test v1.4.7
 	github.com/steadybit/discovery-kit/go/discovery_kit_api v1.7.1
 	github.com/steadybit/discovery-kit/go/discovery_kit_commons v0.3.1
-	github.com/steadybit/discovery-kit/go/discovery_kit_sdk v1.3.6
+	github.com/steadybit/discovery-kit/go/discovery_kit_sdk v1.4.0
 	github.com/steadybit/discovery-kit/go/discovery_kit_test v1.2.1
-	github.com/steadybit/extension-kit v1.10.8
+	github.com/steadybit/extension-kit v1.11.0
 	github.com/stretchr/testify v1.11.1
 	golang.org/x/exp v0.0.0-20260312153236-7ab1446f8b90
 	golang.org/x/sync v0.21.0
@@ -56,7 +56,7 @@ require (
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/josharian/native v1.1.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
-	github.com/klauspost/compress v1.18.6 // indirect
+	github.com/klauspost/compress v1.19.0 // indirect
 	github.com/mailru/easyjson v0.9.2 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.21 // indirect
