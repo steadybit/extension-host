@@ -13,7 +13,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/rs/zerolog v1.35.1
 	github.com/steadybit/action-kit/go/action_kit_api/v2 v2.10.5
-	github.com/steadybit/action-kit/go/action_kit_commons v1.10.2
+	github.com/steadybit/action-kit/go/action_kit_commons v1.10.3
 	github.com/steadybit/action-kit/go/action_kit_sdk v1.4.0
 	github.com/steadybit/action-kit/go/action_kit_test v1.4.7
 	github.com/steadybit/discovery-kit/go/discovery_kit_api v1.7.1
@@ -88,7 +88,7 @@ require (
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/net v0.55.0 // indirect
 	golang.org/x/oauth2 v0.35.0 // indirect
-	golang.org/x/sys v0.46.0 // indirect
+	golang.org/x/sys v0.47.0 // indirect
 	golang.org/x/term v0.43.0 // indirect
 	golang.org/x/text v0.37.0 // indirect
 	golang.org/x/time v0.14.0 // indirect

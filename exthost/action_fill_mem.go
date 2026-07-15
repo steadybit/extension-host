@@ -135,12 +135,20 @@ func (a *fillMemoryAction) Describe() action_kit_api.ActionDescription {
 }
 
 func fillMemoryOpts(request action_kit_api.PrepareActionRequestBody) (memfill.Opts, error) {
+	mode := memfill.Mode(request.Config["mode"].(string))
 	opts := memfill.Opts{
 		Size:         extutil.ToInt(request.Config["size"]),
-		Mode:         memfill.Mode(request.Config["mode"].(string)),
+		Mode:         mode,
 		Unit:         memfill.Unit(request.Config["unit"].(string)),
 		Duration:     time.Duration(extutil.ToInt64(request.Config["duration"])) * time.Millisecond,
 		IgnoreCgroup: true,
+		// Keep the host alive under the fill: always leave a reserve free (so the kubelet survives),
+		// pin the fill's oom_score_adj just above the agent/extension-host so it is sacrificed before
+		// the tooling, and — usage mode only, where there is a target to relax toward — adaptively
+		// back off under memory pressure. Reserve/oom_score_adj are configurable (see config).
+		Reserve:     config.Config.FillMemoryReserve,
+		OomScoreAdj: extutil.Ptr(config.Config.FillMemoryOomScoreAdj),
+		Adaptive:    mode == memfill.ModeUsage,
 	}
 	return opts, nil
 }
