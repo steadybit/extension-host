@@ -22,11 +22,11 @@ func StopProcesses(pid []int, force bool) error {
 
 	var errs error
 	for _, p := range pid {
-		if process, err := ps.FindProcess(p); err == nil {
-			log.Info().Int("pid", p).Str("name", process.Executable()).Msg("Stopping process")
-		} else {
+		process, err := ps.FindProcess(p)
+		if err != nil || process == nil {
 			continue
 		}
+		log.Info().Int("pid", p).Str("name", process.Executable()).Msg("Stopping process")
 
 		if err := stopProcessUnix(p, force); err != nil {
 			errs = errors.Join(errs, err)

@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- fix: the `stop-process` attack no longer crashes the extension with a nil pointer dereference when a matched process exits before it is stopped (`ps.FindProcess` returns `nil, nil` for a vanished PID on Linux).
+
 ## v1.6.1
 
 - build(deps): bump golang.org/x/sync from 0.21.0 to 0.22.0

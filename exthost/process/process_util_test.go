@@ -16,3 +16,11 @@ func TestStopProcesses(t *testing.T) {
 	err = StopProcesses(ids, true)
 	assert.NoError(t, err)
 }
+
+func TestStopProcessesSkipsVanishedPid(t *testing.T) {
+	nonExistentPid := 4194303
+	assert.NotPanics(t, func() {
+		err := StopProcesses([]int{nonExistentPid}, true)
+		assert.NoError(t, err)
+	})
+}
