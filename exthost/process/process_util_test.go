@@ -18,9 +18,13 @@ func TestStopProcesses(t *testing.T) {
 }
 
 func TestStopProcessesSkipsVanishedPid(t *testing.T) {
-	nonExistentPid := 4194303
+	command := exec.Command("true")
+	assert.NoError(t, command.Start())
+	vanishedPid := command.Process.Pid
+	assert.NoError(t, command.Wait())
+
 	assert.NotPanics(t, func() {
-		err := StopProcesses([]int{nonExistentPid}, true)
+		err := StopProcesses([]int{vanishedPid}, true)
 		assert.NoError(t, err)
 	})
 }
