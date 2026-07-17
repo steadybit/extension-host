@@ -7,12 +7,21 @@ import (
 	"context"
 	"testing"
 
+	"github.com/steadybit/action-kit/go/action_kit_api/v2"
 	"github.com/steadybit/action-kit/go/action_kit_commons/network"
 	"github.com/steadybit/action-kit/go/action_kit_commons/network/netfault"
 	"github.com/steadybit/extension-host/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestMapToExecutionContextWithoutExecutionContext(t *testing.T) {
+	assert.NotPanics(t, func() {
+		eCtx := mapToExecutionContext(action_kit_api.PrepareActionRequestBody{})
+		assert.Empty(t, eCtx.ExperimentKey)
+		assert.Empty(t, eCtx.ExperimentExecutionId)
+	})
+}
 
 func TestMapToNetworkFilterExcludeIp(t *testing.T) {
 	config.Config.DisableRunc = true

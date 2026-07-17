@@ -155,8 +155,8 @@ func fillDiskOpts(request action_kit_api.PrepareActionRequestBody) (diskfill.Opt
 		TempPath: extutil.ToString(request.Config["path"]),
 	}
 
-	opts.BlockSize = int(request.Config["blocksize"].(float64))
-	opts.Size = int(request.Config["size"].(float64))
+	opts.BlockSize = extutil.ToInt(request.Config["blocksize"])
+	opts.Size = extutil.ToInt(request.Config["size"])
 	switch request.Config["mode"] {
 	case string(diskfill.Percentage):
 		opts.Mode = diskfill.Percentage

@@ -3,6 +3,8 @@
 ## Unreleased
 
 - fix: the `stop-process` attack no longer crashes the extension with a nil pointer dereference when a matched process exits before it is stopped (`ps.FindProcess` returns `nil, nil` for a vanished PID on Linux).
+- fix: network attacks no longer crash the extension during Prepare when the request omits `executionContext` (nil pointer dereference in `mapToExecutionContext`).
+- fix: `fill-disk` and `fill-memory` no longer crash the extension during Prepare when a config parameter is missing or has an unexpected type; config values are now read via the tolerant `extutil` helpers.
 
 ## v1.6.1
 

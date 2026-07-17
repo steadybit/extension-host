@@ -337,6 +337,9 @@ func toExcludes(restrictedEndpoints []action_kit_api.RestrictedEndpoint) ([]netw
 
 func mapToExecutionContext(request action_kit_api.PrepareActionRequestBody) netfault.ExecutionContext {
 	eCtx := netfault.ExecutionContext{}
+	if request.ExecutionContext == nil {
+		return eCtx
+	}
 	if request.ExecutionContext.ExperimentKey != nil {
 		eCtx.ExperimentKey = *request.ExecutionContext.ExperimentKey
 	}
