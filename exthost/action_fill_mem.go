@@ -135,11 +135,11 @@ func (a *fillMemoryAction) Describe() action_kit_api.ActionDescription {
 }
 
 func fillMemoryOpts(request action_kit_api.PrepareActionRequestBody) (memfill.Opts, error) {
-	mode := memfill.Mode(request.Config["mode"].(string))
+	mode := memfill.Mode(extutil.ToString(request.Config["mode"]))
 	opts := memfill.Opts{
 		Size:         extutil.ToInt(request.Config["size"]),
 		Mode:         mode,
-		Unit:         memfill.Unit(request.Config["unit"].(string)),
+		Unit:         memfill.Unit(extutil.ToString(request.Config["unit"])),
 		Duration:     time.Duration(extutil.ToInt64(request.Config["duration"])) * time.Millisecond,
 		IgnoreCgroup: true,
 		// Keep the host alive under the fill: always leave a reserve free (so the kubelet survives),
