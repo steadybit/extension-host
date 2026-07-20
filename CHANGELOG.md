@@ -1,10 +1,13 @@
 # Changelog
 
-## Unreleased
+## v1.7.0
 
-- fix: the `stop-process` attack no longer crashes the extension with a nil pointer dereference when a matched process exits before it is stopped (`ps.FindProcess` returns `nil, nil` for a vanished PID on Linux).
-- fix: network attacks no longer crash the extension during Prepare when the request omits `executionContext` (nil pointer dereference in `mapToExecutionContext`).
+- ci: skip build on .trivyignore.yml-only changes [skip ci]
+- feat: keep the host alive during fill_mem (reserve, adaptive, oom_score_adj) (#234)
 - fix: `fill-disk` and `fill-memory` no longer crash the extension during Prepare when a config parameter is missing or has an unexpected type; config values are now read via the tolerant `extutil` helpers.
+- fix: network attacks no longer crash the extension during Prepare when the request omits `executionContext` (nil pointer dereference in `mapToExecutionContext`).
+- fix: prevent stop-process crash when a matched process exits early (#235)
+- fix: the `stop-process` attack no longer crashes the extension with a nil pointer dereference when a matched process exits before it is stopped (`ps.FindProcess` returns `nil, nil` for a vanished PID on Linux).
 
 ## v1.6.1
 
