@@ -21,7 +21,15 @@ Learn about the capabilities of this extension in our [Reliability Hub](https://
 | `STEADYBIT_EXTENSION_FILL_MEMORY_RESERVE`                |                                    | Memory the "Fill Memory" attack always leaves available so the host OS and (on Kubernetes) the kubelet stay responsive. Accepts suffixes K/M/G or %.                                                                          | false    | 512MiB  |
 | `STEADYBIT_EXTENSION_FILL_MEMORY_OOM_SCORE_ADJ`          |                                    | oom_score_adj applied to the "Fill Memory" process. The default sits just above the agent/extension-host, so the fill is OOM-killed before the Steadybit tooling if memory is exhausted.                                      | false    | -996    |
 
-The extension supports all environment variables provided by [steadybit/extension-kit](https://github.com/steadybit/extension-kit#environment-variables).
+Beyond the settings above, this extension supports the configuration common to all Steadybit
+extensions:
+
+- [extension-kit](https://github.com/steadybit/extension-kit#environment-variables) — HTTP and
+  health ports, TLS and mutual TLS, unix domain socket, logging, and pprof.
+- [Target Filtering](https://github.com/steadybit/discovery-kit/blob/main/docs/target-filtering.md) —
+  stop the extension reporting targets you do not want.
+- [Group Matching](https://github.com/steadybit/discovery-kit/blob/main/docs/target-enrichment.md#group-matching) —
+  tag discovered targets with a group, so enrichment rules only match within it.
 
 When installed as linux package this configuration is in`/etc/steadybit/extension-host`.
 
