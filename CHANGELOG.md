@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.7.3
+
+- chore(deps): update dns-inject
+- feat: support filtering targets out of discovery
+- fix: use gcp.zone instead of google.zone as availability zone fallback attribute (#239)
+
 ## v1.7.2
 
 - chore(deps): update dependencies
