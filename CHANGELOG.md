@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.7.4
+
+- fix: show repeated tc batch errors only once in the action error details (action_kit_commons v1.10.5)
+
 ## v1.7.3
 
 - chore(deps): update dns-inject
