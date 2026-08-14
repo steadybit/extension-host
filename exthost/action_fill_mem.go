@@ -158,12 +158,6 @@ func (a *fillMemoryAction) Prepare(ctx context.Context, state *FillMemoryActionS
 		return nil, err
 	}
 
-	// memfill is placed into the target's memory cgroup using cgexec. The linux packages only
-	// recommend it (there is no libcgroup package for EL9), so fail early with a clear message.
-	if _, err := exec.LookPath("cgexec"); err != nil {
-		return nil, extension_kit.ToError("The fill memory attack requires the 'cgexec' binary (provided by the cgroup-tools or libcgroup-tools package), which was not found on this host. Please install it and retry.", err)
-	}
-
 	opts, err := fillMemoryOpts(request)
 	if err != nil {
 		return nil, err

@@ -112,9 +112,6 @@ nfpms:
           - /usr/bin/dig
           - runc
           - libcap
-        recommends:
-          # cgexec (libcgroup-tools) is only needed for the fill memory attack when
-          # running without runc. There is no libcgroup package for EL9, so this must
-          # stay a weak dependency to keep the package installable on RHEL 9 & friends.
           - /usr/bin/cgexec
+        recommends:
           - kernel-modules-extra
