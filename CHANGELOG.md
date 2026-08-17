@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.7.5
+
+- chore: the fill memory attack no longer needs `cgexec`. memfill (>= v1.5.0) now joins the target's memory cgroup and PID namespace itself, so `cgroup-tools` / `libcgroup-tools` is dropped from the package dependencies and the container image. That package has no Enterprise Linux 9 build and never supported cgroup v2, so this also unblocks installing on RHEL 9 / Rocky 9 / Alma 9.
+
 ## v1.7.4
 
 - fix: show repeated tc batch errors only once in the action error details (action_kit_commons v1.10.5)
