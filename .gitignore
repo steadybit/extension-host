@@ -9,3 +9,6 @@
 extension-host
 
 .env
+
+# Local-dev bundled transparent-proxy binary (built by hack/build-transparent-proxy.sh)
+/transparent-proxy.bin
