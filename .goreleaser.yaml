@@ -18,7 +18,7 @@ builds:
       - MEMFILL_VERSION=v1.5.0
       - NSMOUNT_VERSION=v1.1.1
       - DNS_INJECT_VERSION=v0.2.6
-      - TRANSPARENT_PROXY_VERSION=v0.0.1
+      - TRANSPARENT_PROXY_VERSION=v0.0.2
     goos:
       - linux
     goarch:
@@ -92,6 +92,8 @@ nfpms:
         dst: /opt/steadybit/extension-host/memfill
       - src: ./dist/dns-inject.{{ .Arch }}
         dst: /opt/steadybit/extension-host/dns-inject
+      - src: ./dist/transparent-proxy.{{ .Arch }}
+        dst: /opt/steadybit/extension-host/transparent-proxy
       - src: ./licenses
         dst: /opt/steadybit/extension-host/licenses
 

@@ -239,16 +239,13 @@ func (a *dependencyFaultAction) parseOpts(request action_kit_api.PrepareActionRe
 		return proxyfault.Opts{}, err
 	}
 
-	proxyPort, err := freeHostPort()
-	if err != nil {
-		return proxyfault.Opts{}, fmt.Errorf("could not allocate a proxy port: %w", err)
-	}
-
 	duration := time.Duration(extutil.ToInt64(cfg["duration"])) * time.Millisecond
 
 	return proxyfault.Opts{
-		ExecutionId:  request.ExecutionId.String()[24:],
-		ProxyPort:    proxyPort,
+		ExecutionId: request.ExecutionId.String()[24:],
+		// ProxyPort 0: the proxy binds an OS-chosen port and targets its own
+		// interception at that exact port, avoiding a pre-allocation race.
+		ProxyPort:    0,
 		MaxDuration:  duration + 30*time.Second, // deadman if Stop never arrives
 		IncludeCIDRs: includeCIDRs,
 		ExcludeCIDRs: excludeCIDRs,
@@ -327,17 +324,6 @@ func parseCIDRList(items []string) ([]net.IPNet, error) {
 		out = append(out, *n)
 	}
 	return out, nil
-}
-
-// freeHostPort finds an unused TCP port in the host network namespace (the
-// extension runs with hostNetwork, so this is the namespace the proxy binds in).
-func freeHostPort() (uint16, error) {
-	l, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		return 0, err
-	}
-	defer func() { _ = l.Close() }()
-	return uint16(l.Addr().(*net.TCPAddr).Port), nil
 }
 
 func getDependencyFaultHandle(executionId string) (*proxyHandle, bool) {
