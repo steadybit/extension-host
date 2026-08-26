@@ -13,7 +13,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/rs/zerolog v1.35.1
 	github.com/steadybit/action-kit/go/action_kit_api/v2 v2.10.6
-	github.com/steadybit/action-kit/go/action_kit_commons v1.11.0
+	github.com/steadybit/action-kit/go/action_kit_commons v1.11.1-0.20260826113854-1cddb48a2b0e
 	github.com/steadybit/action-kit/go/action_kit_sdk v1.4.1
 	github.com/steadybit/action-kit/go/action_kit_test v1.4.9
 	github.com/steadybit/discovery-kit/go/discovery_kit_api v1.7.2
@@ -102,6 +102,3 @@ require (
 	sigs.k8s.io/structured-merge-diff/v6 v6.3.2 // indirect
 	sigs.k8s.io/yaml v1.6.0 // indirect
 )
-
-// Local development: use the transparent-proxy integration branch of action-kit.
-replace github.com/steadybit/action-kit/go/action_kit_commons => ../action-kit/go/action_kit_commons
