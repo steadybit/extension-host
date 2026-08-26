@@ -91,7 +91,7 @@ run: tidy build
 ## container: build the container image
 .PHONY: container
 container:
-	docker buildx build --build-arg BUILD_WITH_COVERAGE="true" --build-arg SKIP_LICENSES_REPORT="true" -t extension-host:latest --output=type=docker .
+	GH_TOKEN=$${GH_TOKEN:-$$(gh auth token)} docker buildx build --secret id=gh_token,env=GH_TOKEN --build-arg BUILD_WITH_COVERAGE="true" --build-arg SKIP_LICENSES_REPORT="true" -t extension-host:latest --output=type=docker .
 
 ## linuxpkg: build the linux packages
 .PHONY: linuxpkg

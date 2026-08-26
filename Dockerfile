@@ -19,7 +19,7 @@ WORKDIR /app
 
 RUN echo 'deb [trusted=yes] https://repo.goreleaser.com/apt/ /' > /etc/apt/sources.list.d/goreleaser.list \
     && apt-get -qq update \
-    && apt-get -qq install -y --no-install-recommends build-essential libcap2-bin goreleaser gpg curl
+    && apt-get -qq install -y --no-install-recommends build-essential libcap2-bin goreleaser gpg curl jq
 
 COPY . .
 
@@ -38,6 +38,22 @@ RUN curl --proto "=https" -sfL https://github.com/containers/crun/releases/downl
     && curl --proto "=https" -sfL -o - https://github.com/giuseppe.gpg | gpg --import \
     && curl --proto "=https" -sfL -o - https://github.com/containers/crun/releases/download/$CRUN_VERSION/crun-$CRUN_VERSION-linux-$TARGETARCH.asc | gpg --verify - ./crun \
     && chmod a+x ./crun
+
+# Fetch the (private) transparent-proxy release binary. Needs a token with read
+# access to steadybit/transparent-proxy, passed as the build secret `gh_token`
+# (see the CI workflow and Makefile). Private release assets must be downloaded
+# via the API assets endpoint with `Accept: application/octet-stream`.
+ARG TRANSPARENT_PROXY_VERSION=v0.0.1
+RUN --mount=type=secret,id=gh_token \
+    TOKEN="$(cat /run/secrets/gh_token)" \
+    && ASSET_ID="$(curl --proto "=https" -sfL -H "Authorization: Bearer ${TOKEN}" \
+         "https://api.github.com/repos/steadybit/transparent-proxy/releases/tags/${TRANSPARENT_PROXY_VERSION}" \
+         | jq -r ".assets[] | select(.name==\"transparent-proxy.${TARGETARCH}\") | .id")" \
+    && test -n "${ASSET_ID}" \
+    && curl --proto "=https" -sfL -H "Authorization: Bearer ${TOKEN}" -H "Accept: application/octet-stream" \
+         "https://api.github.com/repos/steadybit/transparent-proxy/releases/assets/${ASSET_ID}" \
+         -o ./transparent-proxy.${TARGETARCH} \
+    && chmod a+x ./transparent-proxy.${TARGETARCH}
 
 ##
 ## Runtime
@@ -82,11 +98,7 @@ WORKDIR /
 COPY --from=build /app/dist/nsmount.${TARGETARCH} /nsmount
 COPY --from=build /app/dist/memfill.${TARGETARCH} /memfill
 COPY --from=build /app/dist/dns-inject.${TARGETARCH} /dns-inject
-# Local-dev: the transparent-proxy binary is private (no public release), so it
-# is built locally into the build context by hack/build-transparent-proxy.sh
-# before `docker build`. (A release-based fetch, like the other sidecars, will
-# replace this once transparent-proxy publishes artifacts.)
-COPY transparent-proxy.bin /transparent-proxy
+COPY --from=build /app/transparent-proxy.${TARGETARCH} /transparent-proxy
 COPY --from=build /app/extension /extension
 COPY --from=build /app/licenses /licenses
 
