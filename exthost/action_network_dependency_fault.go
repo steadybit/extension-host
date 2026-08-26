@@ -16,6 +16,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
 	"github.com/steadybit/action-kit/go/action_kit_commons/network"
+	"github.com/steadybit/action-kit/go/action_kit_commons/network/netfault"
 	"github.com/steadybit/action-kit/go/action_kit_commons/network/nsrunner"
 	"github.com/steadybit/action-kit/go/action_kit_commons/network/proxyfault"
 	"github.com/steadybit/action-kit/go/action_kit_commons/ociruntime"
@@ -220,7 +221,7 @@ func (a *dependencyFaultAction) parseOpts(request action_kit_api.PrepareActionRe
 		return proxyfault.Opts{}, err
 	}
 
-	includeCIDRs, err := parseCIDRList(extutil.ToStringArray(cfg["ip"]))
+	includeCIDRs, err := parseCIDRArgs(extutil.ToStringArray(cfg["ip"]))
 	if err != nil {
 		return proxyfault.Opts{}, fmt.Errorf("invalid dependency CIDR: %w", err)
 	}
@@ -258,7 +259,11 @@ func parseFault(cfg map[string]any) (proxyfault.Fault, error) {
 	hosts := extutil.ToStringArray(cfg["hostname"])
 	switch extutil.ToString(cfg["faultType"]) {
 	case "latency":
-		return proxyfault.Fault{Hosts: hosts, Latency: time.Duration(extutil.ToInt64(cfg["networkLatency"])) * time.Millisecond}, nil
+		latency := time.Duration(extutil.ToInt64(cfg["networkLatency"])) * time.Millisecond
+		if latency <= 0 {
+			return proxyfault.Fault{}, fmt.Errorf("networkLatency must be greater than 0 for the Latency fault type")
+		}
+		return proxyfault.Fault{Hosts: hosts, Latency: latency}, nil
 	case "reset":
 		return proxyfault.Fault{Hosts: hosts, AbortProbability: 1.0}, nil
 	case "http_status":
@@ -281,13 +286,30 @@ func (a *dependencyFaultAction) buildExcludes(request action_kit_api.PrepareActi
 	nwps = append(nwps, restricted...)
 	nwps = append(nwps, network.ComputeExcludesForOwnIpAndPorts(config.Config.Port, config.Config.HealthPort)...)
 
+	// User excludes are a protective list — a malformed entry must error, not be
+	// silently dropped (which would let faulted traffic reach a dependency the
+	// user meant to protect).
+	userCIDRs, err := parseCIDRArgs(extutil.ToStringArray(request.Config["excludeIp"]))
+	if err != nil {
+		return nil, fmt.Errorf("invalid excludeIp: %w", err)
+	}
+	nwps = append(nwps, network.NewNetWithPortRanges(userCIDRs, network.PortRangeAny)...)
+
+	// Condense to bound the resulting --exclude-cidrs arg length / rule count in
+	// large environments (mirrors the sibling network actions).
+	nwps = netfault.CondenseNetWithPortRange(nwps, 500)
+
+	// proxyfault excludes are IP-only, so port-scoped restricted endpoints are
+	// intentionally widened to the whole IP (safe over-exclusion). Dedupe.
+	seen := make(map[string]struct{}, len(nwps))
 	out := make([]net.IPNet, 0, len(nwps))
 	for _, n := range nwps {
+		if _, ok := seen[n.Net.String()]; ok {
+			continue
+		}
+		seen[n.Net.String()] = struct{}{}
 		out = append(out, n.Net)
 	}
-
-	userExcludes, _ := network.ParseCIDRs(extutil.ToStringArray(request.Config["excludeIp"]))
-	out = append(out, userExcludes...)
 	return out, nil
 }
 
@@ -310,14 +332,17 @@ func parsePortsList(s string) ([]uint16, error) {
 	return out, nil
 }
 
-func parseCIDRList(items []string) ([]net.IPNet, error) {
+// parseCIDRArgs parses each entry with the shared network.ParseCIDR (which also
+// accepts bare IPs), erroring on any malformed entry so a mistyped selector is
+// never silently dropped.
+func parseCIDRArgs(items []string) ([]net.IPNet, error) {
 	var out []net.IPNet
 	for _, s := range items {
 		s = strings.TrimSpace(s)
 		if s == "" {
 			continue
 		}
-		_, n, err := net.ParseCIDR(s)
+		n, err := network.ParseCIDR(s)
 		if err != nil {
 			return nil, err
 		}
