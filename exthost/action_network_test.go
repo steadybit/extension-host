@@ -81,3 +81,22 @@ func TestMapToNetworkFilterExcludeIp(t *testing.T) {
 		})
 	}
 }
+
+func Test_dependency_defaultPorts(t *testing.T) {
+	require.Equal(t, "80,443", (&dependencyFaultAction{spec: latencyFaultSpec}).defaultPorts())
+	require.Equal(t, "80,443", (&dependencyFaultAction{spec: resetFaultSpec}).defaultPorts())
+	// HTTP abort is cleartext-only, so 443 is dropped from the default.
+	require.Equal(t, "80", (&dependencyFaultAction{spec: httpAbortFaultSpec}).defaultPorts())
+
+	// The Describe()d port parameter default reflects it.
+	portDefault := func(a *dependencyFaultAction) string {
+		for _, p := range a.Describe().Parameters {
+			if p.Name == "port" {
+				return *p.DefaultValue
+			}
+		}
+		return ""
+	}
+	require.Equal(t, "80", portDefault(&dependencyFaultAction{spec: httpAbortFaultSpec}))
+	require.Equal(t, "80,443", portDefault(&dependencyFaultAction{spec: latencyFaultSpec}))
+}
