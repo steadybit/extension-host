@@ -184,33 +184,34 @@ func (a *dependencyFaultAction) Prepare(ctx context.Context, state *DependencyFa
 		}
 	}
 
-	// Idempotent: a repeated Prepare for the same execution reuses the existing
-	// proxy rather than creating (and leaking) a second sidecar.
-	if _, exists := getDependencyFaultHandle(request.ExecutionId.String()); exists {
-		state.ExecutionId = request.ExecutionId.String()
+	// Idempotent + race-safe: atomically claim the execution slot. A repeated or
+	// concurrent Prepare for the same execution finds the reservation and no-ops
+	// instead of creating (and leaking) a second sidecar.
+	state.ExecutionId = request.ExecutionId.String()
+	if !reserveDependencyFaultHandle(state.ExecutionId) {
 		return &action_kit_api.PrepareResult{}, nil
 	}
 
 	opts, err := a.parseOpts(request)
 	if err != nil {
+		removeDependencyFaultHandle(state.ExecutionId)
 		return nil, err
 	}
 
 	processInfo, err := ociruntime.ReadLinuxProcessInfo(ctx, 1, specs.NetworkNamespace)
 	if err != nil {
+		removeDependencyFaultHandle(state.ExecutionId)
 		return nil, fmt.Errorf("failed to read init process info: %w", err)
 	}
 
 	sidecarId := fmt.Sprintf("%s-host", request.ExecutionId.String()[24:])
 	proxy, err := proxyfault.NewProcess(ctx, a.ociRuntime, processInfo, sidecarId, opts)
 	if err != nil {
+		removeDependencyFaultHandle(state.ExecutionId)
 		return nil, fmt.Errorf("failed to create transparent-proxy process: %w", err)
 	}
 
-	state.ExecutionId = request.ExecutionId.String()
-	dependencyFaultHandlesLock.Lock()
-	dependencyFaultHandles[state.ExecutionId] = &proxyHandle{proxy: proxy, opts: opts, sidecar: processInfo, id: sidecarId}
-	dependencyFaultHandlesLock.Unlock()
+	storeDependencyFaultHandle(state.ExecutionId, &proxyHandle{proxy: proxy, opts: opts, sidecar: processInfo, id: sidecarId})
 
 	return &action_kit_api.PrepareResult{}, nil
 }
@@ -348,7 +349,8 @@ func (a *dependencyFaultAction) parseOpts(request action_kit_api.PrepareActionRe
 }
 
 // percentageToProbability maps a 0..100 percentage to a 0..1 probability,
-// clamped. 100 (or missing/invalid) maps to 1.0 (always).
+// clamped to [0,1]: 0% means never, 100% means always. A missing/invalid value
+// falls back to 1.0 (always).
 func percentageToProbability(v any) float64 {
 	var pct float64
 	switch n := v.(type) {
@@ -363,9 +365,14 @@ func percentageToProbability(v any) float64 {
 	default:
 		return 1.0
 	}
+	// Clamp to [0,1]: 0% means never, 100% means always. (The proxy treats an
+	// explicit 0 as never and 1 as always.)
 	p := pct / 100.0
-	if p <= 0 || p >= 1 {
-		return 1.0
+	if p < 0 {
+		return 0
+	}
+	if p > 1 {
+		return 1
 	}
 	return p
 }
@@ -447,7 +454,33 @@ func getDependencyFaultHandle(executionId string) (*proxyHandle, bool) {
 	dependencyFaultHandlesLock.Lock()
 	defer dependencyFaultHandlesLock.Unlock()
 	h, ok := dependencyFaultHandles[executionId]
+	// A nil entry is a reservation held by an in-flight Prepare; treat it as
+	// absent so Start/Status/Stop never dereference an unfilled handle.
+	if h == nil {
+		return nil, false
+	}
 	return h, ok
+}
+
+// reserveDependencyFaultHandle atomically claims the execution's slot. It
+// returns true when the caller now owns a fresh reservation (which it must fill
+// with storeDependencyFaultHandle or release with removeDependencyFaultHandle),
+// or false when a handle/reservation already exists — the check and the claim
+// happen under a single lock, so concurrent retries can't both spawn a sidecar.
+func reserveDependencyFaultHandle(executionId string) bool {
+	dependencyFaultHandlesLock.Lock()
+	defer dependencyFaultHandlesLock.Unlock()
+	if _, exists := dependencyFaultHandles[executionId]; exists {
+		return false
+	}
+	dependencyFaultHandles[executionId] = nil
+	return true
+}
+
+func storeDependencyFaultHandle(executionId string, h *proxyHandle) {
+	dependencyFaultHandlesLock.Lock()
+	defer dependencyFaultHandlesLock.Unlock()
+	dependencyFaultHandles[executionId] = h
 }
 
 func removeDependencyFaultHandle(executionId string) {
