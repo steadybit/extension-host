@@ -77,7 +77,6 @@ func main() {
 	action_kit_sdk.RegisterAction(exthost.NewNetworkDNSErrorInjectionAction(r))
 	action_kit_sdk.RegisterAction(exthost.NewNetworkDelayDependencyAction(r))
 	action_kit_sdk.RegisterAction(exthost.NewNetworkHttpAbortDependencyAction(r))
-	action_kit_sdk.RegisterAction(exthost.NewNetworkResetDependencyAction(r))
 	action_kit_sdk.RegisterAction(exthost.NewNetworkBlockDnsContainerAction(r))
 	action_kit_sdk.RegisterAction(exthost.NewNetworkPackageLossContainerAction(r))
 	action_kit_sdk.RegisterAction(exthost.NewFillDiskHostAction(r))
