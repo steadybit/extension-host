@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.7.5
+
+- build(deps): bump github.com/steadybit/action-kit/go/action_kit_test
+- build(deps): bump github.com/steadybit/discovery-kit/go/discovery_kit_test
+- build(deps): bump github.com/stretchr/testify from 1.12.0 to 1.12.1
+- build(deps): bump golang from 1.26-trixie to 1.27-trixie
+- chore: bump runc to v1.5.1 and crun to 1.29.1 (#246)
+- fix(linuxpkg): add missing iptables/fallocate rpm deps, drop unused ps (#247)
+- fix: extract dns-inject straight to its arch-suffixed path (#248)
+
 ## v1.7.4
 
 - Revert "fix: make the rpm installable on Enterprise Linux 9 (#240)" (#241)
