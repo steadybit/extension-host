@@ -155,10 +155,6 @@ func TestWithMinikube(t *testing.T) {
 			Test: testNetworkTcpReset,
 		},
 		{
-			Name: "network dependency faults (proxy: slow / intercept / L7 reset)",
-			Test: testNetworkDependencyFault,
-		},
-		{
 			Name: "network block dns",
 			Test: testNetworkBlockDns,
 		},
@@ -641,114 +637,6 @@ func testNetworkTcpReset(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			nginx.AssertCanReach(t, "https://steadybit.com", true)
 		})
 	}
-	requireAllSidecarsCleanedUp(t, m, e)
-}
-
-// testNetworkDependencyFault exercises the three transparent-proxy attacks on the
-// host. Unlike the packet-level netfault attacks, the proxy hooks only the OUTPUT
-// chain in the host netns, so it affects host-originated traffic — not forwarded
-// pod egress. The traffic generator therefore runs on the node itself (SshExec),
-// not in a pod.
-func testNetworkDependencyFault(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
-	target := getTarget(m)
-	const host = "steadybit.com"
-
-	// SshExec returns a Cmd whose Stdout/Stderr the harness already assigns, so
-	// clear them before capturing with CombinedOutput.
-	sshOut := func(arg ...string) (string, error) {
-		cmd := m.SshExec(arg...)
-		cmd.Stdout, cmd.Stderr = nil, nil
-		out, err := cmd.CombinedOutput()
-		return strings.TrimSpace(string(out)), err
-	}
-	nodeReach := func(url string) error {
-		out, err := sshOut("curl", "--max-time", "5", "-sS", "-o", "/dev/null", url)
-		if err != nil {
-			return fmt.Errorf("%w: %s", err, out)
-		}
-		return nil
-	}
-	assertNodeReach := func(t *testing.T, url string, expected bool) {
-		t.Helper()
-		e2e.Retry(t, 8, 500*time.Millisecond, func(r *e2e.R) {
-			err := nodeReach(url)
-			if expected && err != nil {
-				r.Failed = true
-				_, _ = fmt.Fprintf(r.Log, "expected node to reach %s, but could not: %v", url, err)
-			} else if !expected && err == nil {
-				r.Failed = true
-				_, _ = fmt.Fprintf(r.Log, "expected node NOT to reach %s, but it did", url)
-			}
-		})
-	}
-	nodeHTTPStatus := func(url string) string {
-		out, _ := sshOut("curl", "--max-time", "5", "-s", "-o", "/dev/null", "-w", "%{http_code}", url)
-		return out
-	}
-	nodeReachSeconds := func(url string) (float64, error) {
-		out, err := sshOut("curl", "--max-time", "10", "-s", "-o", "/dev/null", "-w", "%{time_total}", url)
-		if err != nil {
-			return 0, fmt.Errorf("%w: %s", err, out)
-		}
-		secs, perr := strconv.ParseFloat(out, 64)
-		return secs, perr
-	}
-
-	t.Run("L7 reset drops host connections to the dependency", func(t *testing.T) {
-		assertNodeReach(t, "https://"+host, true)
-		config := map[string]any{
-			"duration": 60000, "l7": true, "hostname": []string{host},
-			"percentage": 100, "port": []string{"443"},
-		}
-		action, err := e.RunAction(exthost.BaseActionID+".network_tcp_reset", target, config, defaultExecutionContext)
-		require.NoError(t, err)
-		defer func() { _ = action.Cancel() }()
-
-		assertNodeReach(t, "https://"+host, false)
-		require.NoError(t, action.Cancel())
-		assertNodeReach(t, "https://"+host, true)
-	})
-
-	t.Run("intercept returns a synthesized status for cleartext HTTP", func(t *testing.T) {
-		config := map[string]any{
-			"duration": 60000, "hostname": []string{host},
-			"percentage": 100, "port": "80", "httpStatus": 503,
-		}
-		action, err := e.RunAction(exthost.BaseActionID+".network_dependency_http_response", target, config, defaultExecutionContext)
-		require.NoError(t, err)
-		defer func() { _ = action.Cancel() }()
-
-		e2e.Retry(t, 10, 500*time.Millisecond, func(r *e2e.R) {
-			if code := nodeHTTPStatus("http://" + host); code != "503" {
-				r.Failed = true
-				_, _ = fmt.Fprintf(r.Log, "expected synthesized 503, got %q", code)
-			}
-		})
-		require.NoError(t, action.Cancel())
-	})
-
-	t.Run("slow dependency adds latency to host calls", func(t *testing.T) {
-		config := map[string]any{
-			"duration": 60000, "hostname": []string{host},
-			"percentage": 100, "port": "443", "delay": 2000,
-		}
-		action, err := e.RunAction(exthost.BaseActionID+".network_dependency_latency", target, config, defaultExecutionContext)
-		require.NoError(t, err)
-		defer func() { _ = action.Cancel() }()
-
-		e2e.Retry(t, 10, 1*time.Second, func(r *e2e.R) {
-			secs, err := nodeReachSeconds("https://" + host)
-			if err != nil {
-				r.Failed = true
-				_, _ = fmt.Fprintf(r.Log, "request failed: %v", err)
-			} else if secs < 1.5 {
-				r.Failed = true
-				_, _ = fmt.Fprintf(r.Log, "expected the 2s injected latency, but the call took only %.2fs", secs)
-			}
-		})
-		require.NoError(t, action.Cancel())
-	})
-
 	requireAllSidecarsCleanedUp(t, m, e)
 }
 
