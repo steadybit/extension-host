@@ -4,4 +4,5 @@ STEADYBIT_EXTENSION_UNIX_SOCKET=/run/steadybit/extension-host.sock
 STEADYBIT_EXTENSION_NSMOUNT_PATH=/opt/steadybit/extension-host/nsmount
 STEADYBIT_EXTENSION_MEMFILL_PATH=/opt/steadybit/extension-host/memfill
 STEADYBIT_EXTENSION_DNS_INJECT_PATH=/opt/steadybit/extension-host/dns-inject
+STEADYBIT_EXTENSION_TRANSPARENT_PROXY_PATH=/opt/steadybit/extension-host/transparent-proxy
 STEADYBIT_EXTENSION_OCIRUNTIME_ROOT="/run/steadybit/oci"

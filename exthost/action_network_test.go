@@ -81,3 +81,53 @@ func TestMapToNetworkFilterExcludeIp(t *testing.T) {
 		})
 	}
 }
+
+func Test_percentageToProbability(t *testing.T) {
+	// 0% must map to never (0.0), not always — the whole point of the fix.
+	require.Equal(t, 0.0, percentageToProbability(0))
+	require.Equal(t, 0.0, percentageToProbability(int64(0)))
+	require.Equal(t, 1.0, percentageToProbability(100))
+	require.Equal(t, 0.5, percentageToProbability(50))
+	require.Equal(t, 0.25, percentageToProbability(25.0))
+	// Numeric strings parse (so an explicit "0" still means never).
+	require.Equal(t, 0.0, percentageToProbability("0"))
+	require.Equal(t, 0.5, percentageToProbability("50"))
+	// Out-of-range clamps; unparseable falls back to the 50% default (not "always").
+	require.Equal(t, 1.0, percentageToProbability(150))
+	require.Equal(t, 0.0, percentageToProbability(-10))
+	require.Equal(t, 0.5, percentageToProbability("nope"))
+}
+
+func Test_dependency_hostname_required_and_first(t *testing.T) {
+	for _, spec := range []dependencyFaultSpec{latencyFaultSpec, httpAbortFaultSpec, resetFaultSpec} {
+		var hostname *action_kit_api.ActionParameter
+		for i := range (&dependencyFaultAction{spec: spec}).Describe().Parameters {
+			p := (&dependencyFaultAction{spec: spec}).Describe().Parameters[i]
+			if p.Name == "hostname" {
+				hostname = &p
+			}
+		}
+		require.NotNil(t, hostname, "spec %s missing hostname param", spec.id)
+		require.True(t, *hostname.Required, "hostname must be required for %s", spec.id)
+		require.Equal(t, 0, *hostname.Order, "hostname must be first (order 0) for %s", spec.id)
+	}
+}
+
+func Test_dependency_defaultPorts(t *testing.T) {
+	require.Equal(t, "80,443", (&dependencyFaultAction{spec: latencyFaultSpec}).defaultPorts())
+	require.Equal(t, "80,443", (&dependencyFaultAction{spec: resetFaultSpec}).defaultPorts())
+	// HTTP abort is cleartext-only, so 443 is dropped from the default.
+	require.Equal(t, "80", (&dependencyFaultAction{spec: httpAbortFaultSpec}).defaultPorts())
+
+	// The Describe()d port parameter default reflects it.
+	portDefault := func(a *dependencyFaultAction) string {
+		for _, p := range a.Describe().Parameters {
+			if p.Name == "port" {
+				return *p.DefaultValue
+			}
+		}
+		return ""
+	}
+	require.Equal(t, "80", portDefault(&dependencyFaultAction{spec: httpAbortFaultSpec}))
+	require.Equal(t, "80,443", portDefault(&dependencyFaultAction{spec: latencyFaultSpec}))
+}
