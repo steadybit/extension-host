@@ -35,9 +35,13 @@ type networkTcpResetAction struct {
 }
 
 // NetworkTcpResetState carries whichever sub-state the chosen mode uses.
+// NetworkActionState is embedded (not nested) so that state persisted by an
+// older build — a flat NetworkActionState, back when this action used that type
+// directly — still deserializes here and its packet-level cleanup survives an
+// upgrade that lands mid-execution.
 type NetworkTcpResetState struct {
+	NetworkActionState
 	L7         bool
-	Network    NetworkActionState
 	Dependency DependencyFaultState
 }
 
@@ -145,7 +149,7 @@ func tcpResetParameters() []action_kit_api.ActionParameter {
 func (a *networkTcpResetAction) Prepare(ctx context.Context, state *NetworkTcpResetState, request action_kit_api.PrepareActionRequestBody) (*action_kit_api.PrepareResult, error) {
 	state.L7 = extutil.ToBool(request.Config["l7"])
 	if !state.L7 {
-		return a.tcp.Prepare(ctx, &state.Network, request)
+		return a.tcp.Prepare(ctx, &state.NetworkActionState, request)
 	}
 
 	// L7 mode needs at least one hostname (the dependency selector). Enforced here
@@ -178,7 +182,7 @@ func (a *networkTcpResetAction) Start(ctx context.Context, state *NetworkTcpRese
 	if state.L7 {
 		return a.l7.Start(ctx, &state.Dependency)
 	}
-	return a.tcp.Start(ctx, &state.Network)
+	return a.tcp.Start(ctx, &state.NetworkActionState)
 }
 
 func (a *networkTcpResetAction) Status(ctx context.Context, state *NetworkTcpResetState) (*action_kit_api.StatusResult, error) {
@@ -202,7 +206,7 @@ func (a *networkTcpResetAction) Stop(ctx context.Context, state *NetworkTcpReset
 	if state.L7 {
 		return a.l7.Stop(ctx, &state.Dependency)
 	}
-	return a.tcp.Stop(ctx, &state.Network)
+	return a.tcp.Stop(ctx, &state.NetworkActionState)
 }
 
 // --- packet-level (netfault) engine ---
