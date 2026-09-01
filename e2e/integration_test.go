@@ -653,10 +653,18 @@ func testNetworkDependencyFault(t *testing.T, m *e2e.Minikube, e *e2e.Extension)
 	target := getTarget(m)
 	const host = "steadybit.com"
 
+	// SshExec returns a Cmd whose Stdout/Stderr the harness already assigns, so
+	// clear them before capturing with CombinedOutput.
+	sshOut := func(arg ...string) (string, error) {
+		cmd := m.SshExec(arg...)
+		cmd.Stdout, cmd.Stderr = nil, nil
+		out, err := cmd.CombinedOutput()
+		return strings.TrimSpace(string(out)), err
+	}
 	nodeReach := func(url string) error {
-		out, err := m.SshExec("curl", "--max-time", "5", "-sS", "-o", "/dev/null", url).CombinedOutput()
+		out, err := sshOut("curl", "--max-time", "5", "-sS", "-o", "/dev/null", url)
 		if err != nil {
-			return fmt.Errorf("%w: %s", err, strings.TrimSpace(string(out)))
+			return fmt.Errorf("%w: %s", err, out)
 		}
 		return nil
 	}
@@ -674,15 +682,15 @@ func testNetworkDependencyFault(t *testing.T, m *e2e.Minikube, e *e2e.Extension)
 		})
 	}
 	nodeHTTPStatus := func(url string) string {
-		out, _ := m.SshExec("curl", "--max-time", "5", "-s", "-o", "/dev/null", "-w", "%{http_code}", url).CombinedOutput()
-		return strings.TrimSpace(string(out))
+		out, _ := sshOut("curl", "--max-time", "5", "-s", "-o", "/dev/null", "-w", "%{http_code}", url)
+		return out
 	}
 	nodeReachSeconds := func(url string) (float64, error) {
-		out, err := m.SshExec("curl", "--max-time", "10", "-s", "-o", "/dev/null", "-w", "%{time_total}", url).CombinedOutput()
+		out, err := sshOut("curl", "--max-time", "10", "-s", "-o", "/dev/null", "-w", "%{time_total}", url)
 		if err != nil {
-			return 0, fmt.Errorf("%w: %s", err, strings.TrimSpace(string(out)))
+			return 0, fmt.Errorf("%w: %s", err, out)
 		}
-		secs, perr := strconv.ParseFloat(strings.TrimSpace(string(out)), 64)
+		secs, perr := strconv.ParseFloat(out, 64)
 		return secs, perr
 	}
 
@@ -704,7 +712,7 @@ func testNetworkDependencyFault(t *testing.T, m *e2e.Minikube, e *e2e.Extension)
 	t.Run("intercept returns a synthesized status for cleartext HTTP", func(t *testing.T) {
 		config := map[string]any{
 			"duration": 60000, "hostname": []string{host},
-			"percentage": 100, "port": []string{"80"}, "httpStatus": 503,
+			"percentage": 100, "port": "80", "httpStatus": 503,
 		}
 		action, err := e.RunAction(exthost.BaseActionID+".network_dependency_http_response", target, config, defaultExecutionContext)
 		require.NoError(t, err)
@@ -722,7 +730,7 @@ func testNetworkDependencyFault(t *testing.T, m *e2e.Minikube, e *e2e.Extension)
 	t.Run("slow dependency adds latency to host calls", func(t *testing.T) {
 		config := map[string]any{
 			"duration": 60000, "hostname": []string{host},
-			"percentage": 100, "port": []string{"443"}, "delay": 2000,
+			"percentage": 100, "port": "443", "delay": 2000,
 		}
 		action, err := e.RunAction(exthost.BaseActionID+".network_dependency_latency", target, config, defaultExecutionContext)
 		require.NoError(t, err)
