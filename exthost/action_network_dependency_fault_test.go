@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/opencontainers/runtime-spec/specs-go"
+	"github.com/steadybit/action-kit/go/action_kit_api/v2"
 	"github.com/steadybit/action-kit/go/action_kit_commons/network/proxyfault"
 	"github.com/steadybit/action-kit/go/action_kit_commons/ociruntime"
 	"github.com/steadybit/action-kit/go/action_kit_sdk"
@@ -289,4 +290,16 @@ func Test_dependencyFault_constructors(t *testing.T) {
 
 	// tcp reset empty state
 	assert.Equal(t, NetworkTcpResetState{}, NewNetworkTcpResetAction(nil).NewEmptyState())
+}
+
+func Test_dependencyFault_hint(t *testing.T) {
+	// The HTTP-abort action carries an action-level (global) hint warning that the
+	// synthesized status/body applies to cleartext HTTP only.
+	httpAbort := NewNetworkHttpAbortDependencyAction(nil).Describe()
+	require.NotNil(t, httpAbort.Hint)
+	assert.Equal(t, action_kit_api.HintWarning, httpAbort.Hint.Type)
+	assert.Contains(t, httpAbort.Hint.Content, "cleartext HTTP")
+
+	// The latency action has no such restriction, so it carries no hint.
+	assert.Nil(t, NewNetworkDelayDependencyAction(nil).Describe().Hint)
 }
