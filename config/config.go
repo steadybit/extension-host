@@ -84,6 +84,12 @@ func ValidateConfiguration() {
 	if err := Config.validate(); err != nil {
 		log.Fatal().Msg(err.Error())
 	}
+	// Not fatal: see validateInterceptCA. HTTPS interception is opt-in, so a CA
+	// that cannot be read disables it and leaves the rest of the extension
+	// working, rather than taking the node's discovery and attacks with it.
+	if err := Config.validateInterceptCA(); err != nil {
+		log.Error().Err(err).Msg("HTTPS interception is configured but unusable; it will be unavailable until this is fixed")
+	}
 }
 
 func (s Specification) validate() error {
@@ -100,13 +106,17 @@ func (s Specification) validate() error {
 	if (s.TLSInterceptCaCert == "") != (s.TLSInterceptCaKey == "") {
 		return fmt.Errorf("STEADYBIT_EXTENSION_TLS_INTERCEPT_CA_CERT and STEADYBIT_EXTENSION_TLS_INTERCEPT_CA_KEY must be set together")
 	}
-	return s.validateInterceptCA()
+	return nil
 }
 
-// validateInterceptCA checks the configured CA is actually loadable. Without
-// this, a path that does not exist or a Secret key holding something other than
-// a keypair passes startup and only surfaces per-attack — or, worse, as HTTPS
-// quietly flowing through untouched while the UI says interception is on.
+// validateInterceptCA reports whether the configured CA is actually loadable.
+//
+// The result is logged, never fatal. HTTPS interception is opt-in, and its
+// Secret is mounted optional precisely so a missing, renamed or mid-rotation
+// one cannot take the extension down — killing the process here would undo
+// that and cost all discovery and every attack on the node. An attack that
+// actually needs the CA still fails at Prepare, naming the file it could not
+// read, so a broken CA is never mistaken for working interception.
 func (s Specification) validateInterceptCA() error {
 	if !s.TLSInterceptEnabled() {
 		return nil
