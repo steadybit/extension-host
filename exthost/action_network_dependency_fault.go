@@ -52,7 +52,7 @@ type dependencyFaultSpec struct {
 
 var latencyFaultSpec = dependencyFaultSpec{
 	id:          "network_dependency_latency",
-	label:       "Slow HTTP(s) Dependency",
+	label:       "Slow Outgoing HTTP(s) Dependency",
 	description: "Add latency to calls to a specific dependency, selected at L7 by hostname (TLS SNI / HTTP Host). Works over HTTPS and for CDN/cloud endpoints with shared or rotating IPs — slows one named dependency, unlike Network Delay which slows all traffic to an IP.",
 	extraParams: []action_kit_api.ActionParameter{
 		{
@@ -77,8 +77,8 @@ var latencyFaultSpec = dependencyFaultSpec{
 
 var httpAbortFaultSpec = dependencyFaultSpec{
 	id:          "network_dependency_http_response",
-	label:       "Intercept HTTP Request",
-	description: "Intercept a specific dependency's cleartext HTTP requests and return a synthesized HTTP response (L7) — a status code, and optionally a custom body, headers and a delay — selected at L7 by Host header. Cleartext HTTP only; for HTTPS dependencies use 'Slow HTTP(s) Dependency' or the L7 mode of 'Reset TCP/HTTP(s) Connection'.",
+	label:       "Intercept Outgoing HTTP Request",
+	description: "Intercept a specific dependency's cleartext HTTP requests and return a synthesized HTTP response (L7) — a status code, and optionally a custom body, headers and a delay — selected at L7 by Host header. Cleartext HTTP only; for HTTPS dependencies use 'Slow Outgoing HTTP(s) Dependency' or the L7 mode of 'Reset TCP/HTTP(s) Connection'.",
 	extraParams: []action_kit_api.ActionParameter{
 		{
 			Name: "httpStatus", Label: "Response Status", Description: extutil.Ptr("HTTP status code to return."),
@@ -251,7 +251,11 @@ func (a *dependencyFaultAction) tlsInterceptCA(ports []uint16) (*proxyfault.TLSI
 		return nil, fmt.Errorf("the configured TLS interception CA is empty (%s / %s)",
 			config.Config.TLSInterceptCaCert, config.Config.TLSInterceptCaKey)
 	}
-	return &proxyfault.TLSInterceptCA{CertPEM: certPEM, KeyPEM: keyPEM}, nil
+	return &proxyfault.TLSInterceptCA{
+		CertPEM:      certPEM,
+		KeyPEM:       keyPEM,
+		LeafValidity: config.Config.TLSInterceptLeafValidity,
+	}, nil
 }
 
 // description adapts the action description the same way as hint(), so an
@@ -292,7 +296,7 @@ func (a *dependencyFaultAction) Prepare(ctx context.Context, state *DependencyFa
 	// passing 443 traffic through.
 	if a.spec.cleartextHTTPOnly && !config.Config.TLSInterceptEnabled() && slices.Contains(opts.Ports, uint16(443)) {
 		return &action_kit_api.PrepareResult{Error: &action_kit_api.ActionKitError{
-			Title:  "'Intercept HTTP Request' synthesizes an HTTP response, which works on cleartext HTTP only — port 443 (HTTPS/TLS) can't be modified without terminating TLS. Remove 443 from the ports, or use 'Slow HTTP(s) Dependency' or the L7 mode of 'Reset TCP/HTTP(s) Connection' for HTTPS dependencies.",
+			Title:  "'Intercept Outgoing HTTP Request' synthesizes an HTTP response, which works on cleartext HTTP only — port 443 (HTTPS/TLS) can't be modified without terminating TLS. Remove 443 from the ports, or use 'Slow Outgoing HTTP(s) Dependency' or the L7 mode of 'Reset TCP/HTTP(s) Connection' for HTTPS dependencies.",
 			Status: extutil.Ptr(action_kit_api.Failed),
 		}}, nil
 	}
