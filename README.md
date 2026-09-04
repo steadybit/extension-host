@@ -20,6 +20,8 @@ Learn about the capabilities of this extension in our [Reliability Hub](https://
 | `STEADYBIT_EXTENSION_NETWORK_STRICT_ROOT_QDISC`          |                                    | When true, refuse network attacks on interfaces whose root qdisc isn't `noqueue`; when false, snapshot the root qdisc tree and replay it on revert (preserving cloud-tuned state).                                            | false    | true    |
 | `STEADYBIT_EXTENSION_FILL_MEMORY_RESERVE`                |                                    | Memory the "Fill Memory" attack always leaves available so the host OS and (on Kubernetes) the kubelet stay responsive. Accepts suffixes K/M/G or %.                                                                          | false    | 512MiB  |
 | `STEADYBIT_EXTENSION_FILL_MEMORY_OOM_SCORE_ADJ`          |                                    | oom_score_adj applied to the "Fill Memory" process. The default sits just above the agent/extension-host, so the fill is OOM-killed before the Steadybit tooling if memory is exhausted.                                      | false    | -996    |
+| `STEADYBIT_EXTENSION_TLS_INTERCEPT_CA_CERT`         | `tlsIntercept.existingSecret`                                | PEM CA certificate enabling 'Intercept HTTP Request' to synthesize responses for **HTTPS** dependencies. Test environments only — see below. | yes      |         |
+| `STEADYBIT_EXTENSION_TLS_INTERCEPT_CA_KEY`          | `tlsIntercept.existingSecret`                                | PEM private key matching the CA certificate.                                                                              | yes      |         |
 
 Beyond the settings above, this extension supports the configuration common to all Steadybit
 extensions:
@@ -174,3 +176,28 @@ The version and revision of the extension:
 - are printed during the startup of the extension
 - are added as a Docker label to the image
 - are available via the `version.txt`/`revision.txt` files in the root of the image
+
+
+## HTTPS response injection (opt-in)
+
+`Intercept HTTP Request` normally synthesizes a response for **cleartext HTTP**
+only. Supplying a certificate authority lets it do the same for an **HTTPS**
+dependency: the proxy terminates the matched TLS connection with a certificate
+it mints for that hostname, and answers the request itself. The real dependency
+is never contacted.
+
+```bash
+kubectl -n <ns> create secret generic intercept-ca \
+  --from-file=ca.crt=ca.crt --from-file=ca.key=ca.key
+
+helm upgrade ... --set tlsIntercept.existingSecret=intercept-ca
+```
+
+**The CA is yours.** You generate it, choose how long it lives, and install it in
+the truststores of the workloads you want to fault — a workload that does not
+trust it fails the connection instead of receiving the synthesized response, and
+that is reported in the attack's statistics rather than silently doing nothing.
+Certificate pinning and mutual TLS cannot be intercepted.
+
+> ⚠️ The private key can impersonate **any** HTTPS endpoint to anything that
+> trusts it. Keep this to test environments, and treat the Secret accordingly.
