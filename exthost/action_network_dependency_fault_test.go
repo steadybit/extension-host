@@ -5,7 +5,15 @@ package exthost
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/pem"
+	"math/big"
 	"net"
+	"os"
 	"testing"
 	"time"
 
@@ -14,6 +22,7 @@ import (
 	"github.com/steadybit/action-kit/go/action_kit_commons/network/proxyfault"
 	"github.com/steadybit/action-kit/go/action_kit_commons/ociruntime"
 	"github.com/steadybit/action-kit/go/action_kit_sdk"
+	"github.com/steadybit/extension-host/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -302,4 +311,179 @@ func Test_dependencyFault_hint(t *testing.T) {
 
 	// The latency action has no such restriction, so it carries no hint.
 	assert.Nil(t, NewNetworkDelayDependencyAction(nil).Describe().Hint)
+}
+
+// withInterceptCA points the global config at a CA for the duration of a test.
+func withInterceptCA(t *testing.T) {
+	t.Helper()
+	prevCert, prevKey := config.Config.TLSInterceptCaCert, config.Config.TLSInterceptCaKey
+	dir := t.TempDir()
+	certPath, keyPath := dir+"/ca.crt", dir+"/ca.key"
+	certPEM, keyPEM := testCAPEM(t)
+	if err := os.WriteFile(certPath, certPEM, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(keyPath, keyPEM, 0600); err != nil {
+		t.Fatal(err)
+	}
+	config.Config.TLSInterceptCaCert = certPath
+	config.Config.TLSInterceptCaKey = keyPath
+	t.Cleanup(func() {
+		config.Config.TLSInterceptCaCert, config.Config.TLSInterceptCaKey = prevCert, prevKey
+	})
+}
+
+func Test_dependencyFault_tlsInterceptCA(t *testing.T) {
+	httpAbort := &dependencyFaultAction{spec: httpAbortFaultSpec}
+	latency := &dependencyFaultAction{spec: latencyFaultSpec}
+
+	// Unconfigured: HTTPS is never decrypted.
+	ca, err := httpAbort.tlsInterceptCA([]uint16{443})
+	require.NoError(t, err)
+	assert.Nil(t, ca)
+	assert.Equal(t, "80", httpAbort.defaultPorts())
+
+	withInterceptCA(t)
+
+	ca, err = httpAbort.tlsInterceptCA([]uint16{443})
+	require.NoError(t, err)
+	require.NotNil(t, ca)
+	assert.Contains(t, string(ca.CertPEM), "BEGIN CERTIFICATE")
+	assert.Contains(t, string(ca.KeyPEM), "PRIVATE KEY")
+	// 443 becomes a sensible default once the proxy can terminate it.
+	assert.Equal(t, "80,443", httpAbort.defaultPorts())
+
+	// Latency already works over HTTPS at L4, so it never asks to decrypt.
+	lca, err := latency.tlsInterceptCA([]uint16{443})
+	require.NoError(t, err)
+	assert.Nil(t, lca)
+	assert.Equal(t, "80,443", latency.defaultPorts())
+}
+
+func Test_dependencyFault_hint_withInterceptCA(t *testing.T) {
+	withInterceptCA(t)
+
+	// The cleartext-only warning would now be wrong, so it is replaced by the
+	// constraint that actually applies: the target must trust the CA.
+	hint := (&dependencyFaultAction{spec: httpAbortFaultSpec}).hint()
+	require.NotNil(t, hint)
+	assert.Equal(t, action_kit_api.HintInfo, hint.Type)
+	assert.Contains(t, hint.Content, "trust the configured CA")
+	assert.NotContains(t, hint.Content, "cleartext HTTP only")
+
+	assert.Nil(t, (&dependencyFaultAction{spec: latencyFaultSpec}).hint())
+}
+
+func Test_formatDependencyStatsMarkdown_rejected(t *testing.T) {
+	// A rejection is the "CA isn't trusted" diagnosis; without it the operator
+	// only sees connections that matched but were never faulted.
+	md := formatDependencyStatsMarkdown(proxyfault.Snapshot{
+		ConnectionsMatched:   2,
+		ConnectionsFaulted:   0,
+		TLSInterceptRejected: 2,
+	})
+	assert.Contains(t, md, "rejected the injected certificate")
+	assert.Contains(t, md, "trust the configured CA")
+
+	// Nothing rejected: no scary note.
+	md = formatDependencyStatsMarkdown(proxyfault.Snapshot{ConnectionsMatched: 1, ConnectionsFaulted: 1})
+	assert.NotContains(t, md, "rejected the injected certificate")
+}
+
+// A CA that is configured but unreadable must fail loudly. Falling back to
+// "cleartext only" would let HTTPS flow untouched while the operator believes
+// it is being faulted — and would report a permissions problem as an
+// unsupported-protocol one.
+func Test_dependencyFault_tlsInterceptCA_unreadable(t *testing.T) {
+	prevCert, prevKey := config.Config.TLSInterceptCaCert, config.Config.TLSInterceptCaKey
+	t.Cleanup(func() {
+		config.Config.TLSInterceptCaCert, config.Config.TLSInterceptCaKey = prevCert, prevKey
+	})
+	config.Config.TLSInterceptCaCert = t.TempDir() + "/missing.crt"
+	config.Config.TLSInterceptCaKey = t.TempDir() + "/missing.key"
+
+	ca, err := (&dependencyFaultAction{spec: httpAbortFaultSpec}).tlsInterceptCA([]uint16{443})
+	require.Error(t, err)
+	require.Nil(t, ca)
+	require.Contains(t, err.Error(), "cannot read the configured TLS interception CA")
+}
+
+// The CA is only needed to decrypt 443. Demanding it for a cleartext-only scope
+// would let a broken CA mount break port-80 attacks that never wanted it.
+func Test_dependencyFault_tlsInterceptCA_notNeededForCleartextPorts(t *testing.T) {
+	withInterceptCA(t)
+	ca, err := (&dependencyFaultAction{spec: httpAbortFaultSpec}).tlsInterceptCA([]uint16{80})
+	require.NoError(t, err)
+	assert.Nil(t, ca, "port 80 only must not require the CA")
+}
+
+// An empty CA half is dropped silently further down the chain, which would
+// leave HTTPS spliced through untouched while the UI claims interception is on.
+func Test_dependencyFault_tlsInterceptCA_emptyIsAnError(t *testing.T) {
+	prevCert, prevKey := config.Config.TLSInterceptCaCert, config.Config.TLSInterceptCaKey
+	t.Cleanup(func() {
+		config.Config.TLSInterceptCaCert, config.Config.TLSInterceptCaKey = prevCert, prevKey
+	})
+	dir := t.TempDir()
+	certPath, keyPath := dir+"/empty.crt", dir+"/empty.key"
+	require.NoError(t, os.WriteFile(certPath, nil, 0600))
+	require.NoError(t, os.WriteFile(keyPath, []byte("KEY"), 0600))
+	config.Config.TLSInterceptCaCert, config.Config.TLSInterceptCaKey = certPath, keyPath
+
+	ca, err := (&dependencyFaultAction{spec: httpAbortFaultSpec}).tlsInterceptCA([]uint16{443})
+	require.Error(t, err)
+	require.Nil(t, ca)
+	require.Contains(t, err.Error(), "empty")
+}
+
+// With a CA configured the description must not still tell the operator that
+// HTTPS is unsupported, directly above a hint saying interception is on.
+func Test_dependencyFault_description_withInterceptCA(t *testing.T) {
+	withInterceptCA(t)
+	d := (&dependencyFaultAction{spec: httpAbortFaultSpec}).description()
+	require.NotContains(t, d, "Cleartext HTTP only")
+	require.Contains(t, d, "trust")
+}
+
+// Readable and non-empty is not enough: the startup check only logs, so a CA
+// whose halves do not match reaches the attack path. Catching it here names the
+// problem instead of surfacing a bare proxy-startup failure.
+func Test_dependencyFault_tlsInterceptCA_mismatchedPairIsAnError(t *testing.T) {
+	prevCert, prevKey := config.Config.TLSInterceptCaCert, config.Config.TLSInterceptCaKey
+	t.Cleanup(func() {
+		config.Config.TLSInterceptCaCert, config.Config.TLSInterceptCaKey = prevCert, prevKey
+	})
+	dir := t.TempDir()
+	certPath, keyPath := dir+"/ca.crt", dir+"/ca.key"
+	require.NoError(t, os.WriteFile(certPath, []byte("-----BEGIN CERTIFICATE-----\nnot-a-cert\n-----END CERTIFICATE-----\n"), 0600))
+	require.NoError(t, os.WriteFile(keyPath, []byte("-----BEGIN EC PRIVATE KEY-----\nnot-a-key\n-----END EC PRIVATE KEY-----\n"), 0600))
+	config.Config.TLSInterceptCaCert, config.Config.TLSInterceptCaKey = certPath, keyPath
+
+	ca, err := (&dependencyFaultAction{spec: httpAbortFaultSpec}).tlsInterceptCA([]uint16{443})
+	require.Error(t, err)
+	require.Nil(t, ca)
+	require.Contains(t, err.Error(), "not a usable certificate/key pair")
+}
+
+// testCAPEM builds a genuine, minimal signing CA, since tlsInterceptCA now
+// verifies the pair rather than only reading it.
+func testCAPEM(t *testing.T) (certPEM, keyPEM []byte) {
+	t.Helper()
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err)
+	tmpl := &x509.Certificate{
+		SerialNumber:          big.NewInt(1),
+		Subject:               pkix.Name{CommonName: "Test Intercept CA"},
+		NotBefore:             time.Now().Add(-time.Hour),
+		NotAfter:              time.Now().Add(24 * time.Hour),
+		IsCA:                  true,
+		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
+		BasicConstraintsValid: true,
+	}
+	der, err := x509.CreateCertificate(rand.Reader, tmpl, tmpl, key.Public(), key)
+	require.NoError(t, err)
+	keyDER, err := x509.MarshalECPrivateKey(key)
+	require.NoError(t, err)
+	return pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der}),
+		pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: keyDER})
 }
