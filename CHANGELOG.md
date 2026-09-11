@@ -1,11 +1,18 @@
 # Changelog
 
 
-## Unreleased
+## v1.8.0
 
-- `Intercept HTTP Request` can now synthesize responses for **HTTPS** dependencies,
-  not only cleartext HTTP, when an interception CA is configured via
-  `tlsIntercept.existingSecret`. Off by default; HTTPS is left untouched without it.
+- feat: new `Fault Dependency Traffic` action (transparent-proxy) — transparently proxy the
+  host's outgoing traffic to a dependency and inject a fault (latency, connection reset, or
+  an HTTP error status), selected by hostname/SNI or HTTP Host header.
+- feat: `Intercept Outgoing HTTP Request` can now synthesize responses for **HTTPS**
+  dependencies, not only cleartext HTTP, when an interception CA is configured via
+  `tlsIntercept.existingSecret`. Off by default; HTTPS is left untouched without it. The
+  statistics widget surfaces `tls_intercept_rejected` so an untrusted CA is visible rather
+  than a silent no-op.
+- chore: refresh the trivy ignore list (systemd, attr, util-linux, zlib; drop fixed CVEs)
+- Update dependencies
 
 ## v1.7.5
 
