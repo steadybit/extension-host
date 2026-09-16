@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.8.1
+
+- build(deps): bump golang.org/x/sync from 0.22.0 to 0.23.0
+- chore: add CVE-2026-74860 to the ignores
+- chore: remove fixed cves
 
 ## v1.8.0
 
