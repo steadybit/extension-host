@@ -20,7 +20,7 @@ require (
 	github.com/steadybit/discovery-kit/go/discovery_kit_commons v0.3.2
 	github.com/steadybit/discovery-kit/go/discovery_kit_sdk v1.4.2
 	github.com/steadybit/discovery-kit/go/discovery_kit_test v1.2.2
-	github.com/steadybit/extension-kit v1.11.3-0.20260917061034-abb8cae4dd9a
+	github.com/steadybit/extension-kit v1.11.3-0.20260917060249-3a12a66ac5cc
 	github.com/stretchr/testify v1.12.1
 	go.opentelemetry.io/proto/otlp v1.11.0
 	golang.org/x/exp v0.0.0-20260813180055-c1d0aacb2297
