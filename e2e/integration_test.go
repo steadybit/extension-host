@@ -93,16 +93,21 @@ func getTarget(m *e2e.Minikube) *action_kit_api.Target {
 }
 
 func TestWithMinikube(t *testing.T) {
+	// Started before the extension is installed, so the OTLP endpoint the
+	// extension is configured with is already accepting traces at startup.
+	collector := startOtlpCollector(t, fmt.Sprintf(":%d", otlpCollectorPort))
+	defer collector.close()
+
 	extFactory := e2e.HelmExtensionFactory{
 		Name: "extension-host",
 		Port: 8085,
 		ExtraArgs: func(m *e2e.Minikube) []string {
-			return []string{
+			return append([]string{
 				"--set", fmt.Sprintf("container.runtime=%s", m.Runtime),
 				"--set", "discovery.attributes.excludes.host={host.nic}",
 				"--set", "discovery.hostnameFromKubernetes=true",
 				"--set", "logging.level=info",
-			}
+			}, otelExtraArgs()...)
 		},
 	}
 
@@ -114,6 +119,10 @@ func TestWithMinikube(t *testing.T) {
 		{
 			Name: "target discovery",
 			Test: testDiscovery,
+		},
+		{
+			Name: "otel tracing",
+			Test: testOtelTracing(collector),
 		},
 		{
 			Name: "stress cpu",
