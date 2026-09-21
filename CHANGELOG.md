@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.8.2
+
+- chore(chart): require extensionlib 1.6.0 so otel values take effect (#261)
+- chore(deps): bump extensionlib to ^1.5.5
+- chore: depend on extension-kit v1.12.1 (#262)
+- feat: support otel (#212)
+- fix(linuxpkg): require iptables/iproute by name, not by sbin path (#263)
+
 ## v1.8.1
 
 - build(deps): bump golang.org/x/sync from 0.22.0 to 0.23.0
