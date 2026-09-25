@@ -117,6 +117,9 @@ func (a *networkAction) Describe() action_kit_api.ActionDescription {
 }
 
 func (a *networkAction) Prepare(ctx context.Context, state *NetworkActionState, request action_kit_api.PrepareActionRequestBody) (*action_kit_api.PrepareResult, error) {
+	if err := requireCapabilities("Network attacks", networkCapabilities); err != nil {
+		return nil, err
+	}
 	_, err := CheckTargetHostname(request.Target.Attributes)
 	if err != nil {
 		return nil, err
