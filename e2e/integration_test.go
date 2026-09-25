@@ -1741,28 +1741,28 @@ func incrementIP(a net.IP, idx int) {
 	}
 }
 
-// testMissingCapability reinstalls the extension without NET_ADMIN. The extension binary has file
-// capabilities without the effective bit, so it starts anyway (with the bit, exec fails with EPERM
-// and the pod crash-loops); the network attacks fail when prepared, naming the capability, and the
-// attacks that do not need it keep working.
+// testMissingCapability reinstalls the extension without SYS_TIME, which only the time travel
+// needs. The extension binary has file capabilities without the effective bit, so it starts anyway
+// (with the bit, exec fails with EPERM and the pod crash-loops); the time travel fails when prepared,
+// naming the capability, and the other attacks keep working.
 func testMissingCapability(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
-	withoutNetAdmin := "{NET_BIND_SERVICE,KILL,SYS_ADMIN,SYS_CHROOT,SYS_PTRACE,NET_RAW,BPF,DAC_OVERRIDE,SETUID,SETGID,AUDIT_WRITE,SYS_BOOT,SYS_TIME,SETPCAP,MKNOD,SYS_RESOURCE}"
-	require.NoError(t, e.Reconfigure(map[string]string{"containerSecurityContext.capabilities.add": withoutNetAdmin}),
-		"the extension must become ready without NET_ADMIN")
+	withoutSysTime := "{NET_BIND_SERVICE,KILL,SYS_ADMIN,SYS_CHROOT,SYS_PTRACE,NET_RAW,NET_ADMIN,BPF,DAC_OVERRIDE,SETUID,SETGID,AUDIT_WRITE,SYS_BOOT,SETPCAP,MKNOD,SYS_RESOURCE}"
+	require.NoError(t, e.Reconfigure(map[string]string{"containerSecurityContext.capabilities.add": withoutSysTime}),
+		"the extension must become ready without SYS_TIME")
 	defer func() { require.NoError(t, e.ResetConfig()) }()
 
-	blackhole, err := e.RunAction(exthost.BaseActionID+".network_blackhole", getTarget(m),
-		map[string]any{"duration": 10000, "port": []string{"80"}}, defaultExecutionContext)
+	timeTravel, err := e.RunAction(exthost.BaseActionID+".timetravel", getTarget(m),
+		map[string]any{"duration": 10000, "offset": 3600000, "disableNtp": true}, nil)
 	defer func() {
-		if blackhole != nil {
-			_ = blackhole.Cancel()
+		if timeTravel != nil {
+			_ = timeTravel.Cancel()
 		}
 	}()
-	require.ErrorContains(t, err, "Network attacks need the capabilities NET_ADMIN")
+	require.ErrorContains(t, err, "Time travel attacks need the capabilities SYS_TIME")
 
 	stress, err := e.RunAction(exthost.BaseActionID+".stress-cpu", getTarget(m),
 		map[string]any{"duration": 5000, "workers": 0, "cpuLoad": 50}, nil)
-	require.NoError(t, err, "attacks not needing NET_ADMIN still work")
+	require.NoError(t, err, "attacks not needing SYS_TIME still work")
 	e2e.AssertProcessRunningInContainer(t, m, e.Pod, "extension", "stress-ng", true)
 	require.NoError(t, stress.Cancel())
 	requireAllSidecarsCleanedUp(t, m, e)
