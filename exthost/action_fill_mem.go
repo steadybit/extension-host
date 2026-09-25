@@ -154,6 +154,9 @@ func fillMemoryOpts(request action_kit_api.PrepareActionRequestBody) (memfill.Op
 }
 
 func (a *fillMemoryAction) Prepare(ctx context.Context, state *FillMemoryActionState, request action_kit_api.PrepareActionRequestBody) (*action_kit_api.PrepareResult, error) {
+	if err := requireCapabilities("Fill memory attacks", sidecarCapabilities); err != nil {
+		return nil, err
+	}
 	if _, err := CheckTargetHostname(request.Target.Attributes); err != nil {
 		return nil, err
 	}
