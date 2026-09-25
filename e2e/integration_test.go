@@ -144,6 +144,10 @@ func TestWithMinikube(t *testing.T) {
 			Test: testTimeTravel,
 		},
 		{
+			Name: "starts without a capability and fails fast for the attacks needing it",
+			Test: testMissingCapability,
+		},
+		{
 			Name: "stop process",
 			Test: testStopProcess,
 		},
@@ -1735,4 +1739,31 @@ func incrementIP(a net.IP, idx int) {
 	} else {
 		a[idx]++
 	}
+}
+
+// testMissingCapability reinstalls the extension without NET_ADMIN. The extension binary has file
+// capabilities without the effective bit, so it starts anyway (with the bit, exec fails with EPERM
+// and the pod crash-loops); the network attacks fail when prepared, naming the capability, and the
+// attacks that do not need it keep working.
+func testMissingCapability(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
+	withoutNetAdmin := "{NET_BIND_SERVICE,KILL,SYS_ADMIN,SYS_CHROOT,SYS_PTRACE,NET_RAW,BPF,DAC_OVERRIDE,SETUID,SETGID,AUDIT_WRITE,SYS_BOOT,SYS_TIME,SETPCAP,MKNOD,SYS_RESOURCE}"
+	require.NoError(t, e.Reconfigure(map[string]string{"containerSecurityContext.capabilities.add": withoutNetAdmin}),
+		"the extension must become ready without NET_ADMIN")
+	defer func() { require.NoError(t, e.ResetConfig()) }()
+
+	blackhole, err := e.RunAction(exthost.BaseActionID+".network_blackhole", getTarget(m),
+		map[string]any{"duration": 10000, "port": []string{"80"}}, defaultExecutionContext)
+	defer func() {
+		if blackhole != nil {
+			_ = blackhole.Cancel()
+		}
+	}()
+	require.ErrorContains(t, err, "Network attacks need the capabilities NET_ADMIN")
+
+	stress, err := e.RunAction(exthost.BaseActionID+".stress-cpu", getTarget(m),
+		map[string]any{"duration": 5000, "workers": 0, "cpuLoad": 50}, nil)
+	require.NoError(t, err, "attacks not needing NET_ADMIN still work")
+	e2e.AssertProcessRunningInContainer(t, m, e.Pod, "extension", "stress-ng", true)
+	require.NoError(t, stress.Cancel())
+	requireAllSidecarsCleanedUp(t, m, e)
 }

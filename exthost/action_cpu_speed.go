@@ -144,6 +144,9 @@ func (a *cpuSpeedAction) Describe() action_kit_api.ActionDescription {
 }
 
 func (a *cpuSpeedAction) Prepare(_ context.Context, state *CpuSpeedActionState, request action_kit_api.PrepareActionRequestBody) (*action_kit_api.PrepareResult, error) {
+	if err := requireCapabilities("CPU speed attacks", cpuSpeedCapabilities); err != nil {
+		return nil, err
+	}
 	if _, err := CheckTargetHostname(request.Target.Attributes); err != nil {
 		return nil, err
 	}
