@@ -24,13 +24,14 @@ var (
 	networkCapabilities = slices.Concat(sidecarCapabilities, []string{"NET_RAW"})
 	// dnsInjectionCapabilities are needed by the DNS error injection (an eBPF program).
 	dnsInjectionCapabilities = slices.Concat(sidecarCapabilities, []string{"BPF"})
-	// timeTravelCapabilities shift the clock and block NTP meanwhile.
-	timeTravelCapabilities = slices.Concat(networkCapabilities, []string{"SYS_TIME"})
-	// shutdownCapabilities reboot or power off the host.
+	// clockCapabilities shift the clock, from the extension's own process. Blocking NTP meanwhile
+	// (disableNtp) also needs networkCapabilities.
+	clockCapabilities = []string{"SYS_TIME"}
+	// shutdownCapabilities reboot or power off the host, from the extension's own process.
 	shutdownCapabilities = []string{"SYS_BOOT"}
 	// stopProcessCapabilities kill processes of other users, through a root helper.
 	stopProcessCapabilities = []string{"KILL", "SETUID", "SETGID"}
-	// cpuSpeedCapabilities write the root-owned cpufreq files as the extension's user.
+	// cpuSpeedCapabilities write the root-owned cpufreq files, from the extension's own process.
 	cpuSpeedCapabilities = []string{"DAC_OVERRIDE"}
 
 	// ExpectedCapabilities are all the capabilities the actions use; the missing ones are logged at
@@ -38,13 +39,25 @@ var (
 	ExpectedCapabilities = slices.Concat(networkCapabilities, []string{"BPF", "SYS_TIME", "SYS_BOOT", "KILL", "SYS_RESOURCE"})
 )
 
-// missingCapabilities is replaced in tests.
-var missingCapabilities = extruntime.MissingCapabilities
+// missingCapabilities and missingHeldCapabilities are replaced in tests.
+var (
+	missingCapabilities     = extruntime.MissingCapabilities
+	missingHeldCapabilities = extruntime.MissingHeldCapabilities
+)
 
 // requireCapabilities fails the preparation of an action when the extension lacks a capability it
 // needs, naming the missing ones.
 func requireCapabilities(what string, required []string) error {
-	missing := missingCapabilities(required...)
+	return capabilitiesError(what, missingCapabilities(required...))
+}
+
+// requireHeldCapabilities is requireCapabilities for what the extension does in its own process (a
+// syscall, writing a file), where the root helpers cannot help: the extension must hold them.
+func requireHeldCapabilities(what string, required []string) error {
+	return capabilitiesError(what, missingHeldCapabilities(required...))
+}
+
+func capabilitiesError(what string, missing []string) error {
 	if len(missing) == 0 {
 		return nil
 	}
