@@ -5,6 +5,7 @@ package exthost
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	extension_kit "github.com/steadybit/extension-kit"
@@ -19,11 +20,11 @@ var (
 	// runc/crun runs as root and enters the host's namespaces and cgroups.
 	sidecarCapabilities = []string{"SETUID", "SETGID", "SYS_ADMIN", "SYS_CHROOT", "SYS_PTRACE", "DAC_OVERRIDE"}
 	// networkCapabilities are needed by the network faults (tc, iptables, ip).
-	networkCapabilities = append(append([]string{}, sidecarCapabilities...), "NET_ADMIN", "NET_RAW")
+	networkCapabilities = slices.Concat(sidecarCapabilities, []string{"NET_ADMIN", "NET_RAW"})
 	// dnsInjectionCapabilities are needed by the DNS error injection (an eBPF program).
-	dnsInjectionCapabilities = append(append([]string{}, sidecarCapabilities...), "NET_ADMIN", "BPF")
+	dnsInjectionCapabilities = slices.Concat(sidecarCapabilities, []string{"NET_ADMIN", "BPF"})
 	// timeTravelCapabilities shift the clock and block NTP meanwhile.
-	timeTravelCapabilities = append(append([]string{}, networkCapabilities...), "SYS_TIME")
+	timeTravelCapabilities = slices.Concat(networkCapabilities, []string{"SYS_TIME"})
 	// shutdownCapabilities reboot or power off the host.
 	shutdownCapabilities = []string{"SYS_BOOT"}
 	// stopProcessCapabilities kill processes of other users, through a root helper.
@@ -33,7 +34,7 @@ var (
 
 	// ExpectedCapabilities are all the capabilities the actions use; the missing ones are logged at
 	// startup. SYS_RESOURCE is optional: without it, the sidecars are not protected from the OOM killer.
-	ExpectedCapabilities = append(append([]string{}, networkCapabilities...), "BPF", "SYS_TIME", "SYS_BOOT", "KILL", "SYS_RESOURCE")
+	ExpectedCapabilities = slices.Concat(networkCapabilities, []string{"BPF", "SYS_TIME", "SYS_BOOT", "KILL", "SYS_RESOURCE"})
 )
 
 // missingCapabilities is replaced in tests.
