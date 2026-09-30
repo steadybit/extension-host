@@ -181,6 +181,9 @@ func fillDiskOpts(request action_kit_api.PrepareActionRequestBody) (diskfill.Opt
 }
 
 func (a *fillDiskAction) Prepare(ctx context.Context, state *FillDiskActionState, request action_kit_api.PrepareActionRequestBody) (*action_kit_api.PrepareResult, error) {
+	if err := requireCapabilities("Fill disk attacks", sidecarCapabilities); err != nil {
+		return nil, err
+	}
 	if _, err := CheckTargetHostname(request.Target.Attributes); err != nil {
 		return nil, err
 	}
