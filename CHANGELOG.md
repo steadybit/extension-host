@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.8.3
+
+- build(deps): bump github.com/beevik/ntp from 1.5.0 to 1.6.0
+- build(deps): bump github.com/steadybit/action-kit/go/action_kit_test
+
 ## v1.8.2
 
 - chore(chart): require extensionlib 1.6.0 so otel values take effect (#261)
