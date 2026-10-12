@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.8.4
+
+- build(deps): bump go.opentelemetry.io/proto/otlp from 1.11.0 to 1.11.1
+
 ## v1.8.3
 
 - build(deps): bump github.com/beevik/ntp from 1.5.0 to 1.6.0
