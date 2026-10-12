@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.8.5
+
+- chore(deps): bump dns-inject to v0.2.10 and transparent-proxy to v1.1.1
+- chore(deps): bump golang.org/x/net to v0.61.0
+- chore: add go stdlib CVEs to trivyignore for runc
+- chore: ignore unfixed debian libexpat1 CVE-2026-77214
+
 ## v1.8.4
 
 - build(deps): bump go.opentelemetry.io/proto/otlp from 1.11.0 to 1.11.1
