@@ -40,7 +40,17 @@ func getNetworkBlackholeDescription() action_kit_api.ActionDescription {
 		Category:    new("Network"),
 		Kind:        action_kit_api.Attack,
 		TimeControl: action_kit_api.TimeControlExternal,
-		Parameters:  commonNetworkParameters,
+		Parameters: append(commonNetworkParameters,
+			action_kit_api.ActionParameter{
+				Name:         "blockLocalhost",
+				Label:        "Block Localhost Traffic",
+				Description:  new("Also block matching traffic on the loopback interface (127.0.0.0/8, ::1), e.g. between two processes on the same host. Combine with the include restrictions above, otherwise all localhost traffic is blocked."),
+				Type:         action_kit_api.ActionParameterTypeBoolean,
+				DefaultValue: new("false"),
+				Advanced:     new(true),
+				Order:        new(106),
+			},
+		),
 	}
 }
 
@@ -70,7 +80,11 @@ func blackhole(r ociruntime.OciRuntime) networkOptsProvider {
 		}
 		messages = append(messages, netMessages...)
 
-		return &netfault.BlackholeOpts{Filter: filter, ExecutionContext: mapToExecutionContext(request)}, messages, nil
+		return &netfault.BlackholeOpts{
+			Filter:           filter,
+			ExecutionContext: mapToExecutionContext(request),
+			BlockLocalhost:   extutil.ToBool(request.Config["blockLocalhost"]),
+		}, messages, nil
 	}
 }
 

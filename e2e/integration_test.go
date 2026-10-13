@@ -160,6 +160,10 @@ func TestWithMinikube(t *testing.T) {
 			Test: testNetworkBlackhole,
 		},
 		{
+			Name: "network blackhole localhost",
+			Test: testNetworkBlackholeLocalhost,
+		},
+		{
 			Name: "network tcp reset",
 			Test: testNetworkTcpReset,
 		},
@@ -525,6 +529,100 @@ func testNetworkBlackhole(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 		})
 	}
 	requireAllSidecarsCleanedUp(t, m, e)
+}
+
+// kubeletHealthzPort is served by the kubelet on 127.0.0.1 only, so it is a
+// loopback-only listener on the node we can use to probe localhost traffic.
+const kubeletHealthzPort = "10248"
+
+func testNetworkBlackholeLocalhost(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
+	nginx := e2e.Nginx{Minikube: m}
+	err := nginx.Deploy("nginx-network-blackhole-localhost")
+	require.NoError(t, err, "failed to create pod")
+	defer func() { _ = nginx.Delete() }()
+
+	tests := []struct {
+		name                     string
+		blockLocalhost           bool
+		wantedLocalhostReachable bool
+	}{
+		{
+			name:                     "should not blackhole localhost traffic by default",
+			blockLocalhost:           false,
+			wantedLocalhostReachable: true,
+		},
+		{
+			name:                     "should blackhole localhost traffic when enabled",
+			blockLocalhost:           true,
+			wantedLocalhostReachable: false,
+		},
+	}
+
+	for _, tt := range tests {
+		config := map[string]any{
+			"duration":       30000,
+			"port":           []string{kubeletHealthzPort},
+			"blockLocalhost": tt.blockLocalhost,
+		}
+
+		t.Run(tt.name, func(t *testing.T) {
+			assertNodeLocalhostReachable(t, m, true)
+			nginx.AssertIsReachable(t, true)
+
+			action, err := e.RunAction(exthost.BaseActionID+".network_blackhole", getTarget(m), config, defaultExecutionContext)
+			defer func() { _ = action.Cancel() }()
+			require.NoError(t, err)
+
+			assertNodeLocalhostReachable(t, m, tt.wantedLocalhostReachable)
+			// non-matching traffic must stay untouched
+			nginx.AssertIsReachable(t, true)
+
+			require.NoError(t, action.Cancel())
+			assertNodeLocalhostReachable(t, m, true)
+			assertNodeHasDefaultLocalRule(t, m)
+		})
+	}
+	requireAllSidecarsCleanedUp(t, m, e)
+}
+
+// assertNodeLocalhostReachable checks whether the kubelet healthz endpoint on
+// the node's loopback interface answers.
+func assertNodeLocalhostReachable(t *testing.T, m *e2e.Minikube, expected bool) {
+	t.Helper()
+	url := fmt.Sprintf("http://127.0.0.1:%s/healthz", kubeletHealthzPort)
+	e2e.Retry(t, 8, 500*time.Millisecond, func(r *e2e.R) {
+		out, err := nodeExec(m, "curl", "-s", "-m", "2", url)
+		if expected && err != nil {
+			r.Failed = true
+			_, _ = fmt.Fprintf(r.Log, "expected %s to be reachable on the node, but was not: %s: %s", url, err, out)
+		} else if !expected && err == nil {
+			r.Failed = true
+			_, _ = fmt.Fprintf(r.Log, "expected %s not to be reachable on the node, but was: %s", url, out)
+		}
+	})
+}
+
+// nodeExec runs a command on the minikube node and returns its combined output.
+func nodeExec(m *e2e.Minikube, arg ...string) ([]byte, error) {
+	cmd := m.SshExec(arg...)
+	// SshExec presets stdout/stderr, which CombinedOutput refuses to overwrite
+	cmd.Stdout, cmd.Stderr = nil, nil
+	return cmd.CombinedOutput()
+}
+
+// assertNodeHasDefaultLocalRule checks the kernel's default `0: from all lookup
+// local` rule is back in place after the attack was reverted.
+func assertNodeHasDefaultLocalRule(t *testing.T, m *e2e.Minikube) {
+	t.Helper()
+	for _, family := range []string{"-4", "-6"} {
+		out, err := nodeExec(m, "ip", family, "rule", "show", "pref", "0")
+		if family == "-6" && err != nil {
+			// IPv6 disabled on the node, the attack does not touch ipv6 rules either
+			continue
+		}
+		require.NoError(t, err, string(out))
+		assert.Contains(t, string(out), "from all lookup local", "ip %s rule pref 0 not restored", family)
+	}
 }
 
 // nginxDefaultGateway returns the nginx pod's default-route gateway, used as an
