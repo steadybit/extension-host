@@ -544,6 +544,7 @@ func testNetworkBlackholeLocalhost(t *testing.T, m *e2e.Minikube, e *e2e.Extensi
 	tests := []struct {
 		name                     string
 		blockLocalhost           bool
+		excludeIp                []string
 		wantedLocalhostReachable bool
 	}{
 		{
@@ -556,12 +557,19 @@ func testNetworkBlackholeLocalhost(t *testing.T, m *e2e.Minikube, e *e2e.Extensi
 			blockLocalhost:           true,
 			wantedLocalhostReachable: false,
 		},
+		{
+			name:                     "should not blackhole excluded localhost traffic",
+			blockLocalhost:           true,
+			excludeIp:                []string{"127.0.0.1"},
+			wantedLocalhostReachable: true,
+		},
 	}
 
 	for _, tt := range tests {
 		config := map[string]any{
 			"duration":       30000,
 			"port":           []string{kubeletHealthzPort},
+			"excludeIp":      tt.excludeIp,
 			"blockLocalhost": tt.blockLocalhost,
 		}
 
@@ -610,18 +618,26 @@ func nodeExec(m *e2e.Minikube, arg ...string) ([]byte, error) {
 	return cmd.CombinedOutput()
 }
 
-// assertNodeHasDefaultLocalRule checks the kernel's default `0: from all lookup
-// local` rule is back in place after the attack was reverted.
+// assertNodeHasDefaultLocalRule checks the routing rules are back to the
+// kernel default after the attack was reverted: exactly one local table
+// lookup, the `0: from all lookup local` rule.
 func assertNodeHasDefaultLocalRule(t *testing.T, m *e2e.Minikube) {
 	t.Helper()
 	for _, family := range []string{"-4", "-6"} {
-		out, err := nodeExec(m, "ip", family, "rule", "show", "pref", "0")
+		out, err := nodeExec(m, "ip", family, "rule", "show")
 		if family == "-6" && err != nil {
 			// IPv6 disabled on the node, the attack does not touch ipv6 rules either
 			continue
 		}
 		require.NoError(t, err, string(out))
-		assert.Contains(t, string(out), "from all lookup local", "ip %s rule pref 0 not restored", family)
+
+		var localRules []string
+		for _, line := range strings.Split(string(out), "\n") {
+			if strings.Contains(line, "lookup local") {
+				localRules = append(localRules, strings.Join(strings.Fields(line), " "))
+			}
+		}
+		assert.Equal(t, []string{"0: from all lookup local"}, localRules, "ip %s rules not restored:\n%s", family, out)
 	}
 }
 
