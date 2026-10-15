@@ -104,6 +104,9 @@ func (a *stopProcessAction) Describe() action_kit_api.ActionDescription {
 }
 
 func (a *stopProcessAction) Prepare(_ context.Context, state *StopProcessActionState, request action_kit_api.PrepareActionRequestBody) (*action_kit_api.PrepareResult, error) {
+	if err := requireCapabilities("Stop process attacks", stopProcessCapabilities); err != nil {
+		return nil, err
+	}
 	_, err := CheckTargetHostname(request.Target.Attributes)
 	if err != nil {
 		return nil, err

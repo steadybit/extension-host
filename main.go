@@ -6,6 +6,7 @@ package main
 import (
 	_ "github.com/KimMachineGun/automemlimit" // By default, it sets `GOMEMLIMIT` to 90% of cgroup's memory limit.
 	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
 	"github.com/steadybit/action-kit/go/action_kit_commons/network/netfault"
 	"github.com/steadybit/action-kit/go/action_kit_commons/ociruntime"
@@ -35,12 +36,18 @@ func main() {
 
 	extotel.InitOpenTelemetry()
 
+	// The binary's file capabilities have no effective bit, so that it starts even when the container
+	// is not granted all of them: make the granted ones effective, and report the missing ones.
+	if err := extruntime.RaiseCapabilities(); err != nil {
+		log.Warn().Err(err).Msg("Failed to raise the capabilities")
+	}
 	extruntime.AdjustOOMScoreAdj()
 
 	// Build information is set at compile-time. This line writes the build information to the log.
 	// The information is mostly handy for debugging purposes.
 	extbuild.PrintBuildInformation()
 	extruntime.LogRuntimeInformation(zerolog.InfoLevel)
+	extruntime.LogMissingCapabilities(exthost.ExpectedCapabilities...)
 
 	// Most extensions require some form of configuration. These calls exist to parse and validate the
 	// configuration obtained from environment variables.
