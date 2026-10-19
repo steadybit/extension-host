@@ -1,9 +1,13 @@
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2026 Steadybit GmbH
+
 package exthost
 
 import (
 	"context"
 	"github.com/google/uuid"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
+	"github.com/steadybit/action-kit/go/action_kit_commons/network/netfault"
 	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
@@ -13,6 +17,7 @@ func TestActionTimeTravel_Prepare(t *testing.T) {
 	osHostname = func() (string, error) {
 		return "myhostname", nil
 	}
+	executionId := uuid.New()
 	tests := []struct {
 		name        string
 		requestBody action_kit_api.PrepareActionRequestBody
@@ -28,7 +33,11 @@ func TestActionTimeTravel_Prepare(t *testing.T) {
 					"offset":     "1000",
 					"disableNtp": "true",
 				},
-				ExecutionId: uuid.New(),
+				ExecutionId: executionId,
+				ExecutionContext: &action_kit_api.ExecutionContext{
+					ExperimentKey: new("EXP-1"),
+					ExecutionId:   new(42),
+				},
 				Target: new(action_kit_api.Target{
 					Attributes: map[string][]string{
 						"host.hostname": {"myhostname"},
@@ -40,6 +49,11 @@ func TestActionTimeTravel_Prepare(t *testing.T) {
 				Offset:        1 * time.Second,
 				DisableNtp:    true,
 				OffsetApplied: false,
+				ExecutionContext: netfault.ExecutionContext{
+					ExperimentKey:         "EXP-1",
+					ExperimentExecutionId: 42,
+					TargetExecutionId:     executionId.String(),
+				},
 			},
 		}, {
 			name: "Should return error too low duration",
@@ -85,6 +99,7 @@ func TestActionTimeTravel_Prepare(t *testing.T) {
 				assert.Equal(t, tt.wantedState.OffsetApplied, state.OffsetApplied)
 				assert.Equal(t, tt.wantedState.Offset, state.Offset)
 				assert.Equal(t, tt.wantedState.DisableNtp, state.DisableNtp)
+				assert.Equal(t, tt.wantedState.ExecutionContext, state.ExecutionContext)
 			}
 		})
 	}

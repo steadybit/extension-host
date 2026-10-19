@@ -26,6 +26,9 @@ type TimeTravelActionState struct {
 	DisableNtp    bool
 	Offset        time.Duration
 	OffsetApplied bool
+	// ExecutionContext tells the NTP blocks of concurrent time travels apart,
+	// netfault tracks them as active attacks.
+	ExecutionContext netfault.ExecutionContext
 }
 
 // Make sure action implements all required interfaces
@@ -131,6 +134,7 @@ func (a *timeTravelAction) Prepare(_ context.Context, state *TimeTravelActionSta
 		}, nil
 	}
 	state.DisableNtp = extutil.ToBool(request.Config["disableNtp"])
+	state.ExecutionContext = mapToExecutionContext(request)
 
 	return nil, nil
 }
@@ -147,7 +151,7 @@ func (a *timeTravelAction) Start(ctx context.Context, state *TimeTravelActionSta
 			return nil, err
 		}
 
-		if err := timetravel.AdjustNtpTrafficRules(ctx, runner, false); err != nil {
+		if err := timetravel.AdjustNtpTrafficRules(ctx, runner, state.ExecutionContext, false); err != nil {
 			log.Error().Err(err).Msg("Failed to block ntp traffic")
 			return nil, err
 		}
@@ -182,7 +186,7 @@ func (a *timeTravelAction) Stop(ctx context.Context, state *TimeTravelActionStat
 			return nil, err
 		}
 
-		if err := timetravel.AdjustNtpTrafficRules(ctx, runner, true); err != nil {
+		if err := timetravel.AdjustNtpTrafficRules(ctx, runner, state.ExecutionContext, true); err != nil {
 			log.Error().Err(err).Msg("Failed to unblock NTP traffic")
 			return nil, err
 		}
