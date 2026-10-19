@@ -9,9 +9,10 @@ import (
 	"github.com/steadybit/action-kit/go/action_kit_commons/network/netfault"
 )
 
-func AdjustNtpTrafficRules(ctx context.Context, runner netfault.CommandRunner, allowNtpTraffic bool) error {
+func AdjustNtpTrafficRules(ctx context.Context, runner netfault.CommandRunner, eCtx netfault.ExecutionContext, allowNtpTraffic bool) error {
 	opts := &netfault.BlackholeOpts{
-		IpProto: netfault.IpProtoUdp,
+		ExecutionContext: eCtx,
+		IpProto:          netfault.IpProtoUdp,
 		Filter: netfault.Filter{
 			Include: network.NewNetWithPortRanges(network.NetAny, network.PortRange{From: 123, To: 123}),
 		},
