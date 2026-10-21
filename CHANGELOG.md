@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.9.0
+
+- chore(deps): bump action_kit_commons to v1.14.0 (#269)
+- feat: block localhost traffic option for Block Traffic attack (#268)
+- fix: bump action_kit_commons to v1.14.2 and tell NTP blocks of time travels apart (#270)
+
 ## v1.8.5
 
 - chore(deps): bump dns-inject to v0.2.10 and transparent-proxy to v1.1.1
