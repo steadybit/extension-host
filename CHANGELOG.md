@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.9.1
+
+- chore(deps): bump dns-inject to v0.2.11 and transparent-proxy to v1.1.2 (CVE-2026-111943)
+
 ## v1.9.0
 
 - chore(deps): bump action_kit_commons to v1.14.0 (#269)
