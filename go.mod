@@ -3,7 +3,7 @@ module github.com/steadybit/extension-host
 go 1.26.0
 
 require (
-	github.com/KimMachineGun/automemlimit v1.0.0
+	github.com/KimMachineGun/automemlimit v1.0.1
 	github.com/beevik/ntp v1.6.0
 	github.com/elastic/go-sysinfo v1.15.5
 	github.com/google/uuid v1.6.0
