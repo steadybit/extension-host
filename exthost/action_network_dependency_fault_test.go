@@ -66,8 +66,9 @@ func Test_parsePortsList(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, []uint16{80, 443, 8080}, ports)
 
-	_, err = parsePortsList("")
-	assert.Error(t, err, "empty port list is an error")
+	ports, err = parsePortsList("")
+	require.NoError(t, err)
+	assert.Empty(t, ports, "empty means every port")
 
 	_, err = parsePortsList("notaport")
 	assert.Error(t, err)
@@ -100,15 +101,60 @@ func Test_formatDependencyStatsMarkdown(t *testing.T) {
 			"cdn.example.com": {Matched: 3, Faulted: 1},
 		},
 	}
-	md := formatDependencyStatsMarkdown(s)
-	assert.Contains(t, md, "Connections matched:** 10")
+	md := formatDependencyStatsMarkdown(s, proxyfault.Opts{Ports: []uint16{80, 443}})
+	assert.Contains(t, md, "Intercepting:** ports 80, 443")
+	assert.Contains(t, md, "Connections intercepted:** 10")
+	assert.Contains(t, md, "To a dependency hostname:** 10")
 	assert.Contains(t, md, "Connections faulted:** 6")
 	assert.Contains(t, md, "api.example.com")
 	assert.Contains(t, md, "cdn.example.com")
-	assert.NotContains(t, md, "No matching connections")
+	assert.NotContains(t, md, "No connections intercepted")
 
-	empty := formatDependencyStatsMarkdown(proxyfault.Snapshot{})
-	assert.Contains(t, empty, "No matching connections", "zero-match snapshot shows the hint")
+	empty := formatDependencyStatsMarkdown(proxyfault.Snapshot{}, proxyfault.Opts{})
+	assert.Contains(t, empty, "Intercepting:** all TCP ports (except loopback)")
+	assert.Contains(t, empty, "No connections intercepted", "zero-match snapshot shows the hint")
+
+	// Traffic flows but nothing reaches the named dependencies: point at the
+	// hostnames, not at the interception.
+	other := formatDependencyStatsMarkdown(proxyfault.Snapshot{ConnectionsMatched: 5}, proxyfault.Opts{})
+	assert.Contains(t, other, "none to the dependency hostnames yet")
+}
+
+func Test_interceptionMessages(t *testing.T) {
+	hosts := proxyfault.Fault{Hosts: []string{"api.example.com"}}
+
+	msgs := interceptionMessages(proxyfault.Opts{Ports: []uint16{80, 443}, Fault: hosts}, false)
+	require.Len(t, msgs, 1)
+	assert.Equal(t, "Intercepting ports 80, 443 of the host. Only connections to api.example.com are faulted; everything else is forwarded untouched.", msgs[0].Message)
+
+	msgs = interceptionMessages(proxyfault.Opts{Fault: hosts}, false)
+	require.Len(t, msgs, 2)
+	assert.Contains(t, msgs[0].Message, "all TCP ports (except loopback)")
+	assert.Contains(t, msgs[1].Message, "kubelet")
+	assert.Contains(t, msgs[1].Message, "other protocols over TLS")
+
+	// HTTP response injection without a CA: HTTPS on any port is untouched.
+	msgs = interceptionMessages(proxyfault.Opts{Fault: hosts}, true)
+	require.Len(t, msgs, 2)
+	assert.Equal(t, action_kit_api.Warn, *msgs[1].Level)
+	assert.Contains(t, msgs[1].Message, "HTTPS is forwarded untouched")
+}
+
+func Test_l7ResetConfig(t *testing.T) {
+	in := map[string]interface{}{"port": []interface{}{"80", "8080"}, "hostname": []interface{}{"api.example.com"}}
+	out := l7ResetConfig(in)
+	assert.Equal(t, "80,8080", out["port"])
+	assert.Equal(t, in["hostname"], out["hostname"])
+	assert.Equal(t, []interface{}{"80", "8080"}, in["port"], "the caller's config must not be mutated")
+
+	// Empty means all ports, as in packet-level mode — not a hidden 80,443.
+	for _, ports := range []interface{}{nil, []interface{}{}} {
+		got := l7ResetConfig(map[string]interface{}{"port": ports})["port"]
+		assert.Equal(t, "", got)
+		parsed, err := parsePortsList(got.(string))
+		require.NoError(t, err)
+		assert.Empty(t, parsed)
+	}
 }
 
 func Test_tcpResetParameters_shape(t *testing.T) {
@@ -177,6 +223,9 @@ func Test_networkNamespaceInode(t *testing.T) {
 func Test_portsOverlap_and_cidrsOverlap(t *testing.T) {
 	assert.True(t, portsOverlap([]uint16{80, 443}, []uint16{443}))
 	assert.False(t, portsOverlap([]uint16{80}, []uint16{443}))
+	// No ports means every port, which overlaps anything.
+	assert.True(t, portsOverlap(nil, []uint16{443}))
+	assert.True(t, portsOverlap([]uint16{8080}, nil))
 
 	_, a, _ := net.ParseCIDR("10.0.0.0/8")
 	_, b, _ := net.ParseCIDR("10.1.2.0/24")
@@ -269,10 +318,10 @@ func (p metricsProxy) Metrics() (proxyfault.Snapshot, bool) { return p.snap, p.o
 
 func Test_dependencyStatsMessages(t *testing.T) {
 	// No snapshot yet => no message (nil).
-	assert.Nil(t, dependencyStatsMessages(stubProxy{}))
+	assert.Nil(t, dependencyStatsMessages(stubProxy{}, proxyfault.Opts{}))
 
 	// A snapshot => one message tagged for the widget.
-	msgs := dependencyStatsMessages(metricsProxy{snap: proxyfault.Snapshot{ConnectionsMatched: 3}, ok: true})
+	msgs := dependencyStatsMessages(metricsProxy{snap: proxyfault.Snapshot{ConnectionsMatched: 3}, ok: true}, proxyfault.Opts{})
 	require.NotNil(t, msgs)
 	require.Len(t, *msgs, 1)
 	require.NotNil(t, (*msgs)[0].Type)
@@ -381,12 +430,12 @@ func Test_formatDependencyStatsMarkdown_rejected(t *testing.T) {
 		ConnectionsMatched:   2,
 		ConnectionsFaulted:   0,
 		TLSInterceptRejected: 2,
-	})
+	}, proxyfault.Opts{Ports: []uint16{443}})
 	assert.Contains(t, md, "rejected the injected certificate")
 	assert.Contains(t, md, "trust the configured CA")
 
 	// Nothing rejected: no scary note.
-	md = formatDependencyStatsMarkdown(proxyfault.Snapshot{ConnectionsMatched: 1, ConnectionsFaulted: 1})
+	md = formatDependencyStatsMarkdown(proxyfault.Snapshot{ConnectionsMatched: 1, ConnectionsFaulted: 1}, proxyfault.Opts{Ports: []uint16{443}})
 	assert.NotContains(t, md, "rejected the injected certificate")
 }
 
@@ -410,6 +459,14 @@ func Test_dependencyFault_tlsInterceptCA_unreadable(t *testing.T) {
 
 // The CA is only needed to decrypt 443. Demanding it for a cleartext-only scope
 // would let a broken CA mount break port-80 attacks that never wanted it.
+// Capturing every port includes HTTPS on any port, so the CA is needed.
+func Test_dependencyFault_tlsInterceptCA_neededForAllPorts(t *testing.T) {
+	withInterceptCA(t)
+	ca, err := (&dependencyFaultAction{spec: httpAbortFaultSpec}).tlsInterceptCA(nil)
+	require.NoError(t, err)
+	require.NotNil(t, ca, "all ports must load the CA")
+}
+
 func Test_dependencyFault_tlsInterceptCA_notNeededForCleartextPorts(t *testing.T) {
 	withInterceptCA(t)
 	ca, err := (&dependencyFaultAction{spec: httpAbortFaultSpec}).tlsInterceptCA([]uint16{80})
