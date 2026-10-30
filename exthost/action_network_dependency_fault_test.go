@@ -129,7 +129,7 @@ func Test_interceptionMessages(t *testing.T) {
 
 	msgs = interceptionMessages(proxyfault.Opts{Fault: hosts}, false)
 	require.Len(t, msgs, 2)
-	assert.Contains(t, msgs[0].Message, "Intercepting all ports")
+	assert.Contains(t, msgs[0].Message, "Intercepting all TCP ports (except loopback)")
 	assert.Contains(t, msgs[1].Message, "kubelet")
 	assert.Contains(t, msgs[1].Message, "non-HTTP protocols")
 
