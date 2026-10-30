@@ -168,6 +168,10 @@ func TestWithMinikube(t *testing.T) {
 			Test: testNetworkTcpReset,
 		},
 		{
+			Name: "network tcp reset L7 with no ports",
+			Test: testNetworkTcpResetL7AllPorts,
+		},
+		{
 			Name: "network block dns",
 			Test: testNetworkBlockDns,
 		},
@@ -761,6 +765,59 @@ func testNetworkTcpReset(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 		})
 	}
 	requireAllSidecarsCleanedUp(t, m, e)
+}
+
+// testNetworkTcpResetL7AllPorts runs the L7 reset with no ports, so the proxy
+// captures every port. On a host it hooks the node's OUTPUT chain, so the
+// traffic under test is the node's own (curl via ssh), not a pod's — forwarded
+// pod traffic never passes OUTPUT.
+func testNetworkTcpResetL7AllPorts(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
+	nginx := e2e.Nginx{Minikube: m}
+	require.NoError(t, nginx.Deploy("nginx-network-tcp-reset-l7"), "failed to create pod")
+	defer func() { _ = nginx.Delete() }()
+	pod, err := m.GetPod(nginx.Pod)
+	require.NoError(t, err)
+	// Captured, but not a dependency hostname: must be forwarded untouched.
+	nginxUrl := "http://" + pod.Status.PodIP
+
+	const host = "steadybit.com"
+	assertNodeCanReach(t, m, "https://"+host, true)
+	assertNodeCanReach(t, m, nginxUrl, true)
+
+	config := map[string]any{
+		"duration": 60000, "l7": true, "hostname": []string{host},
+		"percentage": 100, "port": []string{},
+	}
+	// Use an empty execution context instead of defaultExecutionContext. Its
+	// restricted endpoints are 0.0.0.0/0 on ports 22/8443/10250, but the proxy
+	// can only exclude IP ranges, not ports — so each becomes "exclude every
+	// address" and nothing would be intercepted.
+	action, err := e.RunAction(exthost.BaseActionID+".network_tcp_reset", getTarget(m), config, &action_kit_api.ExecutionContext{})
+	defer func() { _ = action.Cancel() }()
+	require.NoError(t, err)
+
+	assertNodeCanReach(t, m, "https://"+host, false)
+	assertNodeCanReach(t, m, nginxUrl, true)
+
+	require.NoError(t, action.Cancel())
+	assertNodeCanReach(t, m, "https://"+host, true)
+	requireAllSidecarsCleanedUp(t, m, e)
+}
+
+// assertNodeCanReach checks whether url answers when requested from the
+// minikube node itself.
+func assertNodeCanReach(t *testing.T, m *e2e.Minikube, url string, expected bool) {
+	t.Helper()
+	e2e.Retry(t, 8, 500*time.Millisecond, func(r *e2e.R) {
+		out, err := nodeExec(m, "curl", "-s", "-o", "/dev/null", "-m", "5", url)
+		if expected && err != nil {
+			r.Failed = true
+			_, _ = fmt.Fprintf(r.Log, "expected %s to be reachable from the node, but was not: %s: %s", url, err, out)
+		} else if !expected && err == nil {
+			r.Failed = true
+			_, _ = fmt.Fprintf(r.Log, "expected %s not to be reachable from the node, but was", url)
+		}
+	})
 }
 
 func testNetworkDelay(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
