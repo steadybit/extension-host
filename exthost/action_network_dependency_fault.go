@@ -569,12 +569,10 @@ func commonDependencyParameters() []action_kit_api.ActionParameter {
 // otherwise leaves alone whether or not ports are given.
 func attackLocalhostParameter(order int) action_kit_api.ActionParameter {
 	return action_kit_api.ActionParameter{
-		Name:  "attackLocalhost",
-		Label: "Attack Localhost Traffic",
-		Description: extutil.Ptr("Also intercept traffic to localhost (127.0.0.0/8), e.g. to local databases, node-local agents or a local forward proxy. " +
-			"All matching localhost connections then pass through the proxy: existing ones may be reset when the attack starts, and all of them are closed when it ends. " +
-			"Narrow it down with the ports, otherwise every localhost connection of the host is affected."),
-		Type: action_kit_api.ActionParameterTypeBoolean, DefaultValue: extutil.Ptr("false"), Required: extutil.Ptr(false), Order: extutil.Ptr(order), Advanced: extutil.Ptr(true),
+		Name:        "attackLocalhost",
+		Label:       "Attack Localhost Traffic",
+		Description: extutil.Ptr("Also intercept localhost (127.0.0.0/8), e.g. node-local agents. Its connections may be reset when the attack starts and ends."),
+		Type:        action_kit_api.ActionParameterTypeBoolean, DefaultValue: extutil.Ptr("false"), Required: extutil.Ptr(false), Order: extutil.Ptr(order), Advanced: extutil.Ptr(true),
 	}
 }
 
