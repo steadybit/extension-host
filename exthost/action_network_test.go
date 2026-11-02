@@ -113,21 +113,19 @@ func Test_dependency_hostname_required_and_first(t *testing.T) {
 	}
 }
 
-func Test_dependency_defaultPorts(t *testing.T) {
-	require.Equal(t, "80,443", (&dependencyFaultAction{spec: latencyFaultSpec}).defaultPorts())
-	require.Equal(t, "80,443", (&dependencyFaultAction{spec: resetFaultSpec}).defaultPorts())
-	// HTTP abort is cleartext-only, so 443 is dropped from the default.
-	require.Equal(t, "80", (&dependencyFaultAction{spec: httpAbortFaultSpec}).defaultPorts())
-
-	// The Describe()d port parameter default reflects it.
-	portDefault := func(a *dependencyFaultAction) string {
-		for _, p := range a.Describe().Parameters {
-			if p.Name == "port" {
-				return *p.DefaultValue
+func Test_dependency_portsHaveNoDefault(t *testing.T) {
+	// No default, so an attack intercepts every port unless the user narrows it.
+	// Holds with and without a TLS interception CA.
+	assertNoDefault := func(t *testing.T) {
+		for _, spec := range []dependencyFaultSpec{latencyFaultSpec, httpAbortFaultSpec, resetFaultSpec} {
+			for _, p := range (&dependencyFaultAction{spec: spec}).Describe().Parameters {
+				if p.Name == "port" {
+					require.Nil(t, p.DefaultValue, "%s: Dependency Ports must have no default", spec.id)
+				}
 			}
 		}
-		return ""
 	}
-	require.Equal(t, "80", portDefault(&dependencyFaultAction{spec: httpAbortFaultSpec}))
-	require.Equal(t, "80,443", portDefault(&dependencyFaultAction{spec: latencyFaultSpec}))
+	assertNoDefault(t)
+	withInterceptCA(t)
+	assertNoDefault(t)
 }

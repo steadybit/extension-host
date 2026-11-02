@@ -390,7 +390,6 @@ func Test_dependencyFault_tlsInterceptCA(t *testing.T) {
 	ca, err := httpAbort.tlsInterceptCA([]uint16{443})
 	require.NoError(t, err)
 	assert.Nil(t, ca)
-	assert.Equal(t, "80", httpAbort.defaultPorts())
 
 	withInterceptCA(t)
 
@@ -399,14 +398,11 @@ func Test_dependencyFault_tlsInterceptCA(t *testing.T) {
 	require.NotNil(t, ca)
 	assert.Contains(t, string(ca.CertPEM), "BEGIN CERTIFICATE")
 	assert.Contains(t, string(ca.KeyPEM), "PRIVATE KEY")
-	// 443 becomes a sensible default once the proxy can terminate it.
-	assert.Equal(t, "80,443", httpAbort.defaultPorts())
 
 	// Latency already works over HTTPS at L4, so it never asks to decrypt.
 	lca, err := latency.tlsInterceptCA([]uint16{443})
 	require.NoError(t, err)
 	assert.Nil(t, lca)
-	assert.Equal(t, "80,443", latency.defaultPorts())
 }
 
 func Test_dependencyFault_hint_withInterceptCA(t *testing.T) {

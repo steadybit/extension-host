@@ -201,22 +201,12 @@ func (a *dependencyFaultAction) Describe() action_kit_api.ActionDescription {
 				Append:      false,
 			},
 		}),
-		Parameters: append(commonDependencyParameters(a.defaultPorts()), a.spec.extraParams...),
+		Parameters: append(commonDependencyParameters(), a.spec.extraParams...),
 	}
 }
 
 // dependencyStatsMessageType ties the Status messages to the Markdown widget.
 const dependencyStatsMessageType = "dependency_fault_stats_markdown"
-
-// defaultPorts is the default intercept-port list shown in the UI. A
-// cleartext-only fault drops 443 — unless an interception CA is configured, in
-// which case the proxy can terminate TLS and synthesize a response there too.
-func (a *dependencyFaultAction) defaultPorts() string {
-	if a.spec.cleartextHTTPOnly && !config.Config.TLSInterceptEnabled() {
-		return "80"
-	}
-	return "80,443"
-}
 
 // tlsInterceptCA returns the CA to hand the proxy, or nil to leave HTTPS
 // untouched. Only a cleartext-only fault (the synthesized HTTP response) has
@@ -516,7 +506,7 @@ func (a *dependencyFaultAction) teardown(ctx context.Context, handle *proxyHandl
 // --- parameters & parsing ---
 
 // commonDependencyParameters are shared by all three dependency-fault actions.
-func commonDependencyParameters(portsDefault string) []action_kit_api.ActionParameter {
+func commonDependencyParameters() []action_kit_api.ActionParameter {
 	return []action_kit_api.ActionParameter{
 		{
 			Name: "hostname", Label: "Dependency Hostnames", Description: extutil.Ptr("Apply the fault to connections to these hosts (TLS SNI or HTTP Host, subdomain match)."),
@@ -537,7 +527,8 @@ func commonDependencyParameters(portsDefault string) []action_kit_api.ActionPara
 		},
 		{
 			Name: "port", Label: "Dependency Ports", Description: extutil.Ptr("Comma-separated destination ports to intercept. Empty intercepts all ports."),
-			Type: action_kit_api.ActionParameterTypeString, DefaultValue: extutil.Ptr(portsDefault), Required: extutil.Ptr(false), Order: extutil.Ptr(12), Advanced: extutil.Ptr(true),
+			// No default: an attack intercepts every port unless the user narrows it.
+			Type: action_kit_api.ActionParameterTypeString, Required: extutil.Ptr(false), Order: extutil.Ptr(12), Advanced: extutil.Ptr(true),
 		},
 		{
 			Name: "excludeIp", Label: "Exclude CIDRs", Description: extutil.Ptr("Never intercept traffic to these CIDRs (in addition to the automatically protected agent/extension endpoints)."),
