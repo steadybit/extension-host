@@ -318,6 +318,10 @@ func (a *dependencyFaultAction) Prepare(ctx context.Context, state *DependencyFa
 			Status: extutil.Ptr(action_kit_api.Failed),
 		}}, nil
 	}
+	log.Info().
+		Str("execution", request.ExecutionId.String()).
+		Str("scope", interceptScope(opts)).
+		Msg("preparing dependency fault")
 	messages := interceptionMessages(opts, a.spec.cleartextHTTPOnly)
 	if !reserved {
 		// A reservation/handle for this execution already exists — idempotent.
@@ -336,16 +340,30 @@ func (a *dependencyFaultAction) Prepare(ctx context.Context, state *DependencyFa
 	return &action_kit_api.PrepareResult{Messages: &messages}, nil
 }
 
-// interceptScope describes which destination ports the proxy captures.
+// ownPorts are the extension's ports, kept out of an intercepted localhost.
+func ownPorts() []uint16 {
+	ports := []uint16{config.Config.Port}
+	if config.Config.HealthPort > 0 && config.Config.HealthPort != config.Config.Port {
+		ports = append(ports, config.Config.HealthPort)
+	}
+	return ports
+}
+
+// interceptScope describes which destination ports the proxy captures, and
+// whether localhost is among them.
 func interceptScope(opts proxyfault.Opts) string {
+	localhost := "localhost excluded"
+	if opts.InterceptLoopback {
+		localhost = "localhost included"
+	}
 	if len(opts.Ports) == 0 {
-		return "all TCP ports (except loopback)"
+		return "all TCP ports (" + localhost + ")"
 	}
 	parts := make([]string, len(opts.Ports))
 	for i, p := range opts.Ports {
 		parts[i] = strconv.Itoa(int(p))
 	}
-	return "ports " + strings.Join(parts, ", ")
+	return "ports " + strings.Join(parts, ", ") + " (" + localhost + ")"
 }
 
 // interceptionMessages tells the execution log what the attack captures and
@@ -356,6 +374,12 @@ func interceptionMessages(opts proxyfault.Opts, cleartextHTTPOnly bool) action_k
 		Level:   extutil.Ptr(action_kit_api.Info),
 		Message: fmt.Sprintf("Intercepting %s of the host; only connections to %s are faulted.", interceptScope(opts), strings.Join(opts.Fault.Hosts, ", ")),
 	}}
+	if opts.InterceptLoopback {
+		msgs = append(msgs, action_kit_api.Message{
+			Level:   extutil.Ptr(action_kit_api.Warn),
+			Message: "Localhost traffic passes through the proxy: existing localhost connections may be reset when the attack starts, and are closed when it ends.",
+		})
+	}
 	if len(opts.Ports) > 0 {
 		return msgs
 	}
@@ -534,6 +558,20 @@ func commonDependencyParameters() []action_kit_api.ActionParameter {
 			Name: "excludeIp", Label: "Exclude CIDRs", Description: extutil.Ptr("Never intercept traffic to these CIDRs (in addition to the automatically protected agent/extension endpoints)."),
 			Type: action_kit_api.ActionParameterTypeStringArray, Required: extutil.Ptr(false), Order: extutil.Ptr(13), Advanced: extutil.Ptr(true),
 		},
+		attackLocalhostParameter(14),
+	}
+}
+
+// attackLocalhostParameter opts in to intercepting localhost, which the proxy
+// otherwise leaves alone whether or not ports are given.
+func attackLocalhostParameter(order int) action_kit_api.ActionParameter {
+	return action_kit_api.ActionParameter{
+		Name:  "attackLocalhost",
+		Label: "Attack Localhost Traffic",
+		Description: extutil.Ptr("Also intercept traffic to localhost (127.0.0.0/8), e.g. to local databases, node-local agents or a local forward proxy. " +
+			"All matching localhost connections then pass through the proxy: existing ones may be reset when the attack starts, and all of them are closed when it ends. " +
+			"Narrow it down with the ports, otherwise every localhost connection of the host is affected."),
+		Type: action_kit_api.ActionParameterTypeBoolean, DefaultValue: extutil.Ptr("false"), Required: extutil.Ptr(false), Order: extutil.Ptr(order), Advanced: extutil.Ptr(true),
 	}
 }
 
@@ -585,6 +623,7 @@ func (a *dependencyFaultAction) parseOpts(request action_kit_api.PrepareActionRe
 	// resetExisting (default true) resets warm connection pools on start so the
 	// fault bites immediately; NoFlush is its inverse. Specs without the parameter
 	// keep the default (flush on).
+	attackLocalhost := extutil.ToBool(cfg["attackLocalhost"])
 	resetExisting := true
 	if cfg["resetExisting"] != nil {
 		resetExisting = extutil.ToBool(cfg["resetExisting"])
@@ -602,6 +641,9 @@ func (a *dependencyFaultAction) parseOpts(request action_kit_api.PrepareActionRe
 		NoFlush:               !resetExisting,
 		IncludeCIDRs:          includeCIDRs,
 		ExcludeCIDRs:          excludeCIDRs,
+		InterceptLoopback:     attackLocalhost,
+		// The host's loopback is the extension's: keep its own ports reachable.
+		LoopbackExcludePorts: ownPorts(),
 		// No ports means every port: the proxy then captures all of them and
 		// finds HTTP(S) by its SNI/Host wherever it runs.
 		Ports: ports,
