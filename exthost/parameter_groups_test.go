@@ -20,6 +20,15 @@ func groupMembers(desc action_kit_api.ActionDescription) map[string][]string {
 	return members
 }
 
+func parameterOrder(desc action_kit_api.ActionDescription, name string) *int {
+	for _, p := range desc.Parameters {
+		if p.Name == name {
+			return p.Order
+		}
+	}
+	return nil
+}
+
 func definedGroups(desc action_kit_api.ActionDescription) []string {
 	var names []string
 	if desc.ParameterGroups != nil {
@@ -61,9 +70,29 @@ func TestParameterGroups(t *testing.T) {
 			}, []string{groupTrafficFilter}},
 		{"fillDisk", NewFillDiskHostAction(nil).Describe(),
 			map[string][]string{groupFillBehavior: {"method", "blocksize"}}, nil},
+		{"stopProcess", NewStopProcessAction().Describe(),
+			map[string][]string{action_kit_api.ParameterGroupAdditionalSettings: {"delay"}}, nil},
+		{"timeTravel", NewTimetravelAction(nil).Describe(),
+			map[string][]string{action_kit_api.ParameterGroupAdditionalSettings: {"disableNtp"}}, nil},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			// Platforms sort parameters by order and show a group where its first parameter is: an explicit
+			// "Additional Settings" group must therefore come last, as the platform's fallback does.
+			if members, ok := groupMembers(tt.desc)[action_kit_api.ParameterGroupAdditionalSettings]; ok {
+				last := tt.desc.Parameters[0]
+				for _, p := range tt.desc.Parameters {
+					if *p.Order >= *last.Order {
+						last = p
+					}
+				}
+				assert.Equal(t, members[len(members)-1], last.Name, "Additional Settings is shown last")
+				for _, p := range tt.desc.Parameters {
+					if p.Name != members[0] && (p.Group == nil || *p.Group != action_kit_api.ParameterGroupAdditionalSettings) {
+						assert.Less(t, *p.Order, *parameterOrder(tt.desc, members[0]), "parameter %s comes before Additional Settings", p.Name)
+					}
+				}
+			}
 			assert.Equal(t, tt.groups, groupMembers(tt.desc))
 			assert.Equal(t, tt.defined, definedGroups(tt.desc))
 
