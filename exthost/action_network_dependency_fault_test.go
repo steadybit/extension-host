@@ -63,6 +63,40 @@ func Test_resetFaultSpec_buildFault(t *testing.T) {
 	assert.Zero(t, f.HTTPStatus)
 }
 
+func Test_formatDependencyStatsMarkdown_requests(t *testing.T) {
+	// One keep-alive connection carrying 10 cleartext HTTP requests, 4 faulted:
+	// the connection counters say 1/1, only the request counters show 40%.
+	md := formatDependencyStatsMarkdown(proxyfault.Snapshot{
+		ConnectionsMatched: 1,
+		ConnectionsFaulted: 1,
+		RequestsMatched:    10,
+		RequestsFaulted:    4,
+		PerHost: map[string]proxyfault.HostStat{
+			"api.example.com": {Matched: 1, Faulted: 1, RequestsMatched: 10, RequestsFaulted: 4},
+		},
+	}, proxyfault.Opts{Ports: []uint16{443}})
+	// The request counters replace the connection ones in the summary.
+	require.Contains(t, md, "### Interception\n"+
+		"- **Intercepting:** ports 443 (localhost excluded)\n"+
+		"- **Requests to a dependency hostname:** 10\n"+
+		"- **Requests faulted:** 4 (40.0%)\n\n### What was done\n")
+	require.NotContains(t, md, "Connections intercepted")
+	require.NotContains(t, md, "Connections faulted")
+	require.NotContains(t, md, "cleartext HTTP")
+	require.Contains(t, md, "| api.example.com | 1 | 1 | 10 | 4 |")
+
+	// No cleartext HTTP requests (HTTPS or other TCP only): no request section
+	// and the table keeps its connection columns.
+	md = formatDependencyStatsMarkdown(proxyfault.Snapshot{
+		ConnectionsMatched: 1,
+		ConnectionsFaulted: 1,
+		PerHost:            map[string]proxyfault.HostStat{"api.example.com": {Matched: 1, Faulted: 1}},
+	}, proxyfault.Opts{})
+	require.NotContains(t, md, "Requests")
+	require.Contains(t, md, "- **Connections faulted:** 1")
+	require.Contains(t, md, "| api.example.com | 1 | 1 |\n")
+}
+
 func Test_parsePortsList(t *testing.T) {
 	ports, err := parsePortsList("80, 443 ,8080")
 	require.NoError(t, err)
@@ -462,6 +496,20 @@ func Test_dependencyFault_tlsInterceptCA(t *testing.T) {
 	lca, err := latency.tlsInterceptCA([]uint16{443})
 	require.NoError(t, err)
 	assert.Nil(t, lca)
+}
+
+func Test_dependencyFault_percentageDescription(t *testing.T) {
+	httpAbort := &dependencyFaultAction{spec: httpAbortFaultSpec}
+	latency := &dependencyFaultAction{spec: latencyFaultSpec}
+
+	require.NotContains(t, httpAbort.percentageDescription(), "HTTPS")
+	require.Contains(t, latency.percentageDescription(), "per connection for HTTPS")
+
+	// With the CA, the HTTP response attack reads HTTPS requests too, so they
+	// are decided per request; latency still acts on HTTPS connections.
+	withInterceptCA(t)
+	require.Contains(t, httpAbort.percentageDescription(), "HTTPS through the configured interception CA")
+	require.Contains(t, latency.percentageDescription(), "per connection for HTTPS")
 }
 
 func Test_dependencyFault_hint_withInterceptCA(t *testing.T) {
