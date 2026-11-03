@@ -172,6 +172,10 @@ func TestWithMinikube(t *testing.T) {
 			Test: testNetworkTcpResetL7AllPorts,
 		},
 		{
+			Name: "network dependency fault attack localhost",
+			Test: testNetworkDependencyFaultAttackLocalhost,
+		},
+		{
 			Name: "network block dns",
 			Test: testNetworkBlockDns,
 		},
@@ -802,6 +806,82 @@ func testNetworkTcpResetL7AllPorts(t *testing.T, m *e2e.Minikube, e *e2e.Extensi
 	require.NoError(t, action.Cancel())
 	assertNodeCanReach(t, m, "https://"+host, true)
 	requireAllSidecarsCleanedUp(t, m, e)
+}
+
+// testNetworkDependencyFaultAttackLocalhost checks that localhost traffic is
+// only intercepted with Attack Localhost Traffic enabled. The localhost call
+// goes to the kubelet healthz endpoint on the node's loopback with a Host
+// header naming the dependency, like a local proxy forwarding to its backend.
+// The call to steadybit.com shows the proxy is active in every case.
+func testNetworkDependencyFaultAttackLocalhost(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
+	const localDependency = "local-dependency"
+	const remoteDependency = "steadybit.com"
+	// no space in the header: minikube ssh re-splits the arguments
+	localhostCall := []string{"-H", "Host:" + localDependency, fmt.Sprintf("http://127.0.0.1:%s/healthz", kubeletHealthzPort)}
+	remoteCall := []string{"http://" + remoteDependency}
+
+	tests := []struct {
+		name            string
+		attackLocalhost bool
+		port            []string
+		wantedLocalCode string
+	}{
+		{
+			name:            "should not intercept localhost traffic by default",
+			attackLocalhost: false,
+			port:            []string{kubeletHealthzPort, "80"},
+			wantedLocalCode: "200",
+		},
+		{
+			name:            "should intercept localhost traffic when enabled",
+			attackLocalhost: true,
+			port:            []string{kubeletHealthzPort, "80"},
+			wantedLocalCode: "503",
+		},
+		{
+			name:            "should intercept localhost traffic on all ports when enabled",
+			attackLocalhost: true,
+			port:            []string{},
+			wantedLocalCode: "503",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assertNodeHttpCode(t, m, localhostCall, "200")
+
+			config := map[string]any{
+				"duration": 60000, "hostname": []string{localDependency, remoteDependency},
+				"percentage": 100, "port": tt.port, "httpStatus": 503,
+				"attackLocalhost": tt.attackLocalhost,
+			}
+			// Empty execution context, see testNetworkTcpResetL7AllPorts.
+			action, err := e.RunAction(exthost.BaseActionID+".network_dependency_http_response", getTarget(m), config, &action_kit_api.ExecutionContext{})
+			defer func() { _ = action.Cancel() }()
+			require.NoError(t, err)
+
+			assertNodeHttpCode(t, m, remoteCall, "503")
+			assertNodeHttpCode(t, m, localhostCall, tt.wantedLocalCode)
+
+			require.NoError(t, action.Cancel())
+			assertNodeHttpCode(t, m, localhostCall, "200")
+		})
+	}
+	requireAllSidecarsCleanedUp(t, m, e)
+}
+
+// assertNodeHttpCode retries a curl from the minikube node until it returns
+// the wanted status code.
+func assertNodeHttpCode(t *testing.T, m *e2e.Minikube, curlArgs []string, wanted string) {
+	t.Helper()
+	args := append([]string{"curl", "-s", "-o", "/dev/null", "-m", "5", "-w", "%{http_code}"}, curlArgs...)
+	e2e.Retry(t, 8, 500*time.Millisecond, func(r *e2e.R) {
+		out, _ := nodeExec(m, args...)
+		if code := strings.TrimSpace(string(out)); code != wanted {
+			r.Failed = true
+			_, _ = fmt.Fprintf(r.Log, "%v: expected %s, got %q", curlArgs, wanted, code)
+		}
+	})
 }
 
 // assertNodeCanReach checks whether url answers when requested from the
