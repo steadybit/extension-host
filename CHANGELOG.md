@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- feat: network attacks show their traffic filters in a "Traffic Filter" group, Fill Disk its method settings in a "Fill Behavior" group and Intercept Outgoing HTTP Request its optional response fields in a "Response Details" group, on platforms that support parameter groups
 - feat: dependency fault attacks intercept every port when Dependency Ports is empty; only HTTP(S) connections to the dependency hostnames are faulted, all other traffic is forwarded untouched. On a host this includes the outgoing connections of system services such as the kubelet and the container runtime
 - feat: dependency fault attacks report the intercepted ports in the execution log and the statistics widget
 - feat: Dependency Ports has no default anymore, so new dependency fault attacks intercept every port. Existing experiments keep the ports they were saved with.
