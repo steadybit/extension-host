@@ -96,7 +96,7 @@ func (a *fillMemoryAction) Describe() action_kit_api.ActionDescription {
 			{
 				Name:         "size",
 				Label:        "Size",
-				Description:  new("Percentage of total memory or Megabytes."),
+				Description:  new("Percentage of total memory or MiB."),
 				Type:         action_kit_api.ActionParameterTypeInteger,
 				DefaultValue: new("80"),
 				Required:     new(true),
@@ -112,7 +112,7 @@ func (a *fillMemoryAction) Describe() action_kit_api.ActionDescription {
 				Order:        new(4),
 				Options: new([]action_kit_api.ParameterOption{
 					action_kit_api.ExplicitParameterOption{
-						Label: "Megabytes",
+						Label: "MiB",
 						Value: string(memfill.UnitMegabyte),
 					},
 					action_kit_api.ExplicitParameterOption{
