@@ -208,7 +208,8 @@ statistics rather than silently doing nothing.
 
 **Mutual TLS cannot be intercepted.** The proxy forwards without the workload's
 client certificate, so a dependency that requires one rejects the forwarded
-requests. Do not target such dependencies with HTTPS interception.
+requests, and the workload gets a `502` for them. Do not target such
+dependencies with HTTPS interception.
 
 **Dependencies with a private CA.** A forwarded request reaches the dependency
 only if the proxy can verify its certificate. Public CAs are built in. For a
