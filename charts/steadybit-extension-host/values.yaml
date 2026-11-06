@@ -173,6 +173,12 @@ extraEnv: []
 #    name: env-secrets
 extraEnvFrom: []
 
+# extraVolumes -- Additional volumes to which the container will be mounted.
+extraVolumes: []
+
+# extraVolumeMounts -- Additional volumeMounts to which the container will be mounted.
+extraVolumeMounts: []
+
 ociRuntime:
   path: runc
   debug: false
