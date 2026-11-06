@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// SPDX-FileCopyrightText: 2025 Roblox Corporation
+// SPDX-FileCopyrightText: 2025 Steadybit GmbH
 // Author: Tom Handal <thandal@roblox.com>
 
 package cpufreq
