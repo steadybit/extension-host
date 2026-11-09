@@ -218,10 +218,10 @@ github.com/smartystreets/goconvey v1.8.0/go.mod h1:EdX8jtrTIj26jmjCOVNMVSIYAtgex
 github.com/spf13/pflag v1.0.10 h1:4EBh2KAYBwaONj6b2Ye1GiHfwjqyROoF4RwYO+vPwFk=
 github.com/spf13/pflag v1.0.10/go.mod h1:McXfInJRrz4CZXVZOBLb0bTZqETkiAhM9Iw0y3An2Bg=
 github.com/spkg/bom v0.0.0-20160624110644-59b7046e48ad/go.mod h1:qLr4V1qq6nMqFKkMo8ZTx3f+BZEkzsRUY10Xsm2mwU0=
-github.com/steadybit/action-kit/go/action_kit_api/v2 v2.11.1 h1:aDrEMS73WEEjUYG6/7jrpAP9thumtFEveYLgOm9a+EI=
-github.com/steadybit/action-kit/go/action_kit_api/v2 v2.11.1/go.mod h1:jPoUB2nQIaiYWt90VbxhNw4d/mNSiu7xLCoJyfz9DFg=
-github.com/steadybit/action-kit/go/action_kit_commons v1.15.1-0.20261105155936-885d658cd398 h1:FgqBQ6F6uDq5U9jAJlxkVq5E9oyFbeZb3+Dl1+xztJw=
-github.com/steadybit/action-kit/go/action_kit_commons v1.15.1-0.20261105155936-885d658cd398/go.mod h1:IIq84umjtugLFwKuZmCe/Im7REZ3ky9Kv1gD1tu4HlE=
+github.com/steadybit/action-kit/go/action_kit_api/v2 v2.11.2 h1:EZkx8XvjFy/BwFdR4AlWMw3WUTyULOKbiTQLUQ8qDIU=
+github.com/steadybit/action-kit/go/action_kit_api/v2 v2.11.2/go.mod h1:jPoUB2nQIaiYWt90VbxhNw4d/mNSiu7xLCoJyfz9DFg=
+github.com/steadybit/action-kit/go/action_kit_commons v1.16.0 h1:w8MyOChibw2KHeaeMr+PQWf4FhJsBMOaaZqC+lZV6sc=
+github.com/steadybit/action-kit/go/action_kit_commons v1.16.0/go.mod h1:IIq84umjtugLFwKuZmCe/Im7REZ3ky9Kv1gD1tu4HlE=
 github.com/steadybit/action-kit/go/action_kit_sdk v1.4.1 h1:fKgOjkC64Au6RWX/ANWmq0Y1LjMElURde0RPc6lEDCo=
 github.com/steadybit/action-kit/go/action_kit_sdk v1.4.1/go.mod h1:1mLrjwlZkcz8xN3kIRa5zy4LavmZsdNBd6v+Ao5DNe8=
 github.com/steadybit/action-kit/go/action_kit_test v1.4.13 h1:1AP3Gufm41MTWLhXGiJQDnTx7hLSCy7pycdL/HChXEU=
@@ -296,8 +296,8 @@ golang.org/x/net v0.0.0-20210119194325-5f4716e94777/go.mod h1:m0MpNAwzfU5UDzcl9v
 golang.org/x/net v0.0.0-20210226172049-e18ecbb05110/go.mod h1:m0MpNAwzfU5UDzcl9v0D8zg8gWTRqZa9RBIspLL5mdg=
 golang.org/x/net v0.0.0-20210525063256-abc453219eb5/go.mod h1:9nx3DQGgdP8bBQD5qxJ1jj9UTztislL4KSBs9R2vV5Y=
 golang.org/x/net v0.0.0-20220923203811-8be639271d50/go.mod h1:YDH+HFinaLZZlnHAfSS6ZXJJ9M9t4Dl22yv3iI2vPwk=
-golang.org/x/net v0.61.0 h1:RR+6j/BTBCrggOLugxa+66R8FvoN6MHlzDlZIbN9YFw=
-golang.org/x/net v0.61.0/go.mod h1:WgDCOTH8iwtB66T4/GfI94AHo/hhdb7Hah9NDseQfiI=
+golang.org/x/net v0.62.0 h1:18ELalfM5+XNRwzM2nYqXsZQ9ByS1uhj2O/U7+5jqRY=
+golang.org/x/net v0.62.0/go.mod h1:WgDCOTH8iwtB66T4/GfI94AHo/hhdb7Hah9NDseQfiI=
 golang.org/x/oauth2 v0.36.0 h1:peZ/1z27fi9hUOFCAZaHyrpWG5lwe0RJEEEeH0ThlIs=
 golang.org/x/oauth2 v0.36.0/go.mod h1:YDBUJMTkDnJS+A4BP4eZBjCqtokkg1hODuPjwiGPO7Q=
 golang.org/x/sync v0.0.0-20210220032951-036812b2e83c/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
