@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/opencontainers/runtime-spec/specs-go"
@@ -25,6 +26,7 @@ import (
 	"github.com/steadybit/action-kit/go/action_kit_commons/ociruntime"
 	"github.com/steadybit/action-kit/go/action_kit_sdk"
 	"github.com/steadybit/extension-host/config"
+	"github.com/steadybit/extension-host/exthost/flags"
 	"github.com/steadybit/extension-kit/extbuild"
 	"github.com/steadybit/extension-kit/extutil"
 )
@@ -153,6 +155,11 @@ type proxyHandle struct {
 	opts    proxyfault.Opts
 	sidecar ociruntime.LinuxProcessInfo
 	id      string
+	// upstreamCAs are the custom CA paths holding a certificate when the attack
+	// was prepared, for the tip on failed forwards.
+	upstreamCAs []string
+	// upstreamTipLogged makes that tip appear once per execution.
+	upstreamTipLogged atomic.Bool
 }
 
 var (
@@ -208,8 +215,18 @@ func (a *dependencyFaultAction) Describe() action_kit_api.ActionDescription {
 			},
 		}),
 		ParameterGroups: new([]action_kit_api.ParameterGroup{dependencyTrafficFilterGroup}),
-		Parameters:      append(commonDependencyParameters(a.percentageDescription()), a.spec.extraParams...),
+		Parameters:      a.parameters(),
 	}
+}
+
+func (a *dependencyFaultAction) parameters() []action_kit_api.ActionParameter {
+	params := append(commonDependencyParameters(a.percentageDescription()), a.spec.extraParams...)
+	// Only meaningful when the proxy decrypts HTTPS and so opens its own TLS
+	// connection to the dependency.
+	if a.spec.decryptsHTTPS && config.Config.TLSInterceptEnabled() {
+		params = append(params, flags.UpstreamSkipVerifyParameter(15, groupTrafficFilter))
+	}
+	return params
 }
 
 // dependencyStatsMessageType ties the Status messages to the Markdown widget.
@@ -293,7 +310,7 @@ func (a *dependencyFaultAction) hint() *action_kit_api.ActionHint {
 	if a.spec.decryptsHTTPS && config.Config.TLSInterceptEnabled() {
 		return &action_kit_api.ActionHint{
 			Type:    action_kit_api.HintInfo,
-			Content: "HTTPS interception is enabled — every matched HTTPS connection is decrypted, so the target's workloads must trust the configured CA, or all their requests to the dependency fail, not only the selected percentage. Dependencies that require mutual TLS cannot be reached.",
+			Content: "HTTPS interception is enabled: every matched HTTPS connection is decrypted, whatever the Percentage. Workloads that don't trust the configured CA fail all their requests to the dependency. Unfaulted requests get a 502 if the extension can't verify the dependency's certificate. Mutual TLS isn't supported.",
 		}
 	}
 	return a.spec.hint
@@ -343,6 +360,8 @@ func (a *dependencyFaultAction) Prepare(ctx context.Context, state *DependencyFa
 		Str("scope", interceptScope(opts)).
 		Msg("preparing dependency fault")
 	messages := interceptionMessages(opts, a.spec.cleartextHTTPOnly)
+	upstreamCAs, invalidUpstreamCAs := flags.UpstreamCustomCAs()
+	messages = append(messages, flags.UpstreamTLSMessages(opts, upstreamCAs, invalidUpstreamCAs)...)
 	if !opts.InterceptLoopback {
 		messages = append(messages, loopbackHostnameMessages(ctx, processInfo.Pid, opts.Fault.Hosts)...)
 	}
@@ -358,7 +377,7 @@ func (a *dependencyFaultAction) Prepare(ctx context.Context, state *DependencyFa
 		return nil, fmt.Errorf("failed to create transparent-proxy process: %w", err)
 	}
 
-	storeDependencyFaultHandle(state.ExecutionId, &proxyHandle{proxy: proxy, opts: opts, sidecar: processInfo, id: sidecarId})
+	storeDependencyFaultHandle(state.ExecutionId, &proxyHandle{proxy: proxy, opts: opts, sidecar: processInfo, id: sidecarId, upstreamCAs: upstreamCAs})
 
 	return &action_kit_api.PrepareResult{Messages: &messages}, nil
 }
@@ -459,9 +478,18 @@ func (a *dependencyFaultAction) Status(ctx context.Context, state *DependencyFau
 		// completion, not an error.
 		return &action_kit_api.StatusResult{Completed: true}, nil
 	}
+	messages := dependencyStatsMessages(handle.proxy, handle.opts)
+	if snap, ok := handle.proxy.Metrics(); ok {
+		if tip := flags.UpstreamErrorTip(handle.opts, handle.upstreamCAs, snap.UpstreamErrors); tip != nil && handle.upstreamTipLogged.CompareAndSwap(false, true) {
+			if messages == nil {
+				messages = &action_kit_api.Messages{}
+			}
+			*messages = append(*messages, *tip)
+		}
+	}
 	return &action_kit_api.StatusResult{
 		Completed: false,
-		Messages:  dependencyStatsMessages(handle.proxy, handle.opts),
+		Messages:  messages,
 	}, nil
 }
 
@@ -527,6 +555,13 @@ func formatDependencyStatsMarkdown(s proxyfault.Snapshot, opts proxyfault.Opts) 
 	// A rejection means the client refused the certificate we minted for it, so
 	// the fault never applied. Surfacing it here is the difference between the
 	// operator seeing "the CA isn't trusted" and seeing an unexplained no-op.
+	if s.UpstreamErrors > 0 {
+		cause := "couldn't connect to the destination"
+		if flags.VerifiesUpstream(opts) {
+			cause += ", or couldn't verify the dependency's certificate"
+		}
+		fmt.Fprintf(&b, "\n_**Forwarding failed %d time(s).** The proxy %s._\n", s.UpstreamErrors, cause)
+	}
 	if s.TLSInterceptRejected > 0 {
 		fmt.Fprintf(&b, "\n_**%d HTTPS connection(s) rejected the injected certificate.** The target's workload must trust the configured CA — and it usually reads its truststore at startup, so it may need restarting after the CA was installed. Certificate pinning and mutual TLS cannot be intercepted._\n", s.TLSInterceptRejected)
 	}
@@ -614,7 +649,7 @@ func attackLocalhostParameter(order int) action_kit_api.ActionParameter {
 		Name:        "attackLocalhost",
 		Label:       "Attack Localhost Traffic",
 		Description: extutil.Ptr("Also intercept localhost (127.0.0.0/8), e.g. node-local agents. Its connections may be reset when the attack starts and ends."),
-		Type:        action_kit_api.ActionParameterTypeBoolean, DefaultValue: extutil.Ptr("false"), Required: extutil.Ptr(false), Order: extutil.Ptr(order), Advanced: extutil.Ptr(true), Group: extutil.Ptr(groupTrafficFilter),
+		Type:        action_kit_api.ActionParameterTypeBoolean, DefaultValue: extutil.Ptr("false"), Required: extutil.Ptr(true), Order: extutil.Ptr(order), Advanced: extutil.Ptr(true), Group: extutil.Ptr(groupTrafficFilter),
 	}
 }
 
@@ -693,6 +728,8 @@ func (a *dependencyFaultAction) parseOpts(request action_kit_api.PrepareActionRe
 		Fault: fault,
 		// nil unless a CA is configured, so HTTPS stays untouched by default.
 		TLSInterceptCA: interceptCA,
+		// Only applies to decrypted HTTPS, and only when the experiment asks for it.
+		UpstreamInsecureSkipVerify: flags.UpstreamSkipVerify(cfg, interceptCA),
 	}, nil
 }
 
