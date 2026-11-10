@@ -64,7 +64,7 @@ var latencyFaultSpec = dependencyFaultSpec{
 			Name:        "resetExisting",
 			Label:       "Reset existing connections",
 			Description: extutil.Ptr("Reset existing keep-alive/pooled connections at start so they reconnect through the proxy and feel the latency immediately. Off = only new connections are affected."),
-			Type:        action_kit_api.ActionParameterTypeBoolean, DefaultValue: extutil.Ptr("true"), Required: extutil.Ptr(false), Order: extutil.Ptr(4),
+			Type:        action_kit_api.ActionParameterTypeBoolean, DefaultValue: extutil.Ptr("true"), Required: extutil.Ptr(true), Order: extutil.Ptr(4),
 		},
 	},
 	buildFault: func(cfg map[string]any) (proxyfault.Fault, error) {
