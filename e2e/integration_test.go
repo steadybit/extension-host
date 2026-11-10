@@ -102,12 +102,22 @@ func TestWithMinikube(t *testing.T) {
 		Name: "extension-host",
 		Port: 8085,
 		ExtraArgs: func(m *e2e.Minikube) []string {
-			return append([]string{
+			args := []string{
 				"--set", fmt.Sprintf("container.runtime=%s", m.Runtime),
 				"--set", "discovery.attributes.excludes.host={host.nic}",
 				"--set", "discovery.hostnameFromKubernetes=true",
 				"--set", "logging.level=info",
-			}, otelExtraArgs()...)
+			}
+			// Published before install so the chart can mount it; this enables the
+			// HTTPS path of the dependency faults. Not fatal: ExtraArgs runs outside a
+			// test, so leaving the CA unset makes only the HTTPS case fail, with a
+			// readable assertion.
+			if err := createInterceptCASecret(m); err != nil {
+				log.Warn().Err(err).Msg("failed to publish the interception CA secret")
+			} else {
+				args = append(args, "--set", "tlsIntercept.existingSecret="+tlsInterceptSecretName)
+			}
+			return append(args, otelExtraArgs()...)
 		},
 	}
 
@@ -174,6 +184,10 @@ func TestWithMinikube(t *testing.T) {
 		{
 			Name: "network dependency fault attack localhost",
 			Test: testNetworkDependencyFaultAttackLocalhost,
+		},
+		{
+			Name: "network dependency fault percentage per request (HTTP and HTTPS)",
+			Test: testNetworkDependencyFaultPercentage,
 		},
 		{
 			Name: "network block dns",

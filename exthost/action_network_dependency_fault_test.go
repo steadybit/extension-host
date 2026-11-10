@@ -15,6 +15,7 @@ import (
 	"net"
 	"os"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -25,6 +26,7 @@ import (
 	"github.com/steadybit/action-kit/go/action_kit_commons/ociruntime"
 	"github.com/steadybit/action-kit/go/action_kit_sdk"
 	"github.com/steadybit/extension-host/config"
+	"github.com/steadybit/extension-host/exthost/flags"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -61,6 +63,40 @@ func Test_resetFaultSpec_buildFault(t *testing.T) {
 	assert.True(t, f.Reset)
 	assert.Zero(t, f.Latency)
 	assert.Zero(t, f.HTTPStatus)
+}
+
+func Test_formatDependencyStatsMarkdown_requests(t *testing.T) {
+	// One keep-alive connection carrying 10 cleartext HTTP requests, 4 faulted:
+	// the connection counters say 1/1, only the request counters show 40%.
+	md := formatDependencyStatsMarkdown(proxyfault.Snapshot{
+		ConnectionsMatched: 1,
+		ConnectionsFaulted: 1,
+		RequestsMatched:    10,
+		RequestsFaulted:    4,
+		PerHost: map[string]proxyfault.HostStat{
+			"api.example.com": {Matched: 1, Faulted: 1, RequestsMatched: 10, RequestsFaulted: 4},
+		},
+	}, proxyfault.Opts{Ports: []uint16{443}})
+	// The request counters replace the connection ones in the summary.
+	require.Contains(t, md, "### Interception\n"+
+		"- **Intercepting:** ports 443 (localhost excluded)\n"+
+		"- **Requests to a dependency hostname:** 10\n"+
+		"- **Requests faulted:** 4 (40.0%)\n\n### What was done\n")
+	require.NotContains(t, md, "Connections intercepted")
+	require.NotContains(t, md, "Connections faulted")
+	require.NotContains(t, md, "cleartext HTTP")
+	require.Contains(t, md, "| api.example.com | 1 | 1 | 10 | 4 |")
+
+	// No cleartext HTTP requests (HTTPS or other TCP only): no request section
+	// and the table keeps its connection columns.
+	md = formatDependencyStatsMarkdown(proxyfault.Snapshot{
+		ConnectionsMatched: 1,
+		ConnectionsFaulted: 1,
+		PerHost:            map[string]proxyfault.HostStat{"api.example.com": {Matched: 1, Faulted: 1}},
+	}, proxyfault.Opts{})
+	require.NotContains(t, md, "Requests")
+	require.Contains(t, md, "- **Connections faulted:** 1")
+	require.Contains(t, md, "| api.example.com | 1 | 1 |\n")
 }
 
 func Test_parsePortsList(t *testing.T) {
@@ -458,10 +494,29 @@ func Test_dependencyFault_tlsInterceptCA(t *testing.T) {
 	assert.Contains(t, string(ca.CertPEM), "BEGIN CERTIFICATE")
 	assert.Contains(t, string(ca.KeyPEM), "PRIVATE KEY")
 
-	// Latency already works over HTTPS at L4, so it never asks to decrypt.
+	// Latency decrypts too, to delay every HTTPS request.
 	lca, err := latency.tlsInterceptCA([]uint16{443})
 	require.NoError(t, err)
-	assert.Nil(t, lca)
+	assert.NotNil(t, lca)
+
+	// A reset needs no decryption.
+	rca, err := (&dependencyFaultAction{spec: resetFaultSpec}).tlsInterceptCA([]uint16{443})
+	require.NoError(t, err)
+	assert.Nil(t, rca)
+}
+
+func Test_dependencyFault_percentageDescription(t *testing.T) {
+	httpAbort := &dependencyFaultAction{spec: httpAbortFaultSpec}
+	latency := &dependencyFaultAction{spec: latencyFaultSpec}
+
+	require.NotContains(t, httpAbort.percentageDescription(), "HTTPS")
+	require.Contains(t, latency.percentageDescription(), "per connection for HTTPS")
+
+	// With the CA, both attacks read HTTPS requests, so they are decided per
+	// request.
+	withInterceptCA(t)
+	require.Contains(t, httpAbort.percentageDescription(), "HTTPS through the configured interception CA")
+	require.Contains(t, latency.percentageDescription(), "HTTPS through the configured interception CA")
 }
 
 func Test_dependencyFault_hint_withInterceptCA(t *testing.T) {
@@ -474,8 +529,12 @@ func Test_dependencyFault_hint_withInterceptCA(t *testing.T) {
 	assert.Equal(t, action_kit_api.HintInfo, hint.Type)
 	assert.Contains(t, hint.Content, "trust the configured CA")
 	assert.NotContains(t, hint.Content, "cleartext HTTP only")
+	// Requests that aren't faulted are forwarded, so the dependency's certificate
+	// must verify too.
+	assert.Contains(t, hint.Content, "can't verify the dependency's certificate")
 
-	assert.Nil(t, (&dependencyFaultAction{spec: latencyFaultSpec}).hint())
+	// Latency decrypts too, so the same constraint applies.
+	assert.Equal(t, hint, (&dependencyFaultAction{spec: latencyFaultSpec}).hint())
 }
 
 func Test_formatDependencyStatsMarkdown_rejected(t *testing.T) {
@@ -598,4 +657,110 @@ func testCAPEM(t *testing.T) (certPEM, keyPEM []byte) {
 	require.NoError(t, err)
 	return pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der}),
 		pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: keyDER})
+}
+
+func Test_dependencyFault_upstreamInsecureSkipVerifyParameter(t *testing.T) {
+	has := func(spec dependencyFaultSpec) bool {
+		return slices.ContainsFunc((&dependencyFaultAction{spec: spec}).Describe().Parameters, func(p action_kit_api.ActionParameter) bool {
+			return p.Name == "upstreamInsecureSkipVerify"
+		})
+	}
+	// Without a CA nothing is decrypted, so there is no upstream TLS to verify.
+	require.False(t, has(latencyFaultSpec))
+	require.False(t, has(httpAbortFaultSpec))
+
+	withInterceptCA(t)
+	require.True(t, has(latencyFaultSpec))
+	require.True(t, has(httpAbortFaultSpec))
+	require.False(t, has(resetFaultSpec))
+}
+
+func Test_dependencyFault_parseOpts_upstreamInsecureSkipVerify(t *testing.T) {
+	a := &dependencyFaultAction{spec: latencyFaultSpec}
+	request := func(cfg map[string]interface{}) action_kit_api.PrepareActionRequestBody {
+		cfg["hostname"] = []interface{}{"api.example.com"}
+		cfg["delay"] = 500
+		cfg["duration"] = 30000
+		return action_kit_api.PrepareActionRequestBody{ExecutionId: uuid.New(), Config: cfg}
+	}
+
+	// Without a CA the proxy never opens its own TLS connection.
+	opts, err := a.parseOpts(request(map[string]interface{}{"upstreamInsecureSkipVerify": true}))
+	require.NoError(t, err)
+	require.False(t, opts.UpstreamInsecureSkipVerify)
+
+	withInterceptCA(t)
+	opts, err = a.parseOpts(request(map[string]interface{}{}))
+	require.NoError(t, err)
+	require.False(t, opts.UpstreamInsecureSkipVerify, "verified by default")
+
+	opts, err = a.parseOpts(request(map[string]interface{}{"upstreamInsecureSkipVerify": true}))
+	require.NoError(t, err)
+	require.True(t, opts.UpstreamInsecureSkipVerify)
+
+	// Strictly per experiment: the extension-wide setting doesn't turn it on.
+	t.Setenv("STEADYBIT_EXTENSION_INSECURE_SKIP_VERIFY", "true")
+	unset, err := a.parseOpts(request(map[string]interface{}{}))
+	require.NoError(t, err)
+	require.False(t, unset.UpstreamInsecureSkipVerify)
+
+}
+
+type upstreamErrorsProxy struct {
+	errors int64
+}
+
+func (upstreamErrorsProxy) Start() error          { return nil }
+func (upstreamErrorsProxy) Stop() error           { return nil }
+func (upstreamErrorsProxy) Exited() (bool, error) { return false, nil }
+
+func (p upstreamErrorsProxy) Metrics() (proxyfault.Snapshot, bool) {
+	return proxyfault.Snapshot{UpstreamErrors: p.errors}, true
+}
+
+func Test_dependencyFault_Status_logsUpstreamErrorTipOnce(t *testing.T) {
+	executionId := uuid.NewString()
+	storeDependencyFaultHandle(executionId, &proxyHandle{
+		proxy: upstreamErrorsProxy{errors: 2},
+		opts:  proxyfault.Opts{TLSInterceptCA: &proxyfault.TLSInterceptCA{}},
+	})
+	t.Cleanup(func() { removeDependencyFaultHandle(executionId) })
+	a := &dependencyFaultAction{spec: latencyFaultSpec}
+
+	tips := func() int {
+		res, err := a.Status(context.Background(), &DependencyFaultState{ExecutionId: executionId})
+		require.NoError(t, err)
+		n := 0
+		for _, m := range *res.Messages {
+			if strings.Contains(m.Message, "failed to forward") {
+				n++
+			}
+		}
+		return n
+	}
+	require.Equal(t, 1, tips())
+	require.Equal(t, 0, tips(), "the tip is logged once per execution")
+}
+
+func Test_formatDependencyStatsMarkdown_upstreamErrors(t *testing.T) {
+	md := formatDependencyStatsMarkdown(proxyfault.Snapshot{ConnectionsMatched: 1}, proxyfault.Opts{})
+	require.NotContains(t, md, "Forwarding failed")
+
+	md = formatDependencyStatsMarkdown(proxyfault.Snapshot{ConnectionsMatched: 1, UpstreamErrors: 2}, proxyfault.Opts{})
+	require.Contains(t, md, "Forwarding failed 2 time(s).** The proxy couldn't connect to the destination._")
+
+	md = formatDependencyStatsMarkdown(proxyfault.Snapshot{ConnectionsMatched: 1, UpstreamErrors: 2}, proxyfault.Opts{TLSInterceptCA: &proxyfault.TLSInterceptCA{}})
+	require.Contains(t, md, "or couldn't verify the dependency's certificate")
+}
+
+func Test_dependencyFault_upstreamSkipVerifyInTrafficFilter(t *testing.T) {
+	// The setting only exists with a CA; it belongs with the other interception
+	// settings rather than in the platform's "Additional Settings" fallback.
+	withInterceptCA(t)
+	for _, spec := range []dependencyFaultSpec{latencyFaultSpec, httpAbortFaultSpec} {
+		params := (&dependencyFaultAction{spec: spec}).Describe().Parameters
+		i := slices.IndexFunc(params, func(p action_kit_api.ActionParameter) bool { return p.Name == flags.UpstreamSkipVerifyParameterName })
+		require.NotEqual(t, -1, i, spec.id)
+		require.Equal(t, groupTrafficFilter, *params[i].Group, spec.id)
+	}
 }
