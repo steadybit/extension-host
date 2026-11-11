@@ -20,7 +20,7 @@ Learn about the capabilities of this extension in our [Reliability Hub](https://
 | `STEADYBIT_EXTENSION_NETWORK_STRICT_ROOT_QDISC`          |                                    | When true, refuse network attacks on interfaces whose root qdisc isn't `noqueue`; when false, snapshot the root qdisc tree and replay it on revert (preserving cloud-tuned state).                                            | false    | true    |
 | `STEADYBIT_EXTENSION_FILL_MEMORY_RESERVE`                |                                    | Memory the "Fill Memory" attack always leaves available so the host OS and (on Kubernetes) the kubelet stay responsive. Accepts suffixes K/M/G or %.                                                                          | false    | 512MiB  |
 | `STEADYBIT_EXTENSION_FILL_MEMORY_OOM_SCORE_ADJ`          |                                    | oom_score_adj applied to the "Fill Memory" process. The default sits just above the agent/extension-host, so the fill is OOM-killed before the Steadybit tooling if memory is exhausted.                                      | false    | -996    |
-| `STEADYBIT_EXTENSION_TLS_INTERCEPT_CA_CERT`         | `tlsIntercept.existingSecret`                                | PEM CA certificate enabling 'Intercept Outgoing HTTP Request' to synthesize responses for **HTTPS** dependencies, and 'Slow Outgoing HTTP(s) Dependency' to delay each HTTPS request. Test environments only — see below. | no      |         |
+| `STEADYBIT_EXTENSION_TLS_INTERCEPT_CA_CERT`         | `tlsIntercept.existingSecret`                                | PEM CA certificate enabling 'Intercept Outgoing HTTP Request' to synthesize responses for **HTTPS** dependencies, 'Slow Outgoing HTTP(s) Dependency' to delay each HTTPS request, and the L7 mode of 'Reset TCP/HTTP(s) Connection' to reset each HTTPS request. Test environments only — see below. | no      |         |
 | `STEADYBIT_EXTENSION_TLS_INTERCEPT_CA_KEY`          | `tlsIntercept.existingSecret`                                | PEM private key matching the CA certificate.                                                                              | no      |         |
 
 Beyond the settings above, this extension supports the configuration common to all Steadybit
@@ -197,6 +197,15 @@ request, with **Percentage** per request. Without it, HTTPS connections are not
 decrypted, so the delay is decided once per connection and applies only before
 its first request.
 
+It also lets the L7 mode of `Reset TCP/HTTP(s) Connection` reset **each** HTTPS
+request, with **Percentage** per request: on HTTP/2 the request's stream is
+reset and the connection stays open, on HTTP/1.1 the connection is closed.
+Most HTTP/1.1 clients silently resend a request whose reused connection closed
+without a reply, so the workload may see fewer failures than the
+**Percentage**; the statistics count every reset. Without the CA, the reset is
+decided once per HTTPS connection, so a keep-alive client is reset only until
+one connection is spared, which then carries every later request.
+
 ```bash
 kubectl -n <ns> create secret generic intercept-ca \
   --from-file=ca.crt=ca.crt --from-file=ca.key=ca.key
@@ -205,7 +214,7 @@ helm upgrade ... --set tlsIntercept.existingSecret=intercept-ca
 ```
 
 **The CA is yours.** You generate it, choose how long it lives, and install it in
-the truststores of the workloads you want to fault. For both attacks, every
+the truststores of the workloads you want to fault. For every attack using it, every
 matched HTTPS connection is decrypted, whatever the **Percentage**, so a
 workload that does not trust the CA, or pins certificates, fails **all** its
 requests to the dependency, not only the selected share. That is reported in the attack's
