@@ -1323,6 +1323,10 @@ func testNetworkPackageCorruption(t *testing.T, m *e2e.Minikube, e *e2e.Extensio
 				if err != nil {
 					r.Failed = true
 					_, _ = fmt.Fprintf(r.Log, "failed to run action: %s\n", err)
+					if strings.Contains(err.Error(), "Cannot find device") {
+						// the previous test's iperf pods were deleted between prepare and start, taking their veth with them
+						_, _ = fmt.Fprintf(r.Log, "known issue, see Kanbanize #27563: host network attacks fail to start when a pod is deleted between prepare and start\n")
+					}
 					return
 				}
 
