@@ -29,8 +29,9 @@ import (
 )
 
 // testNetworkDependencyFaultPercentage checks that Percentage applies per
-// request on a keep-alive connection: on cleartext HTTP, and on HTTPS that the
-// proxy decrypts with the interception CA. The requests are the node's own
+// request on a keep-alive connection, for Intercept Outgoing HTTP Request and
+// the L7 reset: on cleartext HTTP, and on HTTPS that the proxy decrypts with
+// the interception CA. The requests are the node's own
 // (curl on the node), since the host attack hooks the node's outgoing traffic.
 func testNetworkDependencyFaultPercentage(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	// The suite configures an interception CA; the node's curl trusts it over
@@ -76,6 +77,39 @@ func testNetworkDependencyFaultPercentage(t *testing.T, m *e2e.Minikube, e *e2e.
 			})
 			require.NoError(t, action.Cancel())
 		})
+
+		t.Run("L7 reset applies the percentage per request on a keep-alive connection over "+tt.name, func(t *testing.T) {
+			config := map[string]any{
+				"duration": 60000, "l7": true, "hostname": []string{host},
+				"percentage": 50, "port": []string{tt.port},
+			}
+			// Empty execution context, see testNetworkTcpResetL7AllPorts.
+			action, err := e.RunAction(exthost.BaseActionID+".network_tcp_reset", getTarget(m), config, &action_kit_api.ExecutionContext{})
+			defer func() { _ = action.Cancel() }()
+			require.NoError(t, err)
+
+			// A reset request gets no response (000). Each reset ends the connection,
+			// and curl resends a request whose reused connection ended without a
+			// reply, so about a third of the requests fail rather than half. Rolled
+			// per connection instead, curl would reconnect until one connection was
+			// spared and send the rest over it: a handful of failures at most.
+			// 15..60 keeps clear of both.
+			const requests = 100
+			e2e.Retry(t, 10, 1*time.Second, func(r *e2e.R) {
+				got, err := nodeCurlKeepAliveAllowingResets(m, tt.url, requests, tt.curlArgs...)
+				if err != nil {
+					r.Failed = true
+					_, _ = fmt.Fprintf(r.Log, "curl failed: %v", err)
+					return
+				}
+				if got.responses != requests || got.reset < 15 || got.reset > 60 || got.faulted != 0 {
+					r.Failed = true
+					_, _ = fmt.Fprintf(r.Log, "expected %d requests, about a third reset and none answered with a 503; got %d, %d reset, %d with a 503",
+						requests, got.responses, got.reset, got.faulted)
+				}
+			})
+			require.NoError(t, action.Cancel())
+		})
 	}
 	requireAllSidecarsCleanedUp(t, m, e)
 }
@@ -88,8 +122,23 @@ const nodeInterceptCAPath = "/tmp/steadybit-e2e-intercept-ca.crt"
 // ssh re-parses the command in a shell, which would mangle curl's write-out
 // format, so the call runs from a script written to the node.
 func nodeCurlKeepAlive(m *e2e.Minikube, url string, n int, extraArgs ...string) (keepAliveResult, error) {
-	script := "curl --max-time 30 -s -w '%{http_code} %{num_connects}\\n' " + strings.Join(extraArgs, " ") +
-		strings.Repeat(" -o /dev/null "+url, n) + "\n"
+	return nodeCurl(m, nodeCurlKeepAliveCmd(url, n, extraArgs...)+"\n")
+}
+
+// nodeCurlKeepAliveAllowingResets is nodeCurlKeepAlive for requests that may
+// get no response. curl exits non-zero when its last request is reset, but the
+// write-out still has a line per request, so the exit code is ignored.
+func nodeCurlKeepAliveAllowingResets(m *e2e.Minikube, url string, n int, extraArgs ...string) (keepAliveResult, error) {
+	return nodeCurl(m, nodeCurlKeepAliveCmd(url, n, extraArgs...)+" || true\n")
+}
+
+func nodeCurlKeepAliveCmd(url string, n int, extraArgs ...string) string {
+	return "curl --max-time 30 -s -w '%{http_code} %{num_connects}\\n' " + strings.Join(extraArgs, " ") +
+		strings.Repeat(" -o /dev/null "+url, n)
+}
+
+// nodeCurl runs script on the node and summarizes curl's write-out.
+func nodeCurl(m *e2e.Minikube, script string) (keepAliveResult, error) {
 	const scriptPath = "/tmp/steadybit-e2e-keepalive.sh"
 	if err := nodeWriteFile(m, scriptPath, []byte(script)); err != nil {
 		return keepAliveResult{}, err
@@ -111,10 +160,11 @@ func nodeWriteFile(m *e2e.Minikube, path string, data []byte) error {
 	return nil
 }
 
-// keepAliveResult summarizes nodeCurlKeepAlive: how many responses arrived,
-// how many were the injected 503, and how many connections curl had to open.
+// keepAliveResult summarizes nodeCurlKeepAlive: how many requests curl
+// reported, how many got the injected 503, how many got no response at all
+// (000, e.g. reset), and how many connections curl had to open.
 type keepAliveResult struct {
-	responses, faulted, connects int
+	responses, faulted, reset, connects int
 }
 
 // parseCurlWriteOut reads curl's "-w '%{http_code} %{num_connects}\n'" output.
@@ -128,8 +178,11 @@ func parseCurlWriteOut(out string) keepAliveResult {
 			continue
 		}
 		r.responses++
-		if fields[0] == "503" {
+		switch fields[0] {
+		case "503":
 			r.faulted++
+		case "000":
+			r.reset++
 		}
 		if c, err := strconv.Atoi(fields[1]); err == nil {
 			r.connects += c
