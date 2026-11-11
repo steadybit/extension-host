@@ -1209,7 +1209,7 @@ func testNetworkDelayTcpPsh(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 
 func testNetworkPackageLoss(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	iperf := e2e.Iperf{Minikube: m}
-	err := deployIperf(&iperf, "loss")
+	err := iperf.Deploy("loss")
 	defer func() { _ = iperf.Delete() }()
 	require.NoError(t, err)
 	tests := []struct {
@@ -1258,13 +1258,13 @@ func testNetworkPackageLoss(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			require.NoError(t, err)
 
 			if tt.wantedLoss {
-				require.NoError(t, awaitPackageLoss(&iperf, float64(percentage)*0.7, float64(percentage)*1.4, 8))
+				iperf.AssertPackageLoss(t, float64(percentage)*0.7, float64(percentage)*1.4)
 			} else {
-				require.NoError(t, awaitPackageLoss(&iperf, 0, 5, 8))
+				iperf.AssertPackageLoss(t, 0, 5)
 			}
 			require.NoError(t, action.Cancel())
 
-			require.NoError(t, awaitPackageLoss(&iperf, 0, 5, 8))
+			iperf.AssertPackageLoss(t, 0, 5)
 		})
 	}
 	requireAllSidecarsCleanedUp(t, m, e)
@@ -1272,7 +1272,7 @@ func testNetworkPackageLoss(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 
 func testNetworkPackageCorruption(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	iperf := e2e.Iperf{Minikube: m}
-	err := deployIperf(&iperf, "corruption")
+	err := iperf.Deploy("corruption")
 	defer func() { _ = iperf.Delete() }()
 	require.NoError(t, err)
 
@@ -1308,7 +1308,7 @@ func testNetworkPackageCorruption(t *testing.T, m *e2e.Minikube, e *e2e.Extensio
 	for _, tt := range tests {
 		corruption := 10
 		config := map[string]any{
-			"duration":          30000,
+			"duration":          20000,
 			"networkCorruption": corruption,
 			"ip":                tt.ip,
 			"hostname":          tt.hostname,
@@ -1327,19 +1327,21 @@ func testNetworkPackageCorruption(t *testing.T, m *e2e.Minikube, e *e2e.Extensio
 				}
 
 				if tt.wantedCorruption {
-					err = awaitPackageLoss(&iperf, float64(corruption)*0.7, float64(corruption)*1.3, 8)
+					packageLossResult := iperf.AssertPackageLossWithRetry(float64(corruption)*0.7, float64(corruption)*1.3, 8)
+					if !packageLossResult {
+						r.Failed = true
+					}
 				} else {
-					err = awaitPackageLoss(&iperf, 0, 5, 8)
-				}
-				if err != nil {
-					r.Failed = true
-					_, _ = fmt.Fprintf(r.Log, "while attacked: %s\n", err)
+					packageLossResult := iperf.AssertPackageLossWithRetry(0, 5, 8)
+					if !packageLossResult {
+						r.Failed = true
+					}
 				}
 				require.NoError(t, action.Cancel())
 
-				if err := awaitPackageLoss(&iperf, 0, 5, 8); err != nil {
+				packageLossResult := iperf.AssertPackageLossWithRetry(0, 5, 8)
+				if !packageLossResult {
 					r.Failed = true
-					_, _ = fmt.Fprintf(r.Log, "after attack: %s\n", err)
 				}
 			})
 		})
