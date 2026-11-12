@@ -1824,6 +1824,8 @@ func testFillDiskFreedWhenExtensionKilled(t *testing.T, m *e2e.Minikube, e *e2e.
 	}()
 	assertHeldFillSize(t, m, 1024, 0)
 
+	// the kill drops the extension's in-memory coverage counters, collect them first
+	e2e.CollectCoverage(m, e)
 	_, err = runInMinikube(m, "sudo pkill -9 -x extension")
 	require.NoError(t, err)
 
