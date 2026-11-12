@@ -14,6 +14,7 @@ import (
 	"net"
 	"os/exec"
 	"path"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -220,6 +221,10 @@ func TestWithMinikube(t *testing.T) {
 		{
 			Name: "fill disk invalid path",
 			Test: testFillDiskInvalidPath,
+		},
+		{
+			Name: "fill disk is freed when the extension is killed",
+			Test: testFillDiskFreedWhenExtensionKilled,
 		},
 		{
 			Name: "shutdown host",
@@ -1699,7 +1704,7 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			require.NoError(t, err)
 
 			if tt.allowedDelta >= 0 {
-				assertFileHasSize(t, m, "/filldisk/disk-fill", tt.wantedFileSize, tt.allowedDelta)
+				assertHeldFillSize(t, m, tt.wantedFileSize, tt.allowedDelta)
 			}
 
 			if tt.wantedLog != nil {
@@ -1714,8 +1719,7 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 				e2e.AssertProcessNOTRunningInContainer(t, m, e.Pod, "extension", "fallocate")
 			}
 
-			out, _ := runInMinikube(m, "ls", "/filldisk/disk-fill")
-			assert.Contains(t, string(out), "No such file or directory")
+			requireNoHeldFill(t, m)
 		})
 	}
 	requireAllSidecarsCleanedUp(t, m, e)
@@ -1801,7 +1805,58 @@ func testStressCombined(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	requireAllSidecarsCleanedUp(t, m, e)
 }
 
-func assertFileHasSize(t *testing.T, m *e2e.Minikube, filepath string, wantedSizeInMb int64, allowedDeltaInMb int64) {
+func testFillDiskFreedWhenExtensionKilled(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
+	pathToFill := "/filldisk"
+	require.NoError(t, m.SshExec("sudo", "mkdir", "-p", pathToFill).Run())
+	config := map[string]any{
+		"duration":  600_000,
+		"path":      pathToFill,
+		"size":      1024,
+		"mode":      string(diskfill.MBToFill),
+		"blocksize": 0,
+		"method":    string(diskfill.AtOnce),
+	}
+	action, err := e.RunAction(fmt.Sprintf("%s.fill_disk", exthost.BaseActionID), getTarget(m), config, defaultExecutionContext)
+	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, e.ResetConfig())
+		_ = action.Cancel()
+	}()
+	assertHeldFillSize(t, m, 1024, 0)
+
+	_, err = runInMinikube(m, "sudo pkill -9 -x extension")
+	require.NoError(t, err)
+
+	requireNoHeldFill(t, m)
+}
+
+// heldFillSizes returns the sizes of the unlinked disk-fill files held open on the node.
+func heldFillSizes(m *e2e.Minikube) ([]int64, error) {
+	out, err := runInMinikube(m, `sudo find /proc/[0-9]*/fd -lname "*/disk-fill (deleted)" -exec stat -L -c %s {} + 2>/dev/null; true`)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %s", err, out)
+	}
+	var sizes []int64
+	for _, field := range strings.Fields(string(out)) {
+		size, err := strconv.ParseInt(field, 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("unexpected output: %s", out)
+		}
+		sizes = append(sizes, size)
+	}
+	return sizes, nil
+}
+
+func requireNoHeldFill(t *testing.T, m *e2e.Minikube) {
+	t.Helper()
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
+		sizes, err := heldFillSizes(m)
+		require.NoError(c, err)
+		assert.Empty(c, sizes, "disk-fill file still held open")
+	}, 30*time.Second, 500*time.Millisecond)
+}
+
+func assertHeldFillSize(t *testing.T, m *e2e.Minikube, wantedSizeInMb int64, allowedDeltaInMb int64) {
 	t.Helper()
 	sizeInBytes := wantedSizeInMb * 1024 * 1024
 	allowedDeltaInBytes := allowedDeltaInMb * 1024 * 1024
@@ -1815,12 +1870,12 @@ func assertFileHasSize(t *testing.T, m *e2e.Minikube, filepath string, wantedSiz
 			return
 
 		case <-time.After(200 * time.Millisecond):
-			out, err := runInMinikube(m, "stat", "-c", "%s", filepath)
-			if err != nil {
-				message = fmt.Sprintf("%s: %s", err.Error(), out)
-				continue
-			}
-			if fileSize, err := strconv.ParseInt(strings.TrimSpace(string(out)), 10, 64); err == nil {
+			if sizes, err := heldFillSizes(m); err != nil {
+				message = err.Error()
+			} else if len(sizes) == 0 {
+				message = "no disk-fill file held open"
+			} else {
+				fileSize := slices.Max(sizes)
 				var actualDelta int64
 				if fileSize < sizeInBytes {
 					actualDelta = sizeInBytes - fileSize
@@ -1832,8 +1887,6 @@ func assertFileHasSize(t *testing.T, m *e2e.Minikube, filepath string, wantedSiz
 				} else {
 					message = fmt.Sprintf("file size is %s, wanted %s, delta of %s exceeds allowed delta of %s", prettyBytes(fileSize), prettyBytes(sizeInBytes), prettyBytes(actualDelta), prettyBytes(allowedDeltaInBytes))
 				}
-			} else {
-				message = fmt.Sprintf("cannot parse file size: %s", err.Error())
 			}
 		}
 	}

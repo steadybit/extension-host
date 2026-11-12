@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/opencontainers/runtime-spec/specs-go"
@@ -155,6 +156,7 @@ func (a *fillDiskAction) Describe() action_kit_api.ActionDescription {
 func fillDiskOpts(request action_kit_api.PrepareActionRequestBody) (diskfill.Opts, error) {
 	opts := diskfill.Opts{
 		TempPath: extutil.ToString(request.Config["path"]),
+		Duration: time.Duration(extutil.ToInt64(request.Config["duration"])) * time.Millisecond,
 	}
 
 	opts.BlockSize = extutil.ToInt(request.Config["blocksize"])
@@ -248,6 +250,11 @@ func (a *fillDiskAction) Start(ctx context.Context, state *FillDiskActionState) 
 		messages = append(messages, action_kit_api.Message{
 			Level:   extutil.Ptr(action_kit_api.Info),
 			Message: "Noop mode is enabled. No disk will be filled, because the disk is already filled enough.",
+		})
+	} else {
+		messages = append(messages, action_kit_api.Message{
+			Level:   extutil.Ptr(action_kit_api.Info),
+			Message: diskfill.UnlinkedFileMessage,
 		})
 	}
 
