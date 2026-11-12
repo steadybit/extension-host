@@ -166,7 +166,7 @@ func (a *stopProcessAction) Start(_ context.Context, state *StopProcessActionSta
 func (a *stopProcessAction) Status(_ context.Context, state *StopProcessActionState) (*action_kit_api.StatusResult, error) {
 	stopper, ok := a.processStoppers.Load(state.ExecutionId)
 	if !ok {
-		return &action_kit_api.StatusResult{Completed: true}, nil
+		return unknownExecutionStatus(), nil
 	}
 
 	s := stopper.(*processStopper)
