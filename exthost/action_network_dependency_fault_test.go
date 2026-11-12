@@ -281,6 +281,7 @@ func Test_networkTcpReset_Status_packetModeEmitsNote(t *testing.T) {
 	res, err := a.Status(context.Background(), &NetworkTcpResetState{L7: false})
 	require.NoError(t, err)
 	require.NotNil(t, res)
+	assert.Nil(t, res.Error)
 	assert.False(t, res.Completed)
 	require.NotNil(t, res.Messages)
 	require.Len(t, *res.Messages, 1)

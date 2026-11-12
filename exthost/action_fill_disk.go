@@ -264,7 +264,11 @@ func (a *fillDiskAction) Start(ctx context.Context, state *FillDiskActionState) 
 }
 
 func (a *fillDiskAction) Status(_ context.Context, state *FillDiskActionState) (*action_kit_api.StatusResult, error) {
-	if _, err := a.fillDiskHostExited(state.ExecutionId); err == nil {
+	s, ok := a.diskfills.Load(state.ExecutionId)
+	if !ok {
+		return unknownExecutionStatus(), nil
+	}
+	if _, err := s.(diskfill.Diskfill).Exited(); err == nil {
 		return &action_kit_api.StatusResult{Completed: false}, nil
 	} else {
 		return &action_kit_api.StatusResult{
@@ -299,12 +303,4 @@ func (a *fillDiskAction) stopFillDiskHost(executionId uuid.UUID) error {
 	}
 
 	return s.(diskfill.Diskfill).Stop()
-}
-
-func (a *fillDiskAction) fillDiskHostExited(executionId uuid.UUID) (bool, error) {
-	s, ok := a.diskfills.Load(executionId)
-	if !ok {
-		return true, nil
-	}
-	return s.(diskfill.Diskfill).Exited()
 }
