@@ -357,16 +357,16 @@ func testTimeTravel(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 
 	assert.EventuallyWithT(t, func(c *assert.CollectT) {
 		adjustedOffset, err := getExtensionPodTimeOffset(m, e)
-		require.NoError(t, err)
-		assert.InDelta(t, offset, (normalOffset + adjustedOffset).Milliseconds(), 2000)
+		require.NoError(c, err)
+		assert.InDelta(c, offset, (normalOffset + adjustedOffset).Milliseconds(), 2000)
 	}, 10*time.Second, 1*time.Second, "time travel failed to apply offset")
 
 	// rollback
 	require.NoError(t, action.Cancel())
 	assert.EventuallyWithT(t, func(c *assert.CollectT) {
 		adjustedOffset, err := getExtensionPodTimeOffset(m, e)
-		require.NoError(t, err)
-		assert.InDelta(t, 0, (normalOffset + adjustedOffset).Milliseconds(), 2000)
+		require.NoError(c, err)
+		assert.InDelta(c, 0, (normalOffset + adjustedOffset).Milliseconds(), 2000)
 	}, 10*time.Second, 1*time.Second, "time travel failed to rollback offset")
 }
 
