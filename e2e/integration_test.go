@@ -358,7 +358,7 @@ func testTimeTravel(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	assert.EventuallyWithT(t, func(c *assert.CollectT) {
 		adjustedOffset, err := getExtensionPodTimeOffset(m, e)
 		require.NoError(c, err)
-		assert.InDelta(c, offset, (normalOffset + adjustedOffset).Milliseconds(), 2000)
+		assert.InDelta(c, offset, (adjustedOffset - normalOffset).Milliseconds(), 2000)
 	}, 10*time.Second, 1*time.Second, "time travel failed to apply offset")
 
 	// rollback
@@ -366,7 +366,7 @@ func testTimeTravel(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	assert.EventuallyWithT(t, func(c *assert.CollectT) {
 		adjustedOffset, err := getExtensionPodTimeOffset(m, e)
 		require.NoError(c, err)
-		assert.InDelta(c, 0, (normalOffset + adjustedOffset).Milliseconds(), 2000)
+		assert.InDelta(c, 0, (adjustedOffset - normalOffset).Milliseconds(), 2000)
 	}, 10*time.Second, 1*time.Second, "time travel failed to rollback offset")
 }
 
@@ -378,17 +378,17 @@ func getExtensionPodTimeOffset(m *e2e.Minikube, e *e2e.Extension) (time.Duration
 		chNtpTime := make(chan time.Time, 1)
 
 		g.Go(func() error {
-			out, err := m.PodExec(e.Pod, "extension", "date", "+%s")
+			out, err := m.PodExec(e.Pod, "extension", "date", "+%s%N")
 			if err != nil {
 				return err
 			}
 
-			epoch := extutil.ToInt64(strings.TrimSpace(out))
-			if epoch == 0 {
+			epochNanos := extutil.ToInt64(strings.TrimSpace(out))
+			if epochNanos == 0 {
 				return fmt.Errorf("failed to get container time")
 			}
 
-			chPodTime <- time.Unix(epoch, 0)
+			chPodTime <- time.Unix(0, epochNanos)
 			return nil
 		})
 
