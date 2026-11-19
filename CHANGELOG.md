@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.10.1
+
+- build(deps): bump github.com/KimMachineGun/automemlimit
+- build(deps): bump github.com/steadybit/extension-kit
+- chore: update runc to v1.5.3 and dns-inject to v0.2.13
+- ci: CLA check with a GitHub App token (#300)
+- ci: restart test environments without the deployer token (#305)
+- ci: stop passing unused secrets to the shared workflow (#304)
+
 ## v1.10.0
 
 - **Behaviour change:** Reset TCP Connection in L7 mode with an empty Include Ports now intercepts every port instead of defaulting to 80,443. Resets still apply only to connections to the hostnames, but every outgoing TCP connection of the host passes through the proxy. Set Include Ports to `80,443` to keep the previous scope.
