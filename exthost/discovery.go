@@ -177,19 +177,7 @@ func (d *hostDiscovery) DiscoverTargets(ctx context.Context) ([]discovery_kit_ap
 		target.Attributes["host.bios.uuid"] = []string{id}
 	}
 
-	if host, err := sysinfo.Host(); err == nil {
-		target.Attributes["host.os.family"] = []string{host.Info().OS.Family}
-		target.Attributes["host.os.manufacturer"] = []string{host.Info().OS.Name}
-		target.Attributes["host.os.version"] = []string{host.Info().OS.Version}
-
-		if fqdn, err := host.FQDNWithContext(ctx); err == nil {
-			target.Attributes["host.domainname"] = []string{fqdn}
-		} else {
-			target.Attributes["host.domainname"] = []string{host.Info().Hostname}
-		}
-	} else {
-		log.Error().Err(err).Msg("Failed to get host info")
-	}
+	addOsAttributes(ctx, target.Attributes)
 
 	// Get CPU frequency info
 	minFreq, maxFreq, err := cpufreq.GetCPUFrequencyInfo()
@@ -209,4 +197,21 @@ func (d *hostDiscovery) DiscoverTargets(ctx context.Context) ([]discovery_kit_ap
 
 	targets := []discovery_kit_api.Target{target}
 	return discovery_kit_commons.ApplyAttributeExcludes(targets, config.Config.DiscoveryAttributesExcludesHost), nil
+}
+
+func addOsAttributes(ctx context.Context, attributes map[string][]string) {
+	host, err := sysinfo.Host()
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to get host info")
+		return
+	}
+	attributes["host.os.family"] = []string{host.Info().OS.Family}
+	attributes["host.os.manufacturer"] = []string{host.Info().OS.Name}
+	attributes["host.os.version"] = []string{host.Info().OS.Version}
+
+	if fqdn, err := host.FQDNWithContext(ctx); err == nil {
+		attributes["host.domainname"] = []string{fqdn}
+	} else {
+		attributes["host.domainname"] = []string{host.Info().Hostname}
+	}
 }
