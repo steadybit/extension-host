@@ -12,6 +12,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"os"
 	"os/exec"
 	"path"
 	"slices"
@@ -429,6 +430,10 @@ func testDiscovery(t *testing.T, _ *e2e.Minikube, e *e2e.Extension) {
 	require.NoError(t, err)
 	assert.Equal(t, target.TargetType, exthost.BaseActionID+".host")
 	assert.NotContains(t, target.Attributes, "host.nic")
+	// minikube's docker driver shares the runner's kernel, so the extension sees the runner's DMI table
+	if _, err := os.Stat("/sys/class/dmi/id/product_uuid"); err == nil {
+		assert.NotEmpty(t, target.Attributes["host.bios.uuid"])
+	}
 }
 
 func testStopProcess(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
